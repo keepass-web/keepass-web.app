@@ -1,9 +1,7 @@
-# keepass-web/keepass-web.github.io
+# keepass-web/keepass-web.app
 
-Hosts the KeePass Web application at [keepassweb.app](https://keepassweb.app).
+Hosts the KeePass Web application at [keepass-web.app](https://keepass-web.app).
 
-The `gh-pages` branch is the deployment target. Its contents are managed
-exclusively through the automated release pipeline.
+The `gh-pages` branch is the deployment target. Its contents are managed exclusively through the automated release pipeline.
 
-See [Releasing](https://github.com/keepass-web/build/blob/main/RELEASING.md)
-in `keepass-web/build` for how releases are built, attested, and deployed.
+See [Releases](https://github.com/keepass-web/source-application/blob/main/docs/RELEASES.md) in `keepass-web/source-application` for how releases are built, attested, and deployed.

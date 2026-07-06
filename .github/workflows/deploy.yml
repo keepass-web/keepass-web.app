@@ -1,7 +1,8 @@
 name: Deploy
 
-# Opens a PR against gh-pages with the distributables from a keepass-web release.
-# Triggered automatically by the keepass-web release workflow, or manually:
+# Opens a PR against gh-pages with the distributables from a source-application
+# release. Triggered automatically by the source-application release
+# workflow, or manually:
 #
 #   1. Go to Actions → Deploy → Run workflow
 #   2. Enter the release tag (e.g. v0.1.0)
@@ -45,20 +46,20 @@ jobs:
       - name: Download release assets
         run: |
           tag="${{ inputs.release-tag }}"
-          base="https://github.com/keepass-web/keepass-web/releases/download/${tag}"
-          curl -fsSL "${base}/keepass-web-0x67.html"    -o keepass-web-0x67.html
-          curl -fsSL "${base}/keepass-web-router.html"  -o keepass-web-router.html
-          curl -fsSL "${base}/index.html"               -o index.html
-          curl -fsSL "${base}/CNAME"                    -o CNAME
+          base="https://github.com/keepass-web/source-application/releases/download/${tag}"
+          curl -fsSL "${base}/0x67.html"    -o 0x67.html
+          curl -fsSL "${base}/router.html"  -o router.html
+          curl -fsSL "${base}/index.html"   -o index.html
+          curl -fsSL "${base}/CNAME"        -o CNAME
 
       - name: Verify attestations
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh attestation verify keepass-web-0x67.html   --repo keepass-web/keepass-web
-          gh attestation verify keepass-web-router.html  --repo keepass-web/keepass-web
-          gh attestation verify index.html               --repo keepass-web/keepass-web
-          gh attestation verify CNAME                    --repo keepass-web/keepass-web
+          gh attestation verify 0x67.html    --repo keepass-web/source-application
+          gh attestation verify router.html  --repo keepass-web/source-application
+          gh attestation verify index.html   --repo keepass-web/source-application
+          gh attestation verify CNAME        --repo keepass-web/source-application
 
       - name: Push branch
         run: |
@@ -67,7 +68,7 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "${branch}"
-          git add keepass-web-0x67.html keepass-web-router.html index.html CNAME
+          git add 0x67.html router.html index.html CNAME
           git commit -m "Deploy ${tag}"
           git push --force origin "${branch}"
 
@@ -78,8 +79,8 @@ jobs:
           tag="${{ inputs.release-tag }}"
           branch="deploy/${tag}"
           gh pr create \
-            --repo keepass-web/keepass-web.github.io \
+            --repo keepass-web/keepass-web.app \
             --base gh-pages \
             --head "${branch}" \
             --title "Deploy ${tag}" \
-            --body "Deploys [${tag}](https://github.com/keepass-web/keepass-web/releases/tag/${tag})."
+            --body "Deploys [${tag}](https://github.com/keepass-web/source-application/releases/tag/${tag})."

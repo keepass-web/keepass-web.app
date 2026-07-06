@@ -21,7 +21,22 @@ jobs:
       - name: Check out
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7
 
-      # TODO: verify the SHA256 of each distributable against the checksum
-      # published with the corresponding release.
-      - name: Verify checksum
-        run: echo "Checksum verification not yet implemented"
+      # The deploy branch is always named deploy/<tag> (see deploy.yml), so
+      # the release being verified comes straight from the PR's head branch.
+      # Each file already in this checkout is compared against a fresh
+      # download of the same release asset — confirming the PR's committed
+      # bytes are exactly what the release published. Release assets are
+      # public, so no token is needed.
+      - name: Verify checksums against the release
+        run: |
+          tag="${GITHUB_HEAD_REF#deploy/}"
+          base="https://github.com/keepass-web/source-application/releases/download/${tag}"
+          for file in 0x67.html router.html index.html CNAME; do
+            expected=$(curl -fsSL "${base}/${file}" | sha256sum | awk '{print $1}')
+            actual=$(sha256sum "${file}" | awk '{print $1}')
+            if [ "${expected}" != "${actual}" ]; then
+              echo "::error::${file} does not match the ${tag} release (expected ${expected}, got ${actual})"
+              exit 1
+            fi
+            echo "${file}: sha256:${actual} matches ${tag}"
+          done

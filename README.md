@@ -1,6 +1,6 @@
 # keepass-web/keepass-web.app
 
-Hosts the KeePass Web application at [keepass-web.app](https://keepass-web.app).
+The GitHub Pages repository behind [keepass-web.app](https://keepass-web.app). GitHub Pages serves these files verbatim; there are no KeePass Web servers.
 
 The `gh-pages` branch is the deployment target. Its contents are managed exclusively through the automated release pipeline.
 

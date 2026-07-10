@@ -31,7 +31,7 @@ jobs:
         run: |
           tag="${GITHUB_HEAD_REF#deploy/}"
           base="https://github.com/keepass-web/source-application/releases/download/${tag}"
-          for file in 0x67.html router.html index.html CNAME; do
+          for file in 0x67.html router.html index.html cloud-google-drive.html CNAME; do
             expected=$(curl -fsSL "${base}/${file}" | sha256sum | awk '{print $1}')
             actual=$(sha256sum "${file}" | awk '{print $1}')
             if [ "${expected}" != "${actual}" ]; then

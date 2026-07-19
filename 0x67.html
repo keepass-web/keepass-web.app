@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KeePass Web</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 7V5a3.5 3.5 0 0 1 7 0v2' fill='none' stroke='%230e7c5a' stroke-width='2' stroke-linecap='round'/%3E%3Crect x='2' y='7' width='12' height='8' rx='2' fill='%230e7c5a'/%3E%3C/svg%3E">
   <style>
 /* ============================================================
    Reset and design tokens
@@ -580,34 +581,169 @@ body:not(.app-mode) {
   padding: 0.25rem 0.4rem;
 }
 
+/* View toggle (tile / table) and the table view's column picker */
+
+.view-toggle {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.view-toggle-btn {
+  background: var(--surface);
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.view-toggle-btn + .view-toggle-btn {
+  border-left: 1px solid var(--border);
+}
+
+.view-toggle-btn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.view-toggle-btn.active {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.column-picker {
+  position: relative;
+}
+
+.column-picker-menu {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  padding: 0.5rem;
+  min-width: 160px;
+  z-index: 10;
+}
+
+.column-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.4rem;
+  font-size: 0.85rem;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.column-picker-item:hover {
+  background: var(--surface-2);
+}
+
 .entry-list {
   flex: 1;
-  overflow-y: auto;
+  overflow: auto;
+}
+
+/* Tile view: same entry-row buildEntryRow always built, laid out as a grid. */
+
+.entry-list--tile {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  align-content: start;
+  gap: 0.75rem;
+  padding: 1rem;
 }
 
 .entry-row {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border);
+  padding: 1rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.1s;
+  text-align: center;
+  overflow: hidden;
+  transition:
+    border-color 0.1s,
+    box-shadow 0.1s;
 }
 
 .entry-row:hover {
-  background: var(--surface);
+  border-color: var(--accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .entry-row-title {
-  font-weight: 500;
-  margin-bottom: 0.2rem;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .entry-row-meta {
   font-size: 0.8rem;
   color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .entry-row-path {
   color: var(--accent);
+}
+
+/* Table view */
+
+.entry-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.entry-table th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.entry-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.entry-table tbody tr:hover {
+  background: var(--surface-2);
+}
+
+.entry-table-title {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.entry-table-protected {
+  font-family: ui-monospace, monospace;
+  letter-spacing: 0.15em;
+  color: var(--muted);
 }
 
 .entry-empty {
@@ -962,6 +1098,9 @@ input.attachment-name:focus {
   max-width: 480px;
   width: 90vw;
   padding: 0;
+  /* The global margin:0 reset out-ranks the UA's dialog:modal margin:auto
+   * default (same author-beats-UA cascade as the [hidden] fix above). */
+  margin: auto;
 }
 
 .kw-dialog::backdrop {
@@ -1164,6 +1303,12 @@ footer a:hover {
   text-decoration: underline;
 }
 
+/* Embedded: the host page has its own footer, so hide this copy. */
+body.embedded .sponsor-cta,
+body.embedded footer {
+  display: none;
+}
+
 /* ============================================================
    Printing (entry detail only — see data-action="print")
    ============================================================ */
@@ -1290,6 +1435,14 @@ footer a:hover {
           <div class="panel-header">
             <span id="panel-title" class="panel-title"></span>
             <div class="panel-header-actions">
+              <div class="view-toggle">
+                <button type="button" class="view-toggle-btn" data-action="view-tile" title="Tile view">▦</button>
+                <button type="button" class="view-toggle-btn" data-action="view-table" title="Table view">▤</button>
+              </div>
+              <div class="column-picker">
+                <button type="button" class="btn btn-secondary" id="column-picker-btn" data-action="toggle-columns" hidden>Columns</button>
+                <div id="column-picker-menu" class="column-picker-menu" hidden></div>
+              </div>
               <select id="sort-select" class="sort-select" title="Sort entries">
                 <option value="title:asc">Title (A–Z)</option>
                 <option value="title:desc">Title (Z–A)</option>
@@ -1562,7 +1715,7 @@ footer a:hover {
   <p class="sponsor-cta">
     Like KeePass Web? <a href="https://github.com/sponsors/keepass-web" target="_blank" rel="noopener noreferrer">&hearts; Sponsor</a> its development.
   </p>
-  <footer>MIT licensed &middot; <a href="https://github.com/keepass-web">github.com/keepass-web</a> &middot; <a href="https://github.com/keepass-web/source-application/tree/v0.6.0">v0.6.0</a> committed on <time id="commit-date" datetime="2026-07-16T16:33:20-04:00">2026-07-16T16:33:20-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+  <footer>MIT licensed &middot; <a href="https://github.com/keepass-web">github.com/keepass-web</a> &middot; <a href="https://github.com/keepass-web/source-application/tree/v0.6.1">v0.6.1</a> committed on <time id="commit-date" datetime="2026-07-18T20:01:18-04:00">2026-07-18T20:01:18-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
 
   <script>
 /* keepass-web bundle — generated by bundle-iife */
@@ -5029,6 +5182,28 @@ function sortEntries(entries, field, direction) {
         .slice()
         .sort((a, b) => entrySortKey(a.entry, field).localeCompare(entrySortKey(b.entry, field)) * sign);
 }
+/** Unformatted, unmasked — page.ts formats/masks for display but copies this
+ * on double-click. */
+function entryColumnValue(entry, column) {
+    switch (column) {
+        case 'username':
+            return entryField(entry, 'UserName');
+        case 'password':
+            return entryField(entry, 'Password');
+        case 'url':
+            return entryField(entry, 'URL');
+        case 'notes':
+            return entryField(entry, 'Notes');
+        case 'attachments': {
+            const count = getEntryAttachments(entry).length;
+            return count > 0 ? String(count) : '';
+        }
+        case 'modified':
+            return getEntryTimes(entry).modified;
+        case 'created':
+            return getEntryTimes(entry).created;
+    }
+}
 function exportFields(entry, group) {
     return [
         ['Group', groupName(group)],
@@ -5186,6 +5361,16 @@ const app = {
     dirty: false,
     sortField: 'title',
     sortDir: 'asc',
+    entryView: 'table',
+    columnVisibility: {
+        username: true,
+        password: true,
+        url: true,
+        notes: false,
+        attachments: false,
+        modified: true,
+        created: false,
+    },
 };
 /** True once a trusted same-origin parent frame has handed this app a vault to
  * open (see the "Host integration" section). Stays false in standalone use, so
@@ -5297,8 +5482,10 @@ function showUnlock() {
         app.filename = '';
         showUpload();
     });
-    qs('[data-action="toggle-password"]').addEventListener('click', () => {
+    const togglePasswordBtn = qs('[data-action="toggle-password"]');
+    togglePasswordBtn.addEventListener('click', () => {
         passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password';
+        togglePasswordBtn.textContent = passwordInput.type === 'password' ? '👁' : '🙈';
     });
     const keyfileInput = qs('#keyfile-input');
     keyfileInput.addEventListener('change', async () => {
@@ -5534,6 +5721,8 @@ function renderEntryPanel() {
     const panelTitle = qs('#panel-title');
     const listEl = qs('#entry-list');
     listEl.innerHTML = '';
+    listEl.classList.toggle('entry-list--tile', app.entryView === 'tile');
+    listEl.classList.toggle('entry-list--table', app.entryView === 'table');
     let rows;
     if (app.searchQuery) {
         panelTitle.textContent = `"${app.searchQuery}"`;
@@ -5556,8 +5745,13 @@ function renderEntryPanel() {
         return;
     }
     rows = sortEntries(rows, app.sortField, app.sortDir);
-    for (const { entry, group } of rows) {
-        listEl.appendChild(buildEntryRow(entry, group));
+    if (app.entryView === 'table') {
+        listEl.appendChild(buildEntryTable(rows));
+    }
+    else {
+        for (const { entry, group } of rows) {
+            listEl.appendChild(buildEntryRow(entry, group));
+        }
     }
 }
 function buildEntryRow(entry, group) {
@@ -5588,6 +5782,114 @@ function buildEntryRow(entry, group) {
         showEntryDetail();
     });
     return div;
+}
+// ============================================================
+// Entry list: table view
+// ============================================================
+const ENTRY_COLUMNS = [
+    { key: 'username', label: 'Username' },
+    { key: 'password', label: 'Password' },
+    { key: 'url', label: 'URL' },
+    { key: 'notes', label: 'Notes' },
+    { key: 'attachments', label: 'Attachments' },
+    { key: 'modified', label: 'Modified' },
+    { key: 'created', label: 'Created' },
+];
+/** Display text: dates formatted, password masked. entryColumnValue itself
+ * (unmasked) is what a double-click copies — see buildEntryTable. */
+function entryColumnDisplayValue(entry, column) {
+    const raw = entryColumnValue(entry, column);
+    if (column === 'password')
+        return raw ? '••••••••' : '';
+    if (column === 'modified' || column === 'created')
+        return formatDateTime(raw);
+    return raw;
+}
+// Delays opening a row so a second click (a double-click) has time to cancel
+// it via wireCopyOnDblClick, rather than racing ahead of the copy.
+let entryRowOpenTimer = null;
+const ENTRY_ROW_OPEN_DELAY_MS = 250;
+function openEntryDetailDelayed(entry) {
+    if (entryRowOpenTimer)
+        clearTimeout(entryRowOpenTimer);
+    entryRowOpenTimer = setTimeout(() => {
+        entryRowOpenTimer = null;
+        app.currentEntry = entry;
+        showEntryDetail();
+    }, ENTRY_ROW_OPEN_DELAY_MS);
+}
+function wireCopyOnDblClick(cell, value) {
+    cell.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        if (entryRowOpenTimer) {
+            clearTimeout(entryRowOpenTimer);
+            entryRowOpenTimer = null;
+        }
+        if (value)
+            copyToClipboard(value);
+    });
+}
+function buildEntryTable(rows) {
+    const table = document.createElement('table');
+    table.className = 'entry-table';
+    const visibleColumns = ENTRY_COLUMNS.filter((column) => app.columnVisibility[column.key]);
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    const titleTh = document.createElement('th');
+    titleTh.textContent = 'Title';
+    headRow.appendChild(titleTh);
+    for (const column of visibleColumns) {
+        const th = document.createElement('th');
+        th.textContent = column.label;
+        headRow.appendChild(th);
+    }
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    for (const { entry } of rows) {
+        const tr = document.createElement('tr');
+        const titleTd = document.createElement('td');
+        titleTd.className = 'entry-table-title';
+        titleTd.textContent = `${iconEmoji(elementIconId(entry))} ${entryTitle(entry)}`;
+        wireCopyOnDblClick(titleTd, entryTitle(entry));
+        tr.appendChild(titleTd);
+        for (const column of visibleColumns) {
+            const td = document.createElement('td');
+            td.textContent = entryColumnDisplayValue(entry, column.key);
+            if (column.key === 'password')
+                td.classList.add('entry-table-protected');
+            wireCopyOnDblClick(td, entryColumnValue(entry, column.key));
+            tr.appendChild(td);
+        }
+        tr.addEventListener('click', () => openEntryDetailDelayed(entry));
+        tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    return table;
+}
+function buildColumnPickerMenu() {
+    const menu = qs('#column-picker-menu');
+    menu.innerHTML = '';
+    for (const column of ENTRY_COLUMNS) {
+        const label = document.createElement('label');
+        label.className = 'column-picker-item';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = app.columnVisibility[column.key];
+        checkbox.addEventListener('change', () => {
+            app.columnVisibility[column.key] = checkbox.checked;
+            renderEntryPanel();
+        });
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(` ${column.label}`));
+        menu.appendChild(label);
+    }
+}
+function updateViewToggleUI() {
+    qs('[data-action="view-tile"]').classList.toggle('active', app.entryView === 'tile');
+    qs('[data-action="view-table"]').classList.toggle('active', app.entryView === 'table');
+    qs('#column-picker-btn').hidden = app.entryView !== 'table';
+    qs('#column-picker-menu').hidden = true;
 }
 function wireEntryListEvents() {
     qs('#search-input').addEventListener('input', (e) => {
@@ -5622,7 +5924,12 @@ function wireEntryListEvents() {
                 searchQuery: '',
                 dirty: false,
             });
-            showUpload();
+            if (isEmbedded()) {
+                postToHost({ type: 'kw-close' });
+            }
+            else {
+                showUpload();
+            }
         });
     });
     qs('[data-action="settings"]').addEventListener('click', openSettings);
@@ -5637,6 +5944,22 @@ function wireEntryListEvents() {
     qs('[data-action="add-group"]').addEventListener('click', () => {
         openGroupDialog({ type: 'create', parent: must(app.currentGroup) }, () => showEntryList());
     });
+    qs('[data-action="view-tile"]').addEventListener('click', () => {
+        app.entryView = 'tile';
+        updateViewToggleUI();
+        renderEntryPanel();
+    });
+    qs('[data-action="view-table"]').addEventListener('click', () => {
+        app.entryView = 'table';
+        updateViewToggleUI();
+        renderEntryPanel();
+    });
+    qs('[data-action="toggle-columns"]').addEventListener('click', () => {
+        const menu = qs('#column-picker-menu');
+        menu.hidden = !menu.hidden;
+    });
+    buildColumnPickerMenu();
+    updateViewToggleUI();
 }
 // ============================================================
 // Screen: Entry Detail
@@ -5767,6 +6090,7 @@ function buildDetailField(key, value, isProtected) {
         revealBtn.addEventListener('click', () => {
             revealed = !revealed;
             valueSpan.textContent = revealed ? value : '••••••••';
+            revealBtn.textContent = revealed ? '🙈' : '👁';
         });
         actions.appendChild(revealBtn);
     }
@@ -5994,6 +6318,7 @@ function buildEditField(key, value, isProtected, removable) {
         toggle.textContent = '👁';
         toggle.addEventListener('click', () => {
             valueInput.type = valueInput.type === 'password' ? 'text' : 'password';
+            toggle.textContent = valueInput.type === 'password' ? '👁' : '🙈';
         });
         row.appendChild(toggle);
     }
@@ -6391,6 +6716,7 @@ function openMoveToDialog(title, isValidTarget, onPick) {
 //   host → app  : { type: 'kw-saved', ok, error? }         result of that persist
 //   host → app  : { type: 'kw-close-request' }             host wants to remove this iframe; may I?
 //   app  → host : { type: 'kw-close-ack' }                 yes — nothing unsaved, or the user chose to discard
+//   app  → host : { type: 'kw-close' }                     app's own ✕ was clicked; safe to remove me now
 //
 // Every inbound message is checked to come from the parent frame at this
 // page's own origin; anything else is ignored. Nothing here runs unless the
@@ -6455,6 +6781,7 @@ function notifyHostSaveResult(ok, error) {
 // Boot
 // ============================================================
 if (isEmbedded()) {
+    document.body.classList.add('embedded'); // the host page has its own footer
     window.addEventListener('message', handleHostMessage);
     // Announce readiness so the host knows it can send the vault. Handshaking
     // this way (rather than the host racing the iframe's load event) means the

@@ -449,6 +449,7 @@ body:not(.app-mode) {
   display: flex;
   flex: 1;
   overflow: hidden;
+  position: relative;
 }
 
 /* Sidebar */
@@ -570,6 +571,20 @@ body:not(.app-mode) {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  position: relative;
+}
+
+/* On desktop the menu contributes no box of its own — its children
+ * (column picker, sort select) sit directly in .panel-header-actions,
+ * same as before this was introduced. Mobile overrides this to turn
+ * it into a dropdown; see the mobile layout section below. */
+.panel-menu {
+  display: contents;
+}
+
+.sidebar-toggle-btn,
+.panel-menu-btn {
+  display: none;
 }
 
 .sort-select {
@@ -754,6 +769,95 @@ body:not(.app-mode) {
 }
 
 /* ============================================================
+   Mobile layout (Entry List screen)
+   Below ~700px there isn't room to show the sidebar, full header,
+   and every panel control inline, so: the sidebar becomes a
+   slide-in drawer, the header wraps the search field onto its own
+   row, and the sort/column controls collapse into a "⋯" menu.
+   ============================================================ */
+
+@media (max-width: 700px) {
+  .app-header {
+    height: auto;
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .sidebar-toggle-btn {
+    display: inline-flex;
+    order: 0;
+  }
+
+  .wordmark {
+    order: 1;
+  }
+
+  .header-actions {
+    order: 2;
+    margin-left: auto;
+  }
+
+  .search-wrap {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .sidebar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 20;
+    width: min(80vw, 260px);
+    background: var(--surface);
+    box-shadow: 2px 0 16px rgba(0, 0, 0, 0.18);
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+  }
+
+  .sidebar.sidebar-open {
+    transform: translateX(0);
+  }
+
+  .sidebar-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(14, 23, 20, 0.45);
+    z-index: 15;
+  }
+
+  .panel-menu-btn {
+    display: inline-flex;
+  }
+
+  .panel-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    right: 1rem;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    padding: 0.5rem;
+    z-index: 10;
+  }
+
+  .panel-menu.panel-menu-open {
+    display: flex;
+  }
+
+  #column-picker-btn,
+  .sort-select {
+    width: 100%;
+  }
+}
+
+/* ============================================================
    Screen: Entry Detail
    ============================================================ */
 
@@ -785,6 +889,20 @@ body:not(.app-mode) .screen-detail {
 .detail-header-actions {
   display: flex;
   gap: 0.5rem;
+}
+
+/* Edit / Move to… / Print / Trash / Delete don't all fit on one line next to
+ * "← Entries" on a phone-width screen — wrap instead of forcing the screen
+ * wider than the viewport (and a horizontal scrollbar with it). */
+@media (max-width: 700px) {
+  .detail-header {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+
+  .detail-header-actions {
+    flex-wrap: wrap;
+  }
 }
 
 .detail-body {
@@ -900,6 +1018,15 @@ body:not(.app-mode) .screen-edit {
   flex-shrink: 0;
 }
 
+/* Same fix as .detail-header: don't let a long entry title push Cancel/Save
+ * wider than a phone-width viewport. */
+@media (max-width: 700px) {
+  .edit-header {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+}
+
 .edit-title {
   font-size: 1rem;
   font-weight: 600;
@@ -953,11 +1080,16 @@ body:not(.app-mode) .screen-edit {
 
 .edit-value {
   flex: 1;
+  /* min-width: 0 alone doesn't stop this <input> from forcing its row (and
+   * everything above it, up to the layout viewport) wider than the screen on
+   * a narrow phone — Chromium still counts its intrinsic size toward the
+   * row's automatic minimum. width: 0 makes the zero-basis stick. */
+  width: 0;
+  min-width: 0;
   background: none;
   border: none;
   color: var(--text);
   font-size: 0.9rem;
-  min-width: 0;
 }
 
 .edit-value:focus {
@@ -1094,7 +1226,10 @@ input.attachment-name:focus {
   border-radius: 10px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
   color: var(--text);
-  min-width: 340px;
+  /* 340px was a hard floor: on any viewport narrower than ~378px (340 / 0.9),
+   * it wins over width: 90vw and pushes the dialog wider than the screen.
+   * min() lets it shrink with the viewport instead of forcing overflow. */
+  min-width: min(340px, 92vw);
   max-width: 480px;
   width: 90vw;
   padding: 0;
@@ -1412,6 +1547,7 @@ body.embedded footer {
   <template id="tpl-entry-list">
     <div class="screen screen-app">
       <header class="app-header">
+        <button type="button" class="icon-btn sidebar-toggle-btn" data-action="toggle-sidebar" title="Groups" aria-label="Show groups">☰</button>
         <span class="wordmark"><span class="mark"></span>KeePass Web</span>
         <div class="search-wrap">
           <input type="search" id="search-input" class="search-input" placeholder="Search all entries…" autocomplete="off">
@@ -1424,7 +1560,8 @@ body.embedded footer {
         </div>
       </header>
       <div class="app-body">
-        <aside class="sidebar">
+        <div id="sidebar-backdrop" class="sidebar-backdrop" hidden></div>
+        <aside id="sidebar" class="sidebar">
           <div class="sidebar-header">
             <span class="sidebar-label">Groups</span>
             <button type="button" class="icon-btn" data-action="add-group" title="New group">+</button>
@@ -1439,18 +1576,21 @@ body.embedded footer {
                 <button type="button" class="view-toggle-btn" data-action="view-tile" title="Tile view">▦</button>
                 <button type="button" class="view-toggle-btn" data-action="view-table" title="Table view">▤</button>
               </div>
-              <div class="column-picker">
-                <button type="button" class="btn btn-secondary" id="column-picker-btn" data-action="toggle-columns" hidden>Columns</button>
-                <div id="column-picker-menu" class="column-picker-menu" hidden></div>
+              <button type="button" class="icon-btn panel-menu-btn" data-action="toggle-panel-menu" title="More options" aria-label="More options">⋯</button>
+              <div id="panel-menu" class="panel-menu">
+                <div class="column-picker">
+                  <button type="button" class="btn btn-secondary" id="column-picker-btn" data-action="toggle-columns" hidden>Columns</button>
+                  <div id="column-picker-menu" class="column-picker-menu" hidden></div>
+                </div>
+                <select id="sort-select" class="sort-select" title="Sort entries">
+                  <option value="title:asc">Title (A–Z)</option>
+                  <option value="title:desc">Title (Z–A)</option>
+                  <option value="username:asc">Username (A–Z)</option>
+                  <option value="username:desc">Username (Z–A)</option>
+                  <option value="modified:desc">Modified (newest)</option>
+                  <option value="modified:asc">Modified (oldest)</option>
+                </select>
               </div>
-              <select id="sort-select" class="sort-select" title="Sort entries">
-                <option value="title:asc">Title (A–Z)</option>
-                <option value="title:desc">Title (Z–A)</option>
-                <option value="username:asc">Username (A–Z)</option>
-                <option value="username:desc">Username (Z–A)</option>
-                <option value="modified:desc">Modified (newest)</option>
-                <option value="modified:asc">Modified (oldest)</option>
-              </select>
               <button type="button" class="icon-btn" data-action="add-entry" title="New entry">+</button>
             </div>
           </div>
@@ -1596,7 +1736,7 @@ body.embedded footer {
       <p class="save-status" data-role="save-status" hidden></p>
     </div>
     <div class="dialog-footer">
-      <button type="button" class="btn btn-secondary" data-action="close">Later</button>
+      <button type="button" class="btn btn-secondary" data-action="close" data-role="save-later">Later</button>
       <button type="button" class="btn btn-primary" data-action="download">Download</button>
       <button type="button" class="btn btn-primary" data-action="save-host" hidden>Save to Drive</button>
     </div>
@@ -1715,7 +1855,7 @@ body.embedded footer {
   <p class="sponsor-cta">
     Like KeePass Web? <a href="https://github.com/sponsors/keepass-web" target="_blank" rel="noopener noreferrer">&hearts; Sponsor</a> its development.
   </p>
-  <footer>MIT licensed &middot; <a href="https://github.com/keepass-web">github.com/keepass-web</a> &middot; <a href="https://github.com/keepass-web/source-application/tree/v0.6.1">v0.6.1</a> committed on <time id="commit-date" datetime="2026-07-18T20:01:18-04:00">2026-07-18T20:01:18-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+  <footer>MIT licensed &middot; <a href="https://github.com/keepass-web">github.com/keepass-web</a> &middot; <a href="https://github.com/keepass-web/source-application/tree/v0.7.0">v0.7.0</a> committed on <time id="commit-date" datetime="2026-07-20T09:28:42-04:00">2026-07-20T09:28:42-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
 
   <script>
 /* keepass-web bundle — generated by bundle-iife */
@@ -3360,7 +3500,17 @@ async function aesCbcEncrypt(key, iv, data) {
 async function aesCbcDecrypt(key, iv, data) {
     const subtle = kx_getCrypto().subtle;
     const cryptoKey = await subtle.importKey('raw', kx_buf(key), 'AES-CBC', false, ['decrypt']);
-    return new Uint8Array(await subtle.decrypt({ name: 'AES-CBC', iv: kx_buf(iv) }, cryptoKey, kx_buf(data)));
+    try {
+        return new Uint8Array(await subtle.decrypt({ name: 'AES-CBC', iv: kx_buf(iv) }, cryptoKey, kx_buf(data)));
+    }
+    catch {
+        // WebCrypto throws a DOMException with an empty message on a PKCS#7
+        // padding failure (deliberately, to avoid a padding-oracle side
+        // channel) — and a wrong key almost always produces invalid padding, so
+        // this is the ordinary "wrong password" case for KDBX 3.1 files, not a
+        // rare corruption edge case. Give callers something to show the user.
+        throw new Error('AES-CBC decryption failed (wrong credentials or corrupt file)');
+    }
 }
 /**
  * AES-KDF transformation (the KDBX 3.1 / legacy key derivation function).
@@ -5361,7 +5511,9 @@ const app = {
     dirty: false,
     sortField: 'title',
     sortDir: 'asc',
-    entryView: 'table',
+    // Tile view reads better than a dense table on a narrow phone screen;
+    // this only sets the initial default, the view toggle still overrides it.
+    entryView: window.innerWidth <= 700 ? 'tile' : 'table',
     columnVisibility: {
         username: true,
         password: true,
@@ -5593,6 +5745,12 @@ function showEntryList() {
     renderEntryPanel();
     wireEntryListEvents();
 }
+/** No-op outside the mobile drawer layout, where the sidebar toggle and
+ * backdrop are invisible/unreachable — cheap to call unconditionally. */
+function setSidebarOpen(open) {
+    qs('#sidebar').classList.toggle('sidebar-open', open);
+    qs('#sidebar-backdrop').hidden = !open;
+}
 function renderGroupTree() {
     const container = qs('#group-tree');
     container.innerHTML = '';
@@ -5617,6 +5775,7 @@ function buildGroupNode(group, isRoot) {
             searchInput.value = '';
         renderGroupTree();
         renderEntryPanel();
+        setSidebarOpen(false);
     });
     row.appendChild(btn);
     // The root group represents the database itself — renamed via database
@@ -5890,6 +6049,7 @@ function updateViewToggleUI() {
     qs('[data-action="view-table"]').classList.toggle('active', app.entryView === 'table');
     qs('#column-picker-btn').hidden = app.entryView !== 'table';
     qs('#column-picker-menu').hidden = true;
+    qs('#panel-menu').classList.remove('panel-menu-open');
 }
 function wireEntryListEvents() {
     qs('#search-input').addEventListener('input', (e) => {
@@ -5957,6 +6117,13 @@ function wireEntryListEvents() {
     qs('[data-action="toggle-columns"]').addEventListener('click', () => {
         const menu = qs('#column-picker-menu');
         menu.hidden = !menu.hidden;
+    });
+    qs('[data-action="toggle-sidebar"]').addEventListener('click', () => {
+        setSidebarOpen(!qs('#sidebar').classList.contains('sidebar-open'));
+    });
+    qs('#sidebar-backdrop').addEventListener('click', () => setSidebarOpen(false));
+    qs('[data-action="toggle-panel-menu"]').addEventListener('click', () => {
+        qs('#panel-menu').classList.toggle('panel-menu-open');
     });
     buildColumnPickerMenu();
     updateViewToggleUI();
@@ -6477,6 +6644,7 @@ function openSaveDialog() {
     const status = must(dlg.querySelector('[data-role="save-status"]'));
     const downloadBtn = must(dlg.querySelector('[data-action="download"]'));
     const hostBtn = must(dlg.querySelector('[data-action="save-host"]'));
+    const laterBtn = must(dlg.querySelector('[data-role="save-later"]'));
     status.hidden = true;
     status.textContent = '';
     status.className = 'save-status';
@@ -6484,6 +6652,7 @@ function openSaveDialog() {
     hostMsg.hidden = !hostSession;
     downloadBtn.hidden = hostSession;
     hostBtn.hidden = !hostSession;
+    laterBtn.textContent = 'Later';
     downloadBtn.onclick = async () => {
         await downloadDatabase();
         dlg.close();
@@ -6771,6 +6940,12 @@ function notifyHostSaveResult(ok, error) {
         app.dirty = false;
         status.textContent = 'Saved to Google Drive.';
         status.classList.add('ok');
+        // Retrying no longer makes sense once the save has succeeded — collapse
+        // the footer to a single acknowledgement instead of leaving stale
+        // "Later" / "Save to Drive" actions from before the save was requested.
+        const dlg = byId('dlg-save');
+        must(dlg.querySelector('[data-role="save-later"]')).textContent = 'Close';
+        button.hidden = true;
     }
     else {
         status.textContent = error ? `Save failed: ${error}` : 'Save failed.';

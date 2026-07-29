@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KeePass Web — Local file</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 7V5a3.5 3.5 0 0 1 7 0v2' fill='none' stroke='%230e7c5a' stroke-width='2' stroke-linecap='round'/%3E%3Crect x='2' y='7' width='12' height='8' rx='2' fill='%230e7c5a'/%3E%3C/svg%3E">
+  <style>
+/* ============================================================
+   Reset and design tokens (shared palette with 0x67 / cloud-google-drive)
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Elements with an explicit `display` (e.g. .btn's `display: inline-flex`)
+ * otherwise win the cascade over the UA stylesheet's `[hidden] { display:
+ * none }`, since both are same-specificity author-vs-UA rules and author
+ * always wins — so JS toggling `el.hidden` silently stops hiding anything
+ * once a class gives that element its own `display`. Force it back. */
+[hidden] {
+  /* biome-ignore lint/complexity/noImportantStyles: this rule's entire job is to out-rank any other display declaration, by design */
+  display: none !important;
+}
+
+:root {
+  --bg: #eef2ef;
+  --surface: #ffffff;
+  --surface-2: #eaefec;
+  --border: #d8e2dc;
+  --text: #0e1714;
+  --muted: #5a6a62;
+  --accent: #0e7c5a;
+  --accent-dim: #eaf1ee;
+  --danger: #9a2b2b;
+  --danger-dim: #f2dada;
+  --success: #0e7c5a;
+  --success-dim: #eaf1ee;
+}
+
+/* `height`, not `min-height`: the embedded-app screen's `.app-frame` iframe
+ * depends on `.screen-host { height: 100% }` resolving all the way up this
+ * chain — see cloud-google-drive/page.css, which this is mirrored from. */
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-monospace, monospace;
+  font-size: 15px;
+  height: 100vh;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+}
+
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+}
+
+.mark {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  margin-right: 0.5rem;
+  flex-shrink: 0;
+}
+
+.mark::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 3px;
+  width: 12px;
+  height: 10px;
+  border: 2.5px solid var(--accent);
+  border-bottom: none;
+  border-radius: 7px 7px 0 0;
+}
+
+.mark::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 18px;
+  height: 11px;
+  background: var(--accent);
+  border-radius: 3px;
+}
+
+#root {
+  flex: 1;
+  min-height: 0;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.sponsor-cta {
+  flex-shrink: 0;
+  padding: 0.4rem 1rem 0;
+  font-size: 0.85rem;
+  color: var(--text);
+  text-align: center;
+}
+
+footer {
+  flex-shrink: 0;
+  padding: 0.4rem 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+footer a {
+  color: var(--accent);
+}
+
+.sponsor-cta a {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.description {
+  color: var(--muted);
+}
+
+/* ============================================================
+   Buttons and shared bits
+   ============================================================ */
+
+.btn {
+  display: inline-block;
+  padding: 0.55rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  cursor: pointer;
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.btn-secondary {
+  background: var(--surface-2);
+}
+
+.btn:hover {
+  filter: brightness(1.08);
+}
+
+.back-link {
+  display: inline-block;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: var(--text);
+}
+
+/* ============================================================
+   Screen: Choose a file (local drop zone)
+   ============================================================ */
+
+.screen-chooser {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  text-align: center;
+}
+
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  padding: 3rem 2rem;
+  width: 100%;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.drop-zone.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.drop-zone-icon {
+  font-size: 2.5rem;
+}
+
+.drop-zone-label {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.result {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.result-ok {
+  border-color: var(--success);
+  background: var(--success-dim);
+}
+
+.result-warn {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.result-error {
+  border-color: var(--danger);
+  background: var(--danger-dim);
+}
+
+/* ============================================================
+   Screen: Embedded app
+   ============================================================ */
+
+.screen-host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.host-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.host-filename {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.app-frame {
+  flex: 1;
+  width: 100%;
+  border: none;
+}
+
+</style>
+</head>
+<body>
+  <!-- Live screen container -->
+  <div id="root"></div>
+
+  <!-- ============================================================
+       Screen: Choose a file
+       ============================================================ -->
+  <template id="tpl-chooser">
+    <div class="screen screen-chooser">
+      <div class="wordmark"><span class="mark"></span>KeePass Web</div>
+      <h1>Open a database from this computer</h1>
+      <p class="description">
+        Drop a database file below. It's read entirely in this browser tab —
+        nothing is uploaded anywhere.
+      </p>
+
+      <div id="drop-zone" class="drop-zone">
+        <div class="drop-zone-icon">🔑</div>
+        <p class="drop-zone-label">Drop a database file here</p>
+        <label class="btn btn-primary">
+          Choose file
+          <input type="file" id="file-input" hidden>
+        </label>
+      </div>
+
+      <div id="result" class="result" hidden>
+        <p id="result-message"></p>
+        <button type="button" id="choose-another" class="btn btn-secondary">Choose another file</button>
+      </div>
+
+      <a class="back-link" href="index.html">← Back to KeePass Web</a>
+    </div>
+  </template>
+
+  <!-- ============================================================
+       Screen: Embedded implementation app
+       ============================================================ -->
+  <template id="tpl-host">
+    <div class="screen screen-host">
+      <header class="host-header">
+        <button type="button" class="back-link" data-action="back-to-chooser">← Choose another file</button>
+        <span id="host-filename" class="host-filename"></span>
+      </header>
+      <iframe id="app-frame" class="app-frame" title="KeePass Web app"></iframe>
+    </div>
+  </template>
+
+  <p class="sponsor-cta">
+    Like KeePass Web? <a href="https://github.com/sponsors/keepass-web" target="_blank" rel="noopener noreferrer">&hearts; Sponsor</a> its development.
+  </p>
+  <footer>MIT licensed &middot; <a href="https://github.com/keepass-web">github.com/keepass-web</a> &middot; <a href="https://github.com/keepass-web/source-application/tree/v0.8.0">v0.8.0</a> committed on <time id="commit-date" datetime="2026-07-28T21:01:53-04:00">2026-07-28T21:01:53-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+
+  <script>
+/* keepass-web bundle — generated by bundle-iife */
+(function() {
+
+/* === router/src/index.js === */
+/**
+ * `router` — identifies a KDBX-family file from its first 8 bytes and names
+ * the implementation (a page like `0x67.html`) that reads it.
+ *
+ * This package is shared, unmodified, across every chooser page (local file,
+ * Google Drive, and future sources): the decision "which implementation
+ * understands these bytes" doesn't depend on where the bytes came from, so
+ * it lives once here rather than being re-decided per chooser.
+ *
+ * Deliberately does not import `kdbx`: its whole job is routing based on 8
+ * bytes, and it stays independently auditable by owning that logic outright
+ * rather than pulling in the full parser to do it.
+ */
+/** First 32-bit signature shared by every KDBX-family file (little-endian on disk). */
+const SIGNATURE_1 = 0x9aa2d903;
+/**
+ * Top three bytes shared by every KDBX-family secondary signature; the low
+ * byte identifies the sub-format (see KNOWN_SECONDARY_SIGNATURES).
+ */
+const SIGNATURE_2_PREFIX = 0xb54bfb00;
+/**
+ * Sub-formats identified by the secondary signature's low byte. `implementation`
+ * is present only for a format this app actually has a reader for, and names
+ * the page a chooser should embed to open it — not a page to navigate to.
+ *
+ * A Map, not a plain object, specifically so the keys can stay hexadecimal
+ * literals (matching how the format's own spec refers to them) without
+ * tripping Biome's useSimpleNumberKeys rule, which only applies to object
+ * literal keys.
+ */
+const KNOWN_SECONDARY_SIGNATURES = new Map([
+    [0x65, { label: 'KeePass 1.x (.kdb)' }],
+    [0x66, { label: 'KDBX pre-release' }],
+    [0x67, { label: 'KDBX 3.1 / 4.x', implementation: '0x67.html' }],
+]);
+/**
+ * Identify a KDBX-family file from its first 8 bytes alone: the two
+ * signature UInt32s. Reads nothing else — the router's whole job is
+ * routing, not parsing.
+ */
+function identifyFormat(header) {
+    if (header.length < 8) {
+        return { kind: 'invalid' };
+    }
+    const view = new DataView(header.buffer, header.byteOffset, header.byteLength);
+    if (view.getUint32(0, true) !== SIGNATURE_1) {
+        return { kind: 'invalid' };
+    }
+    const signature2 = view.getUint32(4, true);
+    if ((signature2 & 0xffffff00) >>> 0 !== SIGNATURE_2_PREFIX) {
+        return { kind: 'invalid' };
+    }
+    const secondaryByte = signature2 & 0xff;
+    const known = KNOWN_SECONDARY_SIGNATURES.get(secondaryByte);
+    if (known) {
+        return { kind: 'recognized', secondaryByte, ...known };
+    }
+    const hex = secondaryByte.toString(16).padStart(2, '0');
+    return {
+        kind: 'recognized',
+        secondaryByte,
+        label: `unknown KDBX variant (secondary signature 0x${hex})`,
+    };
+}
+
+
+/* === embed-protocol/src/index.js === */
+/**
+ * `embed-protocol` — the same-origin postMessage contract between a
+ * keepass-web implementation (currently only `0x67`) and whatever host page
+ * embeds it in an iframe (the local-file chooser, the Google Drive
+ * connector, and future sources).
+ *
+ * Message shapes and guards used to be hand-written twice: once inline in
+ * 0x67/page.ts (the app side) and once in each host's own logic.ts (the host
+ * side). Nothing but manual care kept those two hand-written copies in sync.
+ * Centralizing both the guards *and* the builders here means the two ends of
+ * the protocol are provably using the same wire format, not just similarly
+ * shaped code.
+ *
+ * Six message types, each read by exactly one side and built by the other:
+ *   app  → host : kw-ready          (built by the app, read by the host)
+ *   host → app  : kw-open           (built by the host, read by the app)
+ *   app  → host : kw-save           (built by the app, read by the host)
+ *   host → app  : kw-saved          (built by the host, read by the app)
+ *   host → app  : kw-close-request  (built by the host, read by the app)
+ *   app  → host : kw-close-ack      (built by the app, read by the host)
+ *   app  → host : kw-close          (built by the app, read by the host)
+ */
+function hasType(data, type) {
+    return (data !== null && typeof data === 'object' && data.type === type);
+}
+function isFileMessage(data, type) {
+    if (!hasType(data, type))
+        return false;
+    const rec = data;
+    return typeof rec.filename === 'string' && rec.bytes instanceof ArrayBuffer;
+}
+// --- Guards ------------------------------------------------------------
+function isReadyMessage(data) {
+    return hasType(data, 'kw-ready');
+}
+function isOpenMessage(data) {
+    return isFileMessage(data, 'kw-open');
+}
+function isSaveMessage(data) {
+    return isFileMessage(data, 'kw-save');
+}
+function isSavedMessage(data) {
+    if (!hasType(data, 'kw-saved'))
+        return false;
+    const rec = data;
+    if (typeof rec.ok !== 'boolean')
+        return false;
+    return rec.error === undefined || typeof rec.error === 'string';
+}
+function isCloseRequestMessage(data) {
+    return hasType(data, 'kw-close-request');
+}
+function isCloseAckMessage(data) {
+    return hasType(data, 'kw-close-ack');
+}
+function isCloseMessage(data) {
+    return hasType(data, 'kw-close');
+}
+// --- Builders ------------------------------------------------------------
+function readyMessage() {
+    return { type: 'kw-ready' };
+}
+function openMessage(filename, bytes) {
+    return { type: 'kw-open', filename, bytes };
+}
+function saveMessage(filename, bytes) {
+    return { type: 'kw-save', filename, bytes };
+}
+function savedMessage(ok, error) {
+    return error === undefined ? { type: 'kw-saved', ok } : { type: 'kw-saved', ok, error };
+}
+function closeRequestMessage() {
+    return { type: 'kw-close-request' };
+}
+function closeAckMessage() {
+    return { type: 'kw-close-ack' };
+}
+function closeMessage() {
+    return { type: 'kw-close' };
+}
+
+
+/* === ../pages/local/logic.js === */
+/**
+ * Pure logic for the local-file chooser: just the must()-style "fail loudly
+ * on a missing DOM node" guard page.ts needs. Format detection lives in
+ * packages/router (shared with every chooser), and the embed protocol lives
+ * in packages/embed-protocol (shared with every host and with 0x67) — this
+ * page has no pure logic of its own beyond the DOM-lookup guard, which is
+ * kept here rather than in page.ts for the same reason every other
+ * connector's is: so its throw branch is exercisable directly from a logic
+ * test.
+ *
+ * This is a real ES module, exactly like router's and cloud-google-drive's
+ * logic.ts. For the browser build, bundle-iife strips the `export` keyword
+ * below and hoists this name onto globalThis — see local/bundle-iife.json.
+ * page.ts consumes it as a global, not via import — see globals.d.ts.
+ */
+function must(value) {
+    if (value === null || value === undefined) {
+        throw new Error('expected element not found');
+    }
+    return value;
+}
+
+
+/* === ../pages/local/page.js === */
+// ============================================================
+// Local file connector
+// ============================================================
+//
+// Opens a KeePass database from this computer: the user drops or chooses a
+// file, its bytes are read once, right here in this tab, and packages/router
+// decides which implementation understands them. On a match, that
+// implementation (currently only 0x67) is embedded in an iframe and handed
+// the bytes over the same postMessage protocol the Google Drive connector
+// uses (see packages/embed-protocol) — no second file picker, no re-reading
+// the file, and nothing ever leaves the browser.
+//
+// The only way this differs from the Drive connector is what "save" means:
+// Drive persists back to the Drive API, whereas here there is nowhere to
+// persist to — save means downloading the updated bytes, exactly like 0x67's
+// own standalone save flow already does. That is the one piece of this
+// connector that is genuinely local-specific; everything else (the iframe
+// lifecycle, the message guards, the close handshake) is shared with Drive.
+//
+// (must is declared in globals.d.ts and supplied at runtime by logic.ts;
+//  identifyFormat comes from packages/router and the kw-* message helpers
+//  from packages/embed-protocol — bundle-iife concatenates all of them
+//  alongside this file. See globals.d.ts.)
+const APP_ORIGIN = window.location.origin;
+// --- In-memory state (never persisted) -------------------------------------
+let pendingOpen = null;
+// Set while waiting for the embedded app to ack a kw-close-request, so
+// handleFrameMessage knows what to run once it's safe to tear the iframe down.
+let pendingClose = null;
+// ============================================================
+// DOM helpers
+// ============================================================
+function byId(id) {
+    return must(document.getElementById(id));
+}
+function cloneTemplate(id) {
+    return byId(id).content.cloneNode(true);
+}
+function setRoot(fragment) {
+    const root = byId('root');
+    root.innerHTML = '';
+    root.appendChild(fragment);
+}
+function qs(selector) {
+    return must(byId('root').querySelector(selector));
+}
+// ============================================================
+// Screen: Choose a file
+// ============================================================
+function showChooser() {
+    setRoot(cloneTemplate('tpl-chooser'));
+    const dropZone = qs('#drop-zone');
+    const fileInput = qs('#file-input');
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('drag-over');
+    });
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        const f = e.dataTransfer?.files[0];
+        if (f)
+            void handleFile(f);
+    });
+    fileInput.addEventListener('change', () => {
+        const f = fileInput.files?.[0];
+        if (f)
+            void handleFile(f);
+    });
+    qs('#choose-another').addEventListener('click', resetChooser);
+}
+function resetChooser() {
+    qs('#result').hidden = true;
+    const dropZone = qs('#drop-zone');
+    dropZone.hidden = false;
+    dropZone.classList.remove('drag-over');
+    qs('#file-input').value = '';
+}
+function showMessage(message, kind) {
+    qs('#drop-zone').hidden = true;
+    const resultEl = qs('#result');
+    resultEl.hidden = false;
+    resultEl.className = `result result-${kind}`;
+    qs('#result-message').textContent = message;
+}
+/** Read the whole file once: identifyFormat only needs the first 8 bytes, but
+ * opening it needs the rest anyway, so there is no separate sniff-then-reread
+ * step the way a link-based handoff would require. */
+async function handleFile(file) {
+    const bytes = await file.arrayBuffer();
+    const header = new Uint8Array(bytes, 0, Math.min(8, bytes.byteLength));
+    const result = identifyFormat(header);
+    if (result.kind === 'invalid') {
+        showMessage("This doesn't look like a KDBX file — no recognized signature was found.", 'error');
+        return;
+    }
+    if (!result.implementation) {
+        showMessage(`Recognized as ${result.label}, which isn't supported yet.`, 'warn');
+        return;
+    }
+    showHost(file.name, bytes, result.implementation);
+}
+// ============================================================
+// Screen: Embedded implementation app
+// ============================================================
+function showHost(filename, bytes, implementation) {
+    pendingOpen = { filename, bytes };
+    setRoot(cloneTemplate('tpl-host'));
+    qs('#host-filename').textContent = filename;
+    qs('[data-action="back-to-chooser"]').addEventListener('click', () => {
+        requestCloseIframe(tearDownIframe);
+    });
+    window.addEventListener('message', handleFrameMessage);
+    // Setting src last means the iframe's script (and its kw-ready handshake)
+    // can't fire before the listener above is attached.
+    qs('#app-frame').src = implementation;
+}
+function tearDownIframe() {
+    window.removeEventListener('message', handleFrameMessage);
+    pendingOpen = null;
+    showChooser();
+}
+/** Ask the embedded app whether it's safe to remove the iframe — it may have
+ * unsaved edits, in which case it shows its own discard-confirmation dialog
+ * and only acks if the user agrees. */
+function requestCloseIframe(afterClose) {
+    pendingClose = afterClose;
+    must(qs('#app-frame').contentWindow).postMessage(closeRequestMessage(), APP_ORIGIN);
+}
+function handleFrameMessage(event) {
+    if (event.origin !== APP_ORIGIN)
+        return;
+    const iframe = document.getElementById('app-frame');
+    if (iframe === null || event.source === null || event.source !== iframe.contentWindow)
+        return;
+    const source = event.source;
+    if (isReadyMessage(event.data)) {
+        const open = must(pendingOpen);
+        source.postMessage(openMessage(open.filename, open.bytes), APP_ORIGIN);
+    }
+    else if (isSaveMessage(event.data)) {
+        downloadAndAck(event.data.filename, event.data.bytes, source);
+    }
+    else if (isCloseAckMessage(event.data)) {
+        const afterClose = pendingClose;
+        pendingClose = null;
+        afterClose?.();
+    }
+    else if (isCloseMessage(event.data)) {
+        // App-initiated (its own ✕ button) — no request/ack round-trip needed.
+        tearDownIframe();
+    }
+}
+/** Local "save" is a download: there is no remembered location to write back
+ * to, so the closest equivalent to Drive's write-back is the same
+ * Blob-download 0x67 already does standalone. This always succeeds unless the
+ * browser itself refuses the download, so — unlike Drive's saveToDrive —
+ * there is no error path to report back. */
+function downloadAndAck(filename, bytes, source) {
+    const blob = new Blob([bytes]);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    source.postMessage(savedMessage(true), APP_ORIGIN);
+}
+// ============================================================
+// Boot
+// ============================================================
+showChooser();
+
+
+/* --- public exports --- */
+if (typeof identifyFormat !== 'undefined') globalThis.identifyFormat = identifyFormat;
+if (typeof isReadyMessage !== 'undefined') globalThis.isReadyMessage = isReadyMessage;
+if (typeof isSaveMessage !== 'undefined') globalThis.isSaveMessage = isSaveMessage;
+if (typeof isCloseAckMessage !== 'undefined') globalThis.isCloseAckMessage = isCloseAckMessage;
+if (typeof isCloseMessage !== 'undefined') globalThis.isCloseMessage = isCloseMessage;
+if (typeof openMessage !== 'undefined') globalThis.openMessage = openMessage;
+if (typeof savedMessage !== 'undefined') globalThis.savedMessage = savedMessage;
+if (typeof closeRequestMessage !== 'undefined') globalThis.closeRequestMessage = closeRequestMessage;
+if (typeof must !== 'undefined') globalThis.must = must;
+})();
+</script>
+</body>
+</html>

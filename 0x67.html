@@ -7,6 +7,46 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 7V5a3.5 3.5 0 0 1 7 0v2' fill='none' stroke='%230e7c5a' stroke-width='2' stroke-linecap='round'/%3E%3Crect x='2' y='7' width='12' height='8' rx='2' fill='%230e7c5a'/%3E%3C/svg%3E">
   <style>
 /* ============================================================
+   Shared footer partial (pages/shared/footer.html)
+   ============================================================ */
+
+footer {
+  flex-shrink: 0;
+  padding: 0.4rem 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+footer a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+footer a:hover {
+  text-decoration: underline;
+}
+
+.footer-links {
+  flex-shrink: 0;
+  padding: 0.4rem 1rem 0;
+  font-size: 0.85rem;
+  color: var(--text);
+  text-align: center;
+}
+
+.footer-links a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.footer-links a:hover {
+  text-decoration: underline;
+}
+
+/* ============================================================
    Reset and design tokens
    ============================================================ */
 
@@ -965,13 +1005,19 @@ body:not(.app-mode) .screen-detail {
   color: var(--muted);
 }
 
-.detail-value-wrap {
+.detail-value-wrap,
+.edit-field,
+.attachment-row,
+.history-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
+}
+
+.detail-value-wrap {
   padding: 0.5rem 0.75rem;
 }
 
@@ -1047,13 +1093,9 @@ body:not(.app-mode) .screen-edit {
   gap: 0.5rem;
 }
 
-.edit-field {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+.edit-field,
+.attachment-row,
+.history-row {
   padding: 0.4rem 0.5rem;
 }
 
@@ -1119,16 +1161,6 @@ body:not(.app-mode) .screen-edit {
   gap: 0.4rem;
 }
 
-.attachment-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.4rem 0.5rem;
-}
-
 .attachment-name {
   flex: 1;
   min-width: 0;
@@ -1156,16 +1188,6 @@ input.attachment-name:focus {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-}
-
-.history-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.4rem 0.5rem;
 }
 
 .history-label {
@@ -1402,44 +1424,8 @@ input.attachment-name:focus {
    layout's justify-content:center)
    ============================================================ */
 
-.sponsor-cta {
-  flex-shrink: 0;
-  padding: 0.4rem 1rem 0;
-  font-size: 0.8rem;
-  color: var(--text);
-  text-align: center;
-}
-
-footer {
-  flex-shrink: 0;
-  padding: 0.4rem 1rem;
-  border-top: 1px solid var(--border);
-  font-size: 0.75rem;
-  color: var(--muted);
-  text-align: center;
-}
-
-footer a {
-  color: var(--accent);
-  text-decoration: none;
-}
-
-.sponsor-cta a {
-  color: var(--accent);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-footer a:hover {
-  text-decoration: underline;
-}
-
-.sponsor-cta a:hover {
-  text-decoration: underline;
-}
-
 /* Embedded: the host page has its own footer, so hide this copy. */
-body.embedded .sponsor-cta,
+body.embedded .footer-links,
 body.embedded footer {
   display: none;
 }
@@ -1852,38 +1838,25 @@ body.embedded footer {
     </div>
   </dialog>
 
-  <p class="sponsor-cta">
-    Like KeePass Web? <a href="https://github.com/sponsors/keepass-web" target="_blank" rel="noopener noreferrer">&hearts; Sponsor</a> its development.
-  </p>
-  <footer>MIT licensed &middot; <a href="https://github.com/keepass-web">github.com/keepass-web</a> &middot; <a href="https://github.com/keepass-web/source-application/tree/v0.8.0">v0.8.0</a> committed on <time id="commit-date" datetime="2026-07-28T21:01:53-04:00">2026-07-28T21:01:53-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+  <p class="footer-links">
+  <a href="https://github.com/sponsors/keepass-web" target="_blank" rel="noopener noreferrer">&hearts; Sponsor</a>
+  &middot; <a href="https://github.com/keepass-web/source-application/blob/main/LICENSE">MIT Licensed</a>
+  &middot; <a href="https://github.com/keepass-web/.github/blob/main/profile/FAQ.md">FAQ</a>
+  &middot; <a href="https://github.com/keepass-web/source-application">Source</a>
+</p>
+<footer><a href="https://github.com/keepass-web/source-application/tree/v0.9.0">v0.9.0</a> committed on <time id="commit-date" datetime="2026-08-08T10:02:38-04:00">2026-08-08T10:02:38-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+
 
   <script>
 /* keepass-web bundle — generated by bundle-iife */
 (function() {
 
 /* === embed-protocol/src/index.js === */
-/**
- * `embed-protocol` — the same-origin postMessage contract between a
- * keepass-web implementation (currently only `0x67`) and whatever host page
- * embeds it in an iframe (the local-file chooser, the Google Drive
- * connector, and future sources).
- *
- * Message shapes and guards used to be hand-written twice: once inline in
- * 0x67/page.ts (the app side) and once in each host's own logic.ts (the host
- * side). Nothing but manual care kept those two hand-written copies in sync.
- * Centralizing both the guards *and* the builders here means the two ends of
- * the protocol are provably using the same wire format, not just similarly
- * shaped code.
- *
- * Six message types, each read by exactly one side and built by the other:
- *   app  → host : kw-ready          (built by the app, read by the host)
- *   host → app  : kw-open           (built by the host, read by the app)
- *   app  → host : kw-save           (built by the app, read by the host)
- *   host → app  : kw-saved          (built by the host, read by the app)
- *   host → app  : kw-close-request  (built by the host, read by the app)
- *   app  → host : kw-close-ack      (built by the app, read by the host)
- *   app  → host : kw-close          (built by the app, read by the host)
- */
+/** `embed-protocol` — the same-origin postMessage contract between a
+keepass-web implementation and whatever host embeds it in an iframe.
+Centralizes shapes/guards/builders (previously duplicated per side) so
+both ends provably agree on the wire format: kw-ready, kw-open, kw-save,
+kw-saved, kw-close-request, kw-close-ack, kw-close. */
 function hasType(data, type) {
     return (data !== null && typeof data === 'object' && data.type === type);
 }
@@ -1945,32 +1918,19 @@ function closeMessage() {
 
 
 /* === chacha20/src/index.js === */
-/**
- * `chacha20` — ChaCha20 (RFC 8439) and Salsa20 (D. J. Bernstein) stream
- * ciphers.
- *
- * Scope is intentionally limited to the raw stream ciphers. Poly1305 and the
- * ChaCha20-Poly1305 AEAD construction from RFC 8439 are NOT implemented: KDBX
- * authenticates with HMAC-SHA256, so the AEAD is not needed by keepass-web.
- *
- * Both ciphers expose three layers:
- *   - a pure 64-byte block function (`chacha20Block` / `salsa20Block`);
- *   - a one-shot helper (`chacha20` / `salsa20`) for whole buffers;
- *   - a stateful class (`ChaCha20` / `Salsa20`) whose `encrypt`/`decrypt`
- *     consume a single continuous keystream across successive calls. The
- *     stateful form is what KDBX inner-stream (protected-field) processing
- *     needs, since protected values are XORed against one running keystream in
- *     document order.
- */
+/** `chacha20` — ChaCha20 (RFC 8439) and Salsa20 stream ciphers. No
+Poly1305/AEAD: KDBX authenticates with HMAC-SHA256 instead. Each exposes
+a block function, a one-shot helper, and a stateful class sharing one
+running keystream across calls — what inner-stream processing needs. */
 const CC_KEY_BYTES = 32;
 const CC_BLOCK_BYTES = 64;
 const CC_CHACHA_NONCE_BYTES = 12;
 const CC_SALSA_NONCE_BYTES = 8;
-/** "expand 32-byte k" as four little-endian 32-bit words. */
+// "expand 32-byte k" as four little-endian 32-bit words.
 const CC_SIGMA = [
     0x61707865, 0x3320646e, 0x79622d32, 0x6b206574,
 ];
-/** Left-rotate a 32-bit word by `n` bits. */
+// Left-rotate a 32-bit word by `n` bits.
 const cc_rotl = (x, n) => ((x << n) | (x >>> (32 - n))) >>> 0;
 function cc_assertLength(bytes, expected, name) {
     if (bytes.length !== expected) {
@@ -2265,16 +2225,10 @@ function salsa20(key, nonce, data, counter = 0) {
 
 
 /* === argon2/src/blake2b.js === */
-/**
- * BLAKE2b ([RFC 7693](https://www.rfc-editor.org/rfc/rfc7693)), the underlying
- * hash function `H` used by Argon2 (RFC 9106, Section 3.2).
- *
- * This is an unkeyed implementation with a variable output length of 1..64
- * bytes, which is all Argon2 requires. The 64-bit arithmetic is implemented
- * with `bigint` for correctness; see SPEC.md for the optimization trade-off.
- */
+/** BLAKE2b (RFC 7693), Argon2's H (RFC 9106 §3.2) — unkeyed, 1..64-byte
+output. 64-bit math uses bigint; see SPEC.md for the trade-off. */
 const B2_MASK64 = (1n << 64n) - 1n;
-/** BLAKE2b initialization vector (RFC 7693, Section 2.6). */
+// BLAKE2b initialization vector (RFC 7693, Section 2.6).
 const B2_IV = [
     0x6a09e667f3bcc908n,
     0xbb67ae8584caa73bn,
@@ -2285,7 +2239,7 @@ const B2_IV = [
     0x1f83d9abfb41bd6bn,
     0x5be0cd19137e2179n,
 ];
-/** Message word schedule per round (RFC 7693, Section 2.7). */
+// Message word schedule per round (RFC 7693, Section 2.7).
 const B2_SIGMA = [
     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     [14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3],
@@ -2303,7 +2257,7 @@ const B2_SIGMA = [
 function b2_rotr64(x, n) {
     return ((x >> n) | (x << (64n - n))) & B2_MASK64;
 }
-/** The BLAKE2b mixing function G (RFC 7693, Section 3.1). */
+// The BLAKE2b mixing function G (RFC 7693, Section 3.1).
 function b2_mix(v, a, b, c, d, x, y) {
     let va = v[a];
     let vb = v[b];
@@ -2322,7 +2276,7 @@ function b2_mix(v, a, b, c, d, x, y) {
     v[c] = vc;
     v[d] = vd;
 }
-/** The BLAKE2b compression function F (RFC 7693, Section 3.2). */
+// The BLAKE2b compression function F (RFC 7693, Section 3.2).
 function b2_compress(h, m, counter, last) {
     const v = new Array(16);
     for (let i = 0; i < 8; i++) {
@@ -2350,12 +2304,9 @@ function b2_compress(h, m, counter, last) {
         h[i] = h[i] ^ v[i] ^ v[i + 8];
     }
 }
-/**
- * Compute the unkeyed BLAKE2b digest of `input`.
- *
- * @param outLength desired digest length in bytes, 1..64.
- * @param input message to hash.
- */
+/** Unkeyed BLAKE2b digest of `input`.
+@param outLength digest length in bytes, 1..64.
+@param input message to hash. */
 function blake2b(outLength, input) {
     if (!Number.isInteger(outLength) || outLength < 1 || outLength > 64) {
         throw new RangeError(`BLAKE2b output length must be an integer in 1..64, got ${outLength}`);
@@ -2402,20 +2353,15 @@ function blake2b(outLength, input) {
 
 
 /* === argon2/src/argon2.js === */
-/**
- * Argon2d and Argon2id, implemented per
- * [RFC 9106](https://www.rfc-editor.org/rfc/rfc9106). See SPEC.md.
- *
- * This module holds the algorithm core; the public, validated entry points
- * live in `index.ts`. The 64-bit arithmetic uses `bigint` for correctness.
- */
+/** Argon2d/Argon2id per RFC 9106 (see SPEC.md). Algorithm core only —
+validated public entry points live in index.ts; 64-bit math uses bigint. */
 
 const A2_M32 = 0xffffffffn;
 const A2_M64 = (1n << 64n) - 1n;
-/** Argon2 type code: 0 = Argon2d, 2 = Argon2id (RFC 9106, Section 3.1). */
+// Argon2 type code: 0 = Argon2d, 2 = Argon2id (RFC 9106, Section 3.1).
 const ARGON2_D = 0;
 const ARGON2_ID = 2;
-/** Argon2 version numbers (RFC 9106). 0x13 (19) is current. */
+// Argon2 version numbers (RFC 9106). 0x13 (19) is current.
 const ARGON2_VERSION_10 = 0x10;
 const ARGON2_VERSION_13 = 0x13;
 const A2_SYNC_POINTS = 4; // number of vertical slices (SL)
@@ -2464,9 +2410,7 @@ function a2_blockToBytes(block) {
     }
     return out;
 }
-/**
- * Variable-length hash function H' (RFC 9106, Section 3.3), built on BLAKE2b.
- */
+// Variable-length hash H' (RFC 9106 §3.3), built on BLAKE2b.
 function a2_hPrime(outLength, input) {
     if (outLength <= 64) {
         return blake2b(outLength, a2_concatBytes(a2_le32(outLength), input));
@@ -2484,9 +2428,7 @@ function a2_hPrime(outLength, input) {
     out.set(blake2b(outLength - 32 * blocks, v), pos);
     return out;
 }
-// Index patterns for the BLAKE2b permutation P over a 1024-byte block, viewed
-// as an 8x8 matrix of 16-byte registers (RFC 9106, Section 3.5). Rows are 16
-// consecutive words; columns stride through the block.
+// P's index patterns over the 1024-byte block as an 8x8 register matrix (RFC 9106 §3.5).
 const A2_ROWS = [];
 const A2_COLS = [];
 for (let r = 0; r < 8; r++) {
@@ -2502,7 +2444,7 @@ for (let r = 0; r < 8; r++) {
     A2_ROWS.push(row);
     A2_COLS.push(col);
 }
-/** GB, the modified BLAKE2b mixing function with multiplications (Section 3.6). */
+// GB, the modified BLAKE2b mixing function with multiplications (Section 3.6).
 function a2_gb(v, a, b, c, d) {
     let va = v[a];
     let vb = v[b];
@@ -2521,7 +2463,7 @@ function a2_gb(v, a, b, c, d) {
     v[c] = vc;
     v[d] = vd;
 }
-/** Permutation P applied to the 16 words named by `q` (RFC 9106, Section 3.6). */
+// Permutation P applied to the 16 words named by `q` (RFC 9106, Section 3.6).
 function a2_permute(v, q) {
     const i = (k) => q[k];
     a2_gb(v, i(0), i(4), i(8), i(12));
@@ -2533,11 +2475,7 @@ function a2_permute(v, q) {
     a2_gb(v, i(2), i(7), i(8), i(13));
     a2_gb(v, i(3), i(4), i(9), i(14));
 }
-/**
- * Compression function G (RFC 9106, Section 3.5):
- * `next = (with_xor ? next : 0) XOR R XOR P_columns(P_rows(R))`,
- * where `R = ref XOR prev`.
- */
+// G (RFC 9106 §3.5): next = (with_xor?next:0) XOR R XOR P_columns(P_rows(R)), where R=ref XOR prev.
 function a2_fillBlock(prev, ref, next, withXor) {
     const r = new BigUint64Array(A2_WORDS_PER_BLOCK);
     for (let k = 0; k < A2_WORDS_PER_BLOCK; k++) {
@@ -2562,10 +2500,7 @@ function a2_fillBlock(prev, ref, next, withXor) {
         next[k] = tmp[k] ^ r[k];
     }
 }
-/**
- * Map a pseudo-random value to a reference block index within a lane
- * (RFC 9106, Section 3.4.2; reference implementation `index_alpha`).
- */
+// Map a pseudo-random value to a reference block index in a lane (RFC 9106 §3.4.2, index_alpha).
 function a2_indexAlpha(pass, slice, index, segmentLength, laneLength, pseudoRand, sameLane) {
     let referenceAreaSize;
     if (pass === 0) {
@@ -2594,7 +2529,7 @@ function a2_indexAlpha(pass, slice, index, segmentLength, laneLength, pseudoRand
     }
     return Number((BigInt(startPosition) + relative) % BigInt(laneLength));
 }
-/** Run the full Argon2 operation and return the tag. */
+// Run the full Argon2 operation and return the tag.
 function argon2Core(params) {
     const { password, salt, secret, associatedData } = params;
     const lanes = params.parallelism;
@@ -2690,13 +2625,8 @@ function argon2Core(params) {
 
 
 /* === argon2/src/index.js === */
-/**
- * `argon2` — Argon2d and Argon2id key derivation per
- * [RFC 9106](https://www.rfc-editor.org/rfc/rfc9106).
- *
- * Argon2i is intentionally not implemented (see README.md); RFC 9106 requires
- * only Argon2id, and KDBX 4.x uses Argon2d or Argon2id.
- */
+/** `argon2` — Argon2d/Argon2id per RFC 9106. Argon2i isn't implemented (see
+README.md): RFC 9106 only requires Argon2id, and that's all KDBX 4.x uses. */
 
 const A2_MAX_U24 = 0xffffff;
 const A2_MAX_U32 = 0xffffffff;
@@ -2762,24 +2692,18 @@ function argon2id(options) {
 
 
 /* === kdbx/src/bytes.js === */
-/**
- * Byte-level primitives shared by the KDBX reader and writer.
- *
- * The KDBX format stores all integers in little-endian byte order; the readers
- * and writers below honour that. 64-bit integers are surfaced as `bigint` so
- * that values above 2^53 (e.g. large KDF iteration counts) round-trip exactly.
- */
+// Byte primitives for KDBX (little-endian); 64-bit ints use bigint to round-trip exactly.
 const kx_textEncoder = new TextEncoder();
 const kx_textDecoder = new TextDecoder('utf-8', { fatal: false });
-/** Encode a string as UTF-8 bytes (no BOM, no null terminator). */
+// Encode a string as UTF-8 bytes (no BOM, no null terminator).
 function utf8Encode(value) {
     return kx_textEncoder.encode(value);
 }
-/** Decode UTF-8 bytes to a string. */
+// Decode UTF-8 bytes to a string.
 function utf8Decode(bytes) {
     return kx_textDecoder.decode(bytes);
 }
-/** Concatenate byte arrays into a single new array. */
+// Concatenate byte arrays into a single new array.
 function concatBytes(...parts) {
     let total = 0;
     for (const part of parts) {
@@ -2793,7 +2717,7 @@ function concatBytes(...parts) {
     }
     return out;
 }
-/** Whether two byte arrays have identical contents. */
+// Whether two byte arrays have identical contents.
 function bytesEqual(a, b) {
     if (a.length !== b.length) {
         return false;
@@ -2805,26 +2729,19 @@ function bytesEqual(a, b) {
     }
     return true;
 }
-/**
- * Constant-time comparison of two byte arrays of equal length.
- *
- * Used for verifying HMAC tags, where short-circuiting on the first differing
- * byte would leak timing information.
- */
+// Constant-time compare, for HMAC verification where short-circuiting would leak timing.
 function bytesEqualConstantTime(a, b) {
     if (a.length !== b.length) {
         return false;
     }
     let diff = 0;
     for (let i = 0; i < a.length; i += 1) {
-        // Both arrays were just confirmed to be the same length as a.length, so
-        // index i is always in range for both; the cast only satisfies
-        // noUncheckedIndexedAccess and doesn't change behavior.
+        // Lengths are already confirmed equal; the cast only satisfies noUncheckedIndexedAccess.
         diff |= a[i] ^ b[i];
     }
     return diff === 0;
 }
-/** Lowercase hexadecimal encoding. */
+// Lowercase hexadecimal encoding.
 function toHex(bytes) {
     let out = '';
     for (const byte of bytes) {
@@ -2832,7 +2749,7 @@ function toHex(bytes) {
     }
     return out;
 }
-/** Decode a hexadecimal string (whitespace is ignored). */
+// Decode a hexadecimal string (whitespace is ignored).
 function fromHex(hex) {
     const clean = hex.replace(/\s+/g, '');
     if (clean.length % 2 !== 0) {
@@ -2856,17 +2773,12 @@ const KX_BASE64_LOOKUP = (() => {
     }
     return table;
 })();
-/**
- * Standard Base64 encoding (RFC 4648). Implemented directly so that the same
- * code runs in browsers and in Node without depending on `btoa`/`Buffer`.
- */
+// Standard Base64 (RFC 4648), implemented directly to run identically in browsers and Node.
 function toBase64(bytes) {
     const c = (index) => KX_BASE64_CHARS.charAt(index);
     let out = '';
     let i = 0;
-    // Every index used below is guaranteed in range by the loop condition or
-    // the `remaining` check that selects it, so the casts (rather than `?? 0`)
-    // only satisfy noUncheckedIndexedAccess and don't change behavior.
+    // Indices below are already guaranteed in range; casts only satisfy noUncheckedIndexedAccess.
     for (; i + 2 < bytes.length; i += 3) {
         const n = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2];
         out += c((n >> 18) & 63) + c((n >> 12) & 63) + c((n >> 6) & 63) + c(n & 63);
@@ -2935,6 +2847,16 @@ class ByteReader {
         return this.#bytes.length - this.#offset;
     }
     #require(count) {
+        // A negative count (e.g. from a maliciously-crafted Int32 length field in
+        // a TLV-framed structure — the outer/inner header and VariantDictionary
+        // parsers all read attacker-controlled lengths this way) would otherwise
+        // pass the check below, since offset + a negative count is always less
+        // than offset. readBytes would then walk #offset *backward* instead of
+        // throwing, which a crafted file can use to pin the cursor at a fixed
+        // position and loop forever.
+        if (count < 0) {
+            throw new RangeError(`byte count must not be negative, got ${count}`);
+        }
         if (this.#offset + count > this.#bytes.length) {
             throw new RangeError(`unexpected end of data: needed ${count} byte(s) at offset ${this.#offset}`);
         }
@@ -3060,15 +2982,8 @@ class ByteWriter {
 
 
 /* === kdbx/src/xml.js === */
-/**
- * A small XML parser and serializer covering the subset of XML that KeePass
- * produces: elements, attributes, text, CDATA sections, comments, and the XML
- * declaration. It does not support namespaces, DTD validation, or processing
- * instructions beyond the declaration — none of which appear in KDBX documents.
- *
- * `DOMParser`/`XMLSerializer` are not available outside browsers, so this keeps
- * the package isomorphic and dependency-free.
- */
+/** Minimal XML parser/serializer for what KeePass actually produces (no
+namespaces/DTD/PIs) — keeps this isomorphic without DOMParser/XMLSerializer. */
 const KX_NAME_END = new Set([' ', '\t', '\r', '\n', '/', '>', '=']);
 function kx_decodeEntities(text) {
     if (!text.includes('&')) {
@@ -3138,10 +3053,7 @@ class KX_XmlParser {
     }
     #readName() {
         const start = this.#i;
-        // The `&&` short-circuits on `this.#i < this.#s.length`, so `this.#i` is
-        // always in range whenever the index is read; the cast (rather than
-        // `?? ''`) only satisfies noUncheckedIndexedAccess and doesn't change
-        // behavior.
+        // The && already guarantees this.#i is in range; the cast only satisfies noUncheckedIndexedAccess.
         while (this.#i < this.#s.length && !KX_NAME_END.has(this.#s[this.#i])) {
             this.#i += 1;
         }
@@ -3297,73 +3209,73 @@ function serializeXml(root) {
 
 
 /* === kdbx/src/constants.js === */
-/** Format signatures, identifiers, and magic values defined by the KDBX format. */
+// Format signatures, identifiers, and magic values defined by the KDBX format.
 
-/** First 32-bit signature (UInt32, little-endian on disk). */
+// First 32-bit signature (UInt32, little-endian on disk).
 const SIGNATURE_1 = 0x9aa2d903;
-/** Second 32-bit signature, identifying the KDBX 2.x format family (3.1/4.x). */
+// Second 32-bit signature, identifying the KDBX 2.x format family (3.1/4.x).
 const SIGNATURE_2 = 0xb54bfb67;
-/** Outer header field IDs. */
+// Outer header field IDs.
 const HeaderFieldId = {
     EndOfHeader: 0,
     Comment: 1,
     CipherId: 2,
     CompressionFlags: 3,
     MasterSeed: 4,
-    /** KDBX 3.1 only: AES-KDF transform seed. */
+    // KDBX 3.1 only: AES-KDF transform seed.
     TransformSeed: 5,
-    /** KDBX 3.1 only: AES-KDF rounds. */
+    // KDBX 3.1 only: AES-KDF rounds.
     TransformRounds: 6,
     EncryptionIv: 7,
-    /** KDBX 3.1 only: inner random stream key. */
+    // KDBX 3.1 only: inner random stream key.
     ProtectedStreamKey: 8,
-    /** KDBX 3.1 only: expected first bytes of the decrypted payload. */
+    // KDBX 3.1 only: expected first bytes of the decrypted payload.
     StreamStartBytes: 9,
-    /** KDBX 3.1 only: inner random stream cipher ID. */
+    // KDBX 3.1 only: inner random stream cipher ID.
     InnerRandomStreamId: 10,
-    /** KDBX 4.x only: KDF parameters (VariantDictionary). */
+    // KDBX 4.x only: KDF parameters (VariantDictionary).
     KdfParameters: 11,
-    /** KDBX 4.x only: public custom data (VariantDictionary). */
+    // KDBX 4.x only: public custom data (VariantDictionary).
     PublicCustomData: 12,
 };
-/** Inner (encrypted) header field IDs — KDBX 4.x. */
+// Inner (encrypted) header field IDs — KDBX 4.x.
 const InnerHeaderFieldId = {
     EndOfHeader: 0,
     InnerRandomStreamId: 1,
     InnerRandomStreamKey: 2,
     Binary: 3,
 };
-/** Compression algorithm IDs (header field 3). */
+// Compression algorithm IDs (header field 3).
 const Compression = {
     None: 0,
     GZip: 1,
 };
-/** Inner random stream cipher IDs. */
+// Inner random stream cipher IDs.
 const InnerStreamCipher = {
-    /** RC4 variant — obsolete, not supported. */
+    // RC4 variant — obsolete, not supported.
     ArcFourVariant: 1,
     Salsa20: 2,
     ChaCha20: 3,
 };
-/** Value of the End-of-Header field in the outer header. */
+// Value of the End-of-Header field in the outer header.
 const HEADER_END_MARKER = new Uint8Array([0x0d, 0x0a, 0x0d, 0x0a]);
-/** Fixed Salsa20 nonce used by the KDBX 3.1 inner random stream. */
+// Fixed Salsa20 nonce used by the KDBX 3.1 inner random stream.
 const SALSA20_NONCE = new Uint8Array([0xe8, 0x30, 0x09, 0x4b, 0x97, 0x20, 0x5d, 0x2a]);
-/** Cipher UUIDs (header field 2). */
+// Cipher UUIDs (header field 2).
 const CipherId = {
     Aes256: fromHex('31C1F2E6BF714350BE5805216AFC5AFF'),
     ChaCha20: fromHex('D6038A2B8B6F4CB5A524339A31DBB59A'),
 };
-/** Key derivation function UUIDs (KDF parameter `$UUID`). */
+// Key derivation function UUIDs (KDF parameter `$UUID`).
 const KdfId = {
     Aes: fromHex('C9D9F39A628A4460BF740D08C18A4FEA'),
     Argon2d: fromHex('EF636DDF8C29444B91F7A9A403E30A0C'),
     Argon2id: fromHex('9E298B1956DB4773B23DFC3EC6F0A1E6'),
 };
-/** VariantDictionary keys used inside KDF parameters. */
+// VariantDictionary keys used inside KDF parameters.
 const KdfParam = {
     Uuid: '$UUID',
-    /** AES-KDF rounds / Argon2 salt share key letters with distinct meanings per KDF. */
+    // AES-KDF rounds / Argon2 salt share key letters with distinct meanings per KDF.
     AesRounds: 'R',
     AesSeed: 'S',
     Argon2Salt: 'S',
@@ -3374,7 +3286,7 @@ const KdfParam = {
     Argon2Secret: 'K',
     Argon2AssocData: 'A',
 };
-/** Argon2 version numbers as stored in the KDF parameters. */
+// Argon2 version numbers as stored in the KDF parameters.
 const Argon2Version = {
     V10: 0x10,
     V13: 0x13,
@@ -3382,17 +3294,11 @@ const Argon2Version = {
 
 
 /* === kdbx/src/variant-dictionary.js === */
-/**
- * VariantDictionary — the name/value container used by KDBX 4.x for KDF
- * parameters (header field 11) and public custom data (header field 12).
- *
- * Layout (all integers little-endian):
- *   UInt16 version (current 0x0100; the high byte is the critical major version)
- *   zero or more items, each: type byte ‖ Int32 name size ‖ name ‖ Int32 value size ‖ value
- *   a terminating null byte (0x00)
- */
+/** VariantDictionary — KDBX 4.x's name/value container for KDF params
+(field 11) and custom data (field 12). Little-endian layout: UInt16
+version; items of type‖namesize‖name‖valuesize‖value; terminating 0x00. */
 
-/** VariantDictionary value type tags. */
+// VariantDictionary value type tags.
 const VdType = {
     UInt32: 0x04,
     UInt64: 0x05,
@@ -3404,7 +3310,7 @@ const VdType = {
 };
 const KX_CURRENT_MAJOR = 1;
 const KX_CURRENT_VERSION = 0x0100;
-/** Parse a VariantDictionary from its byte encoding. */
+// Parse a VariantDictionary from its byte encoding.
 function readVariantDictionary(bytes) {
     const reader = new ByteReader(bytes);
     const version = reader.readU16();
@@ -3524,16 +3430,8 @@ function vdRequireInt(dict, name) {
 
 
 /* === kdbx/src/crypto.js === */
-/**
- * Cryptographic primitives backed by WebCrypto and the Web Streams compression
- * API, so the same code runs in browsers and in modern Node without any
- * external dependency.
- *
- * The stream ciphers (ChaCha20/Salsa20) and the memory-hard KDFs
- * (Argon2d/Argon2id) are not available in WebCrypto; those come from the
- * sibling `chacha20` and `argon2` packages and are wired in by the modules
- * that need them.
- */
+/** Crypto primitives via WebCrypto + Web Streams compression, no external deps.
+Stream ciphers and Argon2 aren't in WebCrypto — those come from chacha20/argon2. */
 
 function kx_getCrypto() {
     const c = globalThis.crypto;
@@ -3542,44 +3440,37 @@ function kx_getCrypto() {
     }
     return c;
 }
-/**
- * WebCrypto's `BufferSource` is parameterized over `ArrayBuffer` (not
- * `SharedArrayBuffer`). Our buffers are always `ArrayBuffer`-backed, so this
- * narrowing cast is sound and avoids copying large payloads.
- */
+// Our buffers are always ArrayBuffer-backed, so this BufferSource narrowing cast is sound.
 function kx_buf(data) {
     return data;
 }
-/** Fill a fresh array of `length` bytes with cryptographically strong randomness. */
+// Fill a fresh array of `length` bytes with cryptographically strong randomness.
 function getRandomBytes(length) {
     const out = new Uint8Array(length);
     kx_getCrypto().getRandomValues(out);
     return out;
 }
-/** SHA-256 digest. */
+// SHA-256 digest.
 async function sha256(data) {
     return new Uint8Array(await kx_getCrypto().subtle.digest('SHA-256', kx_buf(data)));
 }
-/** SHA-512 digest. */
+// SHA-512 digest.
 async function sha512(data) {
     return new Uint8Array(await kx_getCrypto().subtle.digest('SHA-512', kx_buf(data)));
 }
-/** HMAC-SHA-256 of `data` under `key`. */
+// HMAC-SHA-256 of `data` under `key`.
 async function hmacSha256(key, data) {
     const subtle = kx_getCrypto().subtle;
     const cryptoKey = await subtle.importKey('raw', kx_buf(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
     return new Uint8Array(await subtle.sign('HMAC', cryptoKey, kx_buf(data)));
 }
-/**
- * AES-256-CBC encryption with PKCS#7 padding (as used by KDBX for the outer
- * payload). The `iv` must be 16 bytes.
- */
+// AES-256-CBC with PKCS#7 padding, as KDBX uses for the outer payload; iv must be 16 bytes.
 async function aesCbcEncrypt(key, iv, data) {
     const subtle = kx_getCrypto().subtle;
     const cryptoKey = await subtle.importKey('raw', kx_buf(key), 'AES-CBC', false, ['encrypt']);
     return new Uint8Array(await subtle.encrypt({ name: 'AES-CBC', iv: kx_buf(iv) }, cryptoKey, kx_buf(data)));
 }
-/** AES-256-CBC decryption with PKCS#7 padding. The `iv` must be 16 bytes. */
+// AES-256-CBC decryption with PKCS#7 padding. The `iv` must be 16 bytes.
 async function aesCbcDecrypt(key, iv, data) {
     const subtle = kx_getCrypto().subtle;
     const cryptoKey = await subtle.importKey('raw', kx_buf(key), 'AES-CBC', false, ['decrypt']);
@@ -3587,23 +3478,18 @@ async function aesCbcDecrypt(key, iv, data) {
         return new Uint8Array(await subtle.decrypt({ name: 'AES-CBC', iv: kx_buf(iv) }, cryptoKey, kx_buf(data)));
     }
     catch {
-        // WebCrypto throws a DOMException with an empty message on a PKCS#7
-        // padding failure (deliberately, to avoid a padding-oracle side
-        // channel) — and a wrong key almost always produces invalid padding, so
-        // this is the ordinary "wrong password" case for KDBX 3.1 files, not a
-        // rare corruption edge case. Give callers something to show the user.
+        /** WebCrypto reports bad PKCS#7 padding as an empty-message DOMException
+        (avoids a padding-oracle leak) — the ordinary wrong-password case here. */
         throw new Error('AES-CBC decryption failed (wrong credentials or corrupt file)');
     }
 }
-/**
- * AES-KDF transformation (the KDBX 3.1 / legacy key derivation function).
- *
- * The composite key is split into two 16-byte halves; each half is encrypted
- * `rounds` times with AES-256-ECB under `seed`. WebCrypto has no ECB mode, but
- * encrypting `rounds` zero blocks in CBC mode with the half as the IV yields
- * the same chain: the i-th CBC ciphertext block equals AES^i(half). We take the
- * last real block, then SHA-256 the concatenation.
- */
+/** Ceiling on AES-KDF `rounds`, read from the file before auth — unchecked, a
+crafted file could force a many-exabyte allocation just by being opened.
+Far above any real KeePass config, but keeps a worst case survivable. */
+const KX_MAX_AES_KDF_ROUNDS = 100000000n;
+/** AES-KDF (KDBX 3.1's KDF): each 16-byte key half is AES-256-ECB'd `rounds`
+times under `seed`. WebCrypto has no ECB, so we simulate it via CBC with
+the half as IV over `rounds` zero blocks, then SHA-256 the final blocks. */
 async function aesKdfTransform(key, seed, rounds) {
     if (key.length !== 32) {
         throw new RangeError(`AES-KDF expects a 32-byte key, got ${key.length}`);
@@ -3611,8 +3497,8 @@ async function aesKdfTransform(key, seed, rounds) {
     if (rounds <= 0n) {
         throw new RangeError('AES-KDF rounds must be positive');
     }
-    if (rounds > BigInt(Number.MAX_SAFE_INTEGER)) {
-        throw new RangeError('AES-KDF rounds exceed the supported maximum');
+    if (rounds > KX_MAX_AES_KDF_ROUNDS) {
+        throw new RangeError(`AES-KDF rounds (${rounds}) exceed the maximum this app will run (${KX_MAX_AES_KDF_ROUNDS})`);
     }
     const n = Number(rounds);
     const subtle = kx_getCrypto().subtle;
@@ -3656,31 +3542,24 @@ async function gunzip(data) {
 
 
 /* === kdbx/src/key.js === */
-/**
- * Derivation of the concrete keys used during encryption and authentication,
- * from the master seed (outer header) and the KDF-transformed composite key.
- *
- * See the "Computation of Keys" section of the KDBX specification.
- */
+/** Derives the encryption/auth keys from the master seed and the
+KDF-transformed composite key (spec: "Computation of Keys"). */
 
 
-/** Final encryption key = SHA-256(masterSeed ‖ transformedKey). */
+// Final encryption key = SHA-256(masterSeed ‖ transformedKey).
 async function deriveCipherKey(masterSeed, transformedKey) {
     return sha256(concatBytes(masterSeed, transformedKey));
 }
-/**
- * Base value for the HMAC keys = SHA-512(masterSeed ‖ transformedKey ‖ 0x01).
- * Used (with a block index) to derive the header and per-block HMAC keys.
- */
+// HMAC base = SHA-512(masterSeed‖transformedKey‖0x01); derives header/per-block HMAC keys.
 async function deriveHmacBaseKey(masterSeed, transformedKey) {
     return sha512(concatBytes(masterSeed, transformedKey, new Uint8Array([0x01])));
 }
-/** Header HMAC key = SHA-512(0xFFFFFFFFFFFFFFFF ‖ base). */
+// Header HMAC key = SHA-512(0xFFFFFFFFFFFFFFFF ‖ base).
 async function deriveHeaderHmacKey(hmacBaseKey) {
     const index = new Uint8Array(8).fill(0xff);
     return sha512(concatBytes(index, hmacBaseKey));
 }
-/** Per-block HMAC key = SHA-512(index_u64le ‖ base). */
+// Per-block HMAC key = SHA-512(index_u64le ‖ base).
 async function deriveBlockHmacKey(hmacBaseKey, index) {
     const indexBytes = new ByteWriter(8).writeU64(index).toBytes();
     return sha512(concatBytes(indexBytes, hmacBaseKey));
@@ -3688,17 +3567,11 @@ async function deriveBlockHmacKey(hmacBaseKey, index) {
 
 
 /* === kdbx/src/credentials.js === */
-/**
- * Composite master key assembly.
- *
- * KeePass builds the composite key by SHA-256-hashing the concatenation of the
- * key components the user provides, each in a fixed order: the SHA-256 of the
- * password, then the key drawn from a key file. (Key-provider plugins and the
- * Windows DPAPI component are out of scope here.)
- */
+/** Composite master key: SHA-256(password) then key-file bytes, concatenated
+and SHA-256'd, in that fixed order. (Key-provider plugins/DPAPI: out of scope.) */
 
 
-/** A set of credentials from which a composite key can be derived. */
+// A set of credentials from which a composite key can be derived.
 class Credentials {
     #password;
     #keyFile;
@@ -3710,11 +3583,11 @@ class Credentials {
             typeof input.password === 'string' ? utf8Encode(input.password) : input.password;
         this.#keyFile = input.keyFile;
     }
-    /** Convenience constructor for a password-only credential. */
+    // Convenience constructor for a password-only credential.
     static fromPassword(password) {
         return new Credentials({ password });
     }
-    /** Compute the 32-byte composite key for these credentials. */
+    // Compute the 32-byte composite key for these credentials.
     async getCompositeKey() {
         const components = [];
         if (this.#password !== undefined) {
@@ -3727,7 +3600,7 @@ class Credentials {
     }
 }
 const KX_HEX_64 = /^[0-9a-fA-F]{64}$/;
-/** Derive the 32-byte key-file component, mirroring KeePass's detection order. */
+// Derive the 32-byte key-file component, mirroring KeePass's detection order.
 async function keyFileComponent(bytes) {
     const xmlKey = await kx_tryParseXmlKeyFile(bytes);
     if (xmlKey !== undefined) {
@@ -3750,13 +3623,8 @@ function kx_tryDecodeAscii(bytes) {
     }
     return new TextDecoder('ascii').decode(bytes);
 }
-/**
- * Parse a KeePass XML key file. Version 2.x stores the key as hex, and its
- * `<Data Hash="…">` attribute holds the first 4 bytes of SHA-256 of that key
- * (a corruption check, independent of whether the key opens any database);
- * version 1.x stores 32 bytes as Base64 with no such check. Returns
- * `undefined` if the bytes are not an XML key file.
- */
+/** Parse a KeePass XML key file. v2.x hex-encodes the key with a `Data
+Hash` corruption check; v1.x is unchecked Base64. `undefined` if not XML. */
 async function kx_tryParseXmlKeyFile(bytes) {
     const text = kx_tryDecodeUtf8(bytes);
     if (text === undefined || !text.includes('<KeyFile')) {
@@ -3773,9 +3641,7 @@ async function kx_tryParseXmlKeyFile(bytes) {
         return fromBase64(data);
     }
     const key = fromHex(data);
-    // dataMatch[1] is the <Data ...> tag's attribute text, always captured
-    // (possibly empty) whenever dataMatch[2] matched; the cast only satisfies
-    // noUncheckedIndexedAccess.
+    // Always captured alongside dataMatch[2]; cast only satisfies noUncheckedIndexedAccess.
     const hashMatch = dataMatch[1].match(/\bHash="([0-9a-fA-F]+)"/);
     if (hashMatch?.[1] !== undefined) {
         const expectedHash = hashMatch[1].toLowerCase();
@@ -3797,23 +3663,13 @@ function kx_tryDecodeUtf8(bytes) {
 
 
 /* === kdbx/src/protected-stream.js === */
-/**
- * The inner random stream that protects sensitive fields (e.g. passwords) in
- * the KDBX XML document.
- *
- * KDBX 3.1 uses Salsa20 with a fixed nonce and a key of SHA-256(streamKey).
- * KDBX 4.x uses ChaCha20 with key/nonce derived from SHA-512(streamKey). In
- * both cases the cipher produces one continuous keystream; protected values are
- * XORed against it in document order, so the order of processing matters.
- */
+/** Inner random stream protecting sensitive fields: 3.1 uses Salsa20
+(key = SHA-256(streamKey)); 4.x uses ChaCha20 (from SHA-512(streamKey)).
+One continuous keystream XORed in document order — order matters. */
 
 
 
-/**
- * Create the inner random stream cipher for the given stream ID and key. A
- * fresh cipher must be created for each full read or write pass, since the
- * keystream is consumed in order across all protected values.
- */
+// A fresh cipher is needed per full pass, since the keystream is consumed in order.
 async function createProtectedStreamCipher(streamId, streamKey) {
     if (streamId === InnerStreamCipher.Salsa20) {
         const key = await sha256(streamKey);
@@ -3830,20 +3686,14 @@ async function createProtectedStreamCipher(streamId, streamKey) {
 
 
 /* === kdbx/src/hashed-block-stream.js === */
-/**
- * Hashed block stream (KDBX 3.1).
- *
- * After AES decryption, the KDBX 3.1 payload begins with the stream start bytes
- * (verified separately) followed by this stream. Each block is
- *   index_u32le ‖ SHA-256(data) ‖ size_u32le ‖ data
- * and the stream ends with a block of size 0 (whose hash is all zeros).
- */
+/** KDBX 3.1 hashed block stream: after the stream-start bytes, blocks of
+`index‖SHA-256(data)‖size‖data`, ending with a size-0 block. */
 
 
-/** Block size used when writing (KeePass uses 1 MiB). */
+// Block size used when writing (KeePass uses 1 MiB).
 const KX_HBS_BLOCK_SIZE = 1024 * 1024;
 const KX_ZERO_HASH = new Uint8Array(32);
-/** Verify and concatenate a hashed block stream into its payload. */
+// Verify and concatenate a hashed block stream into its payload.
 async function readHashedBlockStream(data) {
     const reader = new ByteReader(data);
     const chunks = [];
@@ -3868,7 +3718,7 @@ async function readHashedBlockStream(data) {
     }
     return concatBytes(...chunks);
 }
-/** Frame a payload as a hashed block stream. */
+// Frame a payload as a hashed block stream.
 async function writeHashedBlockStream(payload, blockSize = KX_HBS_BLOCK_SIZE) {
     const writer = new ByteWriter(payload.length + 64);
     let index = 0;
@@ -3892,19 +3742,13 @@ async function writeHashedBlockStream(payload, blockSize = KX_HBS_BLOCK_SIZE) {
 
 
 /* === kdbx/src/hmac-block-stream.js === */
-/**
- * HMAC-protected block stream (KDBX 4.x).
- *
- * The (encrypted) payload is split into blocks; each stored block is
- *   HMAC-SHA-256(index_u64le ‖ size_i32le ‖ data) ‖ size_i32le ‖ data
- * where the per-block HMAC key depends on the block index. The stream ends with
- * a block whose size is 0. Verification uses an Encrypt-then-MAC scheme, so the
- * integrity/authenticity check happens before decryption.
- */
+/** KDBX 4.x HMAC block stream: blocks of `HMAC-SHA-256(index‖size‖data)‖
+size‖data`, keyed per block index, ending with a size-0 block.
+Encrypt-then-MAC — integrity is checked before decryption. */
 
 
 
-/** Block size used when writing (KeePass uses 1 MiB for all but the last block). */
+// Block size used when writing (KeePass uses 1 MiB for all but the last block).
 const KX_HMS_BLOCK_SIZE = 1024 * 1024;
 async function kx_blockMac(hmacBaseKey, index, data) {
     const blockKey = await deriveBlockHmacKey(hmacBaseKey, index);
@@ -3912,7 +3756,7 @@ async function kx_blockMac(hmacBaseKey, index, data) {
     const sizeBytes = new ByteWriter(4).writeI32(data.length).toBytes();
     return hmacSha256(blockKey, concatBytes(indexBytes, sizeBytes, data));
 }
-/** Verify and concatenate an HMAC-protected block stream into its payload. */
+// Verify and concatenate an HMAC-protected block stream into its payload.
 async function readHmacBlockStream(data, hmacBaseKey) {
     const reader = new ByteReader(data);
     const chunks = [];
@@ -3936,7 +3780,7 @@ async function readHmacBlockStream(data, hmacBaseKey) {
     }
     return concatBytes(...chunks);
 }
-/** Frame a payload as an HMAC-protected block stream. */
+// Frame a payload as an HMAC-protected block stream.
 async function writeHmacBlockStream(payload, hmacBaseKey, blockSize = KX_HMS_BLOCK_SIZE) {
     const writer = new ByteWriter(payload.length + 64);
     let index = 0n;
@@ -3958,23 +3802,16 @@ async function writeHmacBlockStream(payload, hmacBaseKey, blockSize = KX_HMS_BLO
 
 
 /* === kdbx/src/header.js === */
-/**
- * The outer (unencrypted) KDBX header: signatures, format version, and the
- * type-length-value fields that describe how to decrypt the payload.
- *
- * KDBX 3.1 and 4.x share the field IDs but differ in two ways handled here:
- *   - the field length is a UInt16 in 3.1 and an Int32 in 4.x;
- *   - 3.1 keeps KDF settings and the inner-stream key/ID in the outer header,
- *     whereas 4.x moves the KDF settings into a VariantDictionary and the
- *     inner-stream key/ID into the (encrypted) inner header.
- */
+/** Outer, unencrypted KDBX header: signatures, version, and the TLV fields
+describing how to decrypt the payload. 3.1 and 4.x share field IDs but
+differ in length encoding (UInt16 vs Int32) and where KDF/stream settings live. */
 
 
 
 function kx_isKdbx4(major) {
     return major >= 4;
 }
-/** Parse the outer header from the start of a KDBX buffer. */
+// Parse the outer header from the start of a KDBX buffer.
 function readOuterHeader(data) {
     const reader = new ByteReader(data);
     if (reader.readU32() !== SIGNATURE_1 || reader.readU32() !== SIGNATURE_2) {
@@ -4113,16 +3950,10 @@ function writeOuterHeader(header) {
 
 
 /* === kdbx/src/inner-header.js === */
-/**
- * The inner (encrypted) header — KDBX 4.x only.
- *
- * It precedes the XML document inside the decrypted, decompressed payload and
- * carries the inner random stream cipher ID and key (used to protect sensitive
- * fields) plus any binary attachments referenced by the XML.
- */
+// Inner header (4.x only): the stream cipher ID/key, plus binaries referenced by the XML.
 
 
-/** Parse the inner header from the start of a decrypted, decompressed payload. */
+// Parse the inner header from the start of a decrypted, decompressed payload.
 function readInnerHeader(payload) {
     const reader = new ByteReader(payload);
     const binaries = [];
@@ -4154,7 +3985,7 @@ function readInnerHeader(payload) {
         xml: reader.readRest(),
     };
 }
-/** Serialize an inner header to its byte encoding. */
+// Serialize an inner header to its byte encoding.
 function writeInnerHeader(inner) {
     const writer = new ByteWriter();
     const writeField = (id, value) => {
@@ -4173,14 +4004,8 @@ function writeInnerHeader(inner) {
 
 
 /* === kdbx/src/kdf.js === */
-/**
- * Key derivation functions used by KDBX to transform the composite key.
- *
- * - KDBX 3.1 always uses AES-KDF, parameterized by the outer-header transform
- *   seed and round count.
- * - KDBX 4.x stores the KDF choice and parameters in a VariantDictionary; the
- *   built-in functions are AES-KDF, Argon2d, and Argon2id.
- */
+/** KDFs for the composite key: KDBX 3.1 always uses AES-KDF; 4.x picks
+AES-KDF, Argon2d, or Argon2id via a VariantDictionary. */
 
 
 
@@ -4188,14 +4013,17 @@ function writeInnerHeader(inner) {
 
 const KX_ARGON2_TAG_LENGTH = 32;
 const KX_BYTES_PER_KIB = 1024n;
-/** Transform a 32-byte composite key with AES-KDF (KDBX 3.1 and the AES-KDF KDF). */
+/** Ceiling on Argon2 cost params read from the file before auth. RFC 9106
+allows up to ~4TiB memory / 2^32-1 iterations; unchecked, a crafted file
+could force a huge allocation before any password is even checked. */
+const KX_MAX_ARGON2_MEMORY_KIB = 2 * 1024 * 1024; // 2 GiB
+const KX_MAX_ARGON2_ITERATIONS = 64;
+const KX_MAX_ARGON2_PARALLELISM = 64;
+// Transform a 32-byte composite key with AES-KDF (KDBX 3.1 and the AES-KDF KDF).
 async function aesKdf(compositeKey, seed, rounds) {
     return aesKdfTransform(compositeKey, seed, rounds);
 }
-/**
- * Transform a composite key using the KDF described by a KDBX 4.x KDF-parameter
- * VariantDictionary.
- */
+// Transform a composite key using the KDF named in a KDBX 4.x KDF-parameter VariantDictionary.
 async function transformWithKdfParameters(compositeKey, params) {
     const uuid = vdRequireBytes(params, KdfParam.Uuid);
     if (bytesEqual(uuid, KdfId.Aes)) {
@@ -4225,6 +4053,15 @@ function kx_runArgon2(compositeKey, params, type) {
     // KDBX stores memory in bytes; RFC 9106 / the argon2 package take KiB.
     const memoryBytes = vdRequireInt(params, KdfParam.Argon2Memory);
     const memory = Number(memoryBytes / KX_BYTES_PER_KIB);
+    if (parallelism > KX_MAX_ARGON2_PARALLELISM) {
+        throw new Error(`Argon2 parallelism (${parallelism}) exceeds the maximum this app will run (${KX_MAX_ARGON2_PARALLELISM})`);
+    }
+    if (iterations > KX_MAX_ARGON2_ITERATIONS) {
+        throw new Error(`Argon2 iterations (${iterations}) exceeds the maximum this app will run (${KX_MAX_ARGON2_ITERATIONS})`);
+    }
+    if (memory > KX_MAX_ARGON2_MEMORY_KIB) {
+        throw new Error(`Argon2 memory (${memory} KiB) exceeds the maximum this app will run (${KX_MAX_ARGON2_MEMORY_KIB} KiB)`);
+    }
     const versionParam = params.get(KdfParam.Argon2Version);
     const version = versionParam === undefined
         ? Argon2Version.V13
@@ -4251,20 +4088,14 @@ function kx_optionalBytes(params, name) {
 
 
 /* === kdbx/src/model.js === */
-/**
- * Convenience helpers over the KDBX XML tree: element navigation, protected
- * values, the document-order protection walk, and builders for creating a new
- * database, groups, and entries.
- *
- * The canonical state of a database is its XML tree. Sensitive `<Value>`
- * elements are marked `Protected="True"`; in memory they hold plaintext, and
- * they are (re-)encrypted against the inner random stream only when saving.
- */
+/** Helpers over the KDBX XML tree: navigation, protected-value (de)cryption,
+and builders for new databases, groups, and entries. `Protected="True"`
+values hold plaintext in memory and are encrypted only on save. */
 
 
 const KX_PROTECTED_ATTRIBUTE = 'Protected';
 const KX_GENERATOR = 'keepass-web';
-/** A value that is encrypted by the inner random stream when stored on disk. */
+// A value that is encrypted by the inner random stream when stored on disk.
 class ProtectedValue {
     #text;
     constructor(text) {
@@ -4281,7 +4112,7 @@ class ProtectedValue {
     }
 }
 // --- Element construction and navigation ------------------------------------
-/** Create an element, optionally with a single text child. */
+// Create an element, optionally with a single text child.
 function createElement(name, text) {
     const element = { type: 'element', name, attributes: [], children: [] };
     if (text !== undefined) {
@@ -4289,7 +4120,7 @@ function createElement(name, text) {
     }
     return element;
 }
-/** First direct child element with the given name. */
+// First direct child element with the given name.
 function getChild(element, name) {
     for (const child of element.children) {
         if (child.type === 'element' && child.name === name) {
@@ -4298,7 +4129,7 @@ function getChild(element, name) {
     }
     return undefined;
 }
-/** All direct child elements with the given name. */
+// All direct child elements with the given name.
 function getChildren(element, name) {
     const out = [];
     for (const child of element.children) {
@@ -4308,7 +4139,7 @@ function getChildren(element, name) {
     }
     return out;
 }
-/** Concatenated text content of an element. */
+// Concatenated text content of an element.
 function getText(element) {
     let text = '';
     for (const child of element.children) {
@@ -4318,11 +4149,11 @@ function getText(element) {
     }
     return text;
 }
-/** Replace an element's children with a single text node. */
+// Replace an element's children with a single text node.
 function setText(element, text) {
     element.children = [{ type: 'text', value: text, cdata: false }];
 }
-/** Value of a named attribute, or `undefined`. */
+// Value of a named attribute, or `undefined`.
 function getAttribute(element, name) {
     for (const [attr, value] of element.attributes) {
         if (attr === name) {
@@ -4331,7 +4162,7 @@ function getAttribute(element, name) {
     }
     return undefined;
 }
-/** Set (or replace) a named attribute. */
+// Set (or replace) a named attribute.
 function setAttribute(element, name, value) {
     for (const pair of element.attributes) {
         if (pair[0] === name) {
@@ -4341,12 +4172,12 @@ function setAttribute(element, name, value) {
     }
     element.attributes.push([name, value]);
 }
-/** Append a child node and return the parent. */
+// Append a child node and return the parent.
 function appendChild(parent, child) {
     parent.children.push(child);
     return parent;
 }
-/** Deep-clone an element tree. */
+// Deep-clone an element tree.
 function cloneElement(element) {
     return {
         type: 'element',
@@ -4366,21 +4197,15 @@ function kx_walkProtected(element, visit) {
         }
     }
 }
-/**
- * Decrypt every `Protected="True"` value in document order, replacing the
- * Base64 ciphertext with plaintext (the marker attribute is kept).
- */
+/** Decrypt every `Protected="True"` value in document order, replacing the
+Base64 ciphertext with plaintext (the marker attribute is kept). */
 function applyInboundProtection(root, cipher) {
     kx_walkProtected(root, (element) => {
         const ciphertext = fromBase64(getText(element));
         setText(element, utf8Decode(cipher.process(ciphertext)));
     });
 }
-/**
- * Encrypt every `Protected="True"` value in document order, replacing plaintext
- * with Base64 ciphertext. Operate on a clone so the in-memory tree stays
- * readable.
- */
+// Encrypts every Protected="True" value in place; call on a clone to keep the original readable.
 function applyOutboundProtection(root, cipher) {
     kx_walkProtected(root, (element) => {
         const ciphertext = cipher.process(utf8Encode(getText(element)));
@@ -4420,7 +4245,7 @@ function kx_createStringField(field) {
     appendChild(string, value);
     return string;
 }
-/** Build an `<Entry>` element from the given fields. */
+// Build an `<Entry>` element from the given fields.
 function createEntry(input) {
     const entry = createElement('Entry');
     appendChild(entry, createElement('UUID', kx_newUuid()));
@@ -4439,12 +4264,7 @@ function createEntry(input) {
     }
     return entry;
 }
-/**
- * An entry's tags, from its `<Tags>` element — KeePass's own `;`-joined
- * text format. Empty (`[]`) when the element is absent, matching how real
- * KeePass omits it entirely on a tagless entry rather than writing an empty
- * one.
- */
+// An entry's `;`-joined tags from <Tags>; [] if absent, matching real KeePass.
 function getEntryTags(entry) {
     const tagsEl = getChild(entry, 'Tags');
     if (!tagsEl)
@@ -4454,10 +4274,7 @@ function getEntryTags(entry) {
         .map((tag) => tag.trim())
         .filter((tag) => tag.length > 0);
 }
-/**
- * Replace an entry's tags. An empty list removes the `<Tags>` element
- * entirely rather than leaving one with empty text, matching real KeePass.
- */
+// Replace an entry's tags; an empty list removes <Tags> entirely, matching KeePass.
 function setEntryTags(entry, tags) {
     const cleaned = tags.map((tag) => tag.trim()).filter((tag) => tag.length > 0);
     const existing = getChild(entry, 'Tags');
@@ -4488,12 +4305,7 @@ function getEntryTimes(entry) {
         expiryTime: read('ExpiryTime'),
     };
 }
-/**
- * Update an entry's expiration. `expiryTimeIso`, if given, replaces
- * ExpiryTime; an empty string leaves the existing ExpiryTime untouched
- * (e.g. when the caller only means to flip Expires off). Does nothing on an
- * entry with no Times element at all.
- */
+// Update expiration; blank expiryTimeIso keeps ExpiryTime. No-op without a Times element.
 function setEntryExpiry(entry, expires, expiryTimeIso) {
     const times = getChild(entry, 'Times');
     if (!times)
@@ -4507,20 +4319,14 @@ function setEntryExpiry(entry, expires, expiryTimeIso) {
             setText(expiryTimeEl, expiryTimeIso);
     }
 }
-/** Bump an entry's LastModificationTime to now — real KeePass does this on
- * every edit; this app's own applyEntryEdits() only ever touched fields. */
+// Bump an entry's LastModificationTime to now, matching real KeePass.
 function touchLastModified(entry) {
     const times = getChild(entry, 'Times');
     const modEl = times && getChild(times, 'LastModificationTime');
     if (modEl)
         setText(modEl, kx_nowIso());
 }
-/**
- * Visit every `<Entry>` under `group` — direct children of every
- * (sub)group, plus each entry's own `History` revisions — in that order.
- * Used wherever a binary attachment `Ref` needs to be found across the
- * whole database, not just its live (non-history) entries.
- */
+// Visit every Entry under group, including History revisions (for finding Refs database-wide).
 function walkAllEntries(group, visit) {
     for (const entry of getChildren(group, 'Entry')) {
         visit(entry);
@@ -4532,13 +4338,8 @@ function walkAllEntries(group, visit) {
         walkAllEntries(sub, visit);
     }
 }
-/**
- * An entry's attachments, from its `<Binary>` children
- * (`<Binary><Key>name</Key><Value Ref="N"/></Binary>`). `Ref` addresses
- * Kdbx#binaries by pool index for both KDBX 3.1 and 4.x — see
- * {@link Kdbx.addBinary} in kdbx.ts and meta-binaries.ts for how 3.1's
- * on-disk `Meta/Binaries` IDs get mapped to that index on load.
- */
+/** An entry's attachments from `<Binary>` children; `Ref` indexes
+`Kdbx#binaries` (see meta-binaries.ts for 3.1's on-disk ID mapping). */
 function getEntryAttachments(entry) {
     const out = [];
     for (const binaryEl of getChildren(entry, 'Binary')) {
@@ -4551,7 +4352,7 @@ function getEntryAttachments(entry) {
     }
     return out;
 }
-/** Attach a binary pool reference (see Kdbx#addBinary) to an entry under the given name. */
+// Attach a binary pool reference (see Kdbx#addBinary) to an entry under the given name.
 function addEntryAttachment(entry, name, ref) {
     const binaryEl = createElement('Binary');
     appendChild(binaryEl, createElement('Key', name));
@@ -4560,7 +4361,7 @@ function addEntryAttachment(entry, name, ref) {
     appendChild(binaryEl, valueEl);
     appendChild(entry, binaryEl);
 }
-/** Rename an entry's attachment, matched by its current name. */
+// Rename an entry's attachment, matched by its current name.
 function renameEntryAttachment(entry, oldName, newName) {
     for (const binaryEl of getChildren(entry, 'Binary')) {
         const keyEl = getChild(binaryEl, 'Key');
@@ -4570,11 +4371,7 @@ function renameEntryAttachment(entry, oldName, newName) {
         }
     }
 }
-/**
- * Remove an entry's attachment, matched by name. Does not touch the binary
- * pool itself — Kdbx#save() drops pool entries no longer referenced by any
- * entry.
- */
+// Remove an entry's attachment by name; save() later drops unreferenced pool entries.
 function removeEntryAttachment(entry, name) {
     entry.children = entry.children.filter((child) => {
         if (child.type !== 'element' || child.name !== 'Binary')
@@ -4584,19 +4381,13 @@ function removeEntryAttachment(entry, name) {
     });
 }
 const KX_DEFAULT_HISTORY_MAX_ITEMS = 10;
-/** An entry's past versions, from its `<History>` child, oldest first —
- * matching how real KeePass appends to it. `[]` when it has none. */
+// An entry's past versions from <History>, oldest first; [] if none.
 function getEntryHistory(entry) {
     const historyEl = getChild(entry, 'History');
     return historyEl ? getChildren(historyEl, 'Entry') : [];
 }
-/**
- * Snapshot `entry`'s current state (everything except its own History) onto
- * its History, trimmed to `document`'s Meta/HistoryMaxItems (defaulting to
- * 10, matching real KeePass, for a database that predates that field).
- * Must be called with the pre-edit state still in place — real KeePass
- * snapshots before applying an edit, not after.
- */
+/** Snapshot `entry`'s current state onto its History, trimmed to
+`HistoryMaxItems` (default 10). Call before applying an edit, not after. */
 function pushHistorySnapshot(document, entry) {
     const snapshot = cloneElement(entry);
     snapshot.children = snapshot.children.filter((child) => !(child.type === 'element' && child.name === 'History'));
@@ -4620,13 +4411,8 @@ function pushHistorySnapshot(document, entry) {
         historyEl.children = historyEl.children.filter((child) => !(child.type === 'element' && dropped.has(child)));
     }
 }
-/**
- * Restore `entry` to a past version from its History: the entry's current
- * state is snapshotted first (so it isn't lost), then its fields are
- * replaced with the historical version's — matching real KeePass, where
- * restoring is itself a further edit, not a rewind. `snapshot` must be one
- * of the elements `getEntryHistory(entry)` returned.
- */
+/** Restore `entry` to a past version: snapshots current state first, then
+replaces its fields. `snapshot` must come from `getEntryHistory(entry)`. */
 function restoreHistoryEntry(document, entry, snapshot) {
     const restoredFields = cloneElement(snapshot);
     pushHistorySnapshot(document, entry);
@@ -4644,14 +4430,14 @@ function restoreHistoryEntry(document, entry, snapshot) {
         newChildren.push(historyEl);
     entry.children = newChildren;
 }
-/** Permanently remove one past version from an entry's History. */
+// Permanently remove one past version from an entry's History.
 function deleteHistoryEntry(entry, snapshot) {
     const historyEl = getChild(entry, 'History');
     if (!historyEl)
         return;
     historyEl.children = historyEl.children.filter((child) => child !== snapshot);
 }
-/** Build a `<Group>` element with the given name. */
+// Build a `<Group>` element with the given name.
 function createGroup(name) {
     const group = createElement('Group');
     appendChild(group, createElement('UUID', kx_newUuid()));
@@ -4678,7 +4464,7 @@ function kx_containsGroup(ancestor, target) {
         return true;
     return getChildren(ancestor, 'Group').some((sub) => kx_containsGroup(sub, target));
 }
-/** The database's recycle bin group, if `Meta/RecycleBinUUID` names one that still exists. */
+// The database's recycle bin group, if `Meta/RecycleBinUUID` names one that still exists.
 function kx_findRecycleBin(document) {
     const meta = getChild(document, 'Meta');
     const uuidEl = meta && getChild(meta, 'RecycleBinUUID');
@@ -4688,12 +4474,7 @@ function kx_findRecycleBin(document) {
         return undefined;
     return kx_findGroupByUuid(rootGroup, getText(uuidEl));
 }
-/**
- * Find the database's recycle bin group, creating it as a child of the root
- * group the first time anything is trashed and recording its UUID in
- * `Meta/RecycleBinUUID` — matching real KeePass, which has no recycle bin
- * group in a fresh database until one is needed.
- */
+// Find (or lazily create) the recycle bin group, recording its UUID in Meta/RecycleBinUUID.
 function findOrCreateRecycleBin(document) {
     const existing = kx_findRecycleBin(document);
     if (existing)
@@ -4717,15 +4498,12 @@ function findOrCreateRecycleBin(document) {
     }
     return bin;
 }
-/** True if `group` is the database's recycle bin, or nested inside it. */
+// True if `group` is the database's recycle bin, or nested inside it.
 function isInRecycleBin(document, group) {
     const bin = kx_findRecycleBin(document);
     return bin !== undefined && kx_containsGroup(bin, group);
 }
-/**
- * Build a complete `<KeePassFile>` document with a Meta section and a root group
- * (optionally pre-populated by `build`).
- */
+// Build a complete <KeePassFile> document with Meta and a root group, optionally via build().
 function createDatabaseDocument(databaseName, build) {
     const root = createElement('KeePassFile');
     const meta = createElement('Meta');
@@ -4745,29 +4523,14 @@ function createDatabaseDocument(databaseName, build) {
 
 
 /* === kdbx/src/meta-binaries.js === */
-/**
- * Binary attachments for KDBX 3.1.
- *
- * 3.1 stores attachment content inline in `Meta/Binaries` as Base64 (each
- * entry optionally individually gzip-compressed, marked `Compressed="True"`),
- * referenced from entries by a `Meta/Binaries/Binary`'s `ID` attribute. KDBX
- * 4.x instead stores content in the encrypted inner header, referenced by
- * pool position (see inner-header.ts). Both versions use the same entry-side
- * shape — `<Binary><Key>name</Key><Value Ref="N"/></Binary>` — so the only
- * difference this module needs to bridge is where the content lives and how
- * it's addressed: on load, on-disk IDs are remapped to pool indices so the
- * rest of this library (Kdbx#binaries, the attachment helpers in model.ts)
- * can treat both versions identically; on save, indices are written back out
- * as IDs.
- */
+/** KDBX 3.1 binary attachments: stored inline in `Meta/Binaries` as Base64
+(optionally gzipped), referenced by ID (4.x instead uses the inner header,
+referenced by pool position). Both share the same entry-side `<Binary>`
+shape, so this module just remaps IDs to pool indices on load, and back on save. */
 
 
 
-/**
- * Read `Meta/Binaries`, decoding each `<Binary>` (Base64, gunzipped if
- * marked `Compressed="True"`) into the pool in document order. Does not
- * modify `root` — see {@link removeMetaBinariesElement}.
- */
+// Read Meta/Binaries into the pool, gunzipping if Compressed="True"; doesn't modify root.
 async function readMetaBinaries(root) {
     const binaries = [];
     const idToIndex = new Map();
@@ -4790,7 +4553,7 @@ async function readMetaBinaries(root) {
     }
     return { binaries, idToIndex };
 }
-/** Remove `Meta/Binaries` from the tree — its content now lives in the pool. */
+// Remove `Meta/Binaries` from the tree — its content now lives in the pool.
 function removeMetaBinariesElement(root) {
     const meta = getChild(root, 'Meta');
     if (!meta) {
@@ -4798,11 +4561,7 @@ function removeMetaBinariesElement(root) {
     }
     meta.children = meta.children.filter((child) => !(child.type === 'element' && child.name === 'Binaries'));
 }
-/**
- * Rewrite every entry's (including History revisions') `<Binary><Value
- * Ref="…">` from the on-disk ID in `idToIndex` to the pool index it maps to.
- * A `Ref` with no matching ID (a stale/malformed reference) is left as-is.
- */
+// Remap every Binary Ref (incl. History) from on-disk ID to pool index; leaves unmatched Refs as-is.
 function remapEntryBinaryRefs(root, idToIndex) {
     const rootElement = getChild(root, 'Root');
     const rootGroup = rootElement && getChild(rootElement, 'Group');
@@ -4823,14 +4582,8 @@ function remapEntryBinaryRefs(root, idToIndex) {
         }
     });
 }
-/**
- * Build (or replace) `Meta/Binaries` from the pool, keyed by array index.
- * Always writes uncompressed — one encoding on write keeps this simple;
- * {@link readMetaBinaries} still accepts `Compressed="True"` content written
- * by other implementations. A no-op — beyond removing any existing element —
- * when the pool is empty, matching how a database with no attachments has no
- * Binaries element at all.
- */
+/** Build/replace `Meta/Binaries` from the pool, always uncompressed (still
+reads `Compressed="True"` from others). No-op when the pool is empty. */
 function writeMetaBinaries(root, binaries) {
     removeMetaBinariesElement(root);
     if (binaries.length === 0) {
@@ -4851,17 +4604,7 @@ function writeMetaBinaries(root, binaries) {
 
 
 /* === kdbx/src/kdbx.js === */
-/**
- * High-level KDBX database: parsing (`load`), serialization (`save`), and
- * creation (`create`) for KDBX 3.1 and 4.x.
- *
- * The flow mirrors the specification's overall structure:
- *   load — read outer header, verify header SHA-256/HMAC (4.x) → de-chunk →
- *          decrypt → decompress → read inner header (4.x) → parse XML →
- *          unprotect fields.
- *   save — protect fields → serialize XML → prepend inner header (4.x) →
- *          compress → encrypt → chunk → prepend header + SHA-256 + HMAC (4.x).
- */
+// High-level KDBX database: load/save/create for KDBX 3.1/4.x, per the spec's structure.
 
 
 
@@ -4886,16 +4629,7 @@ const KX_DEFAULT_AES_KDF_ROUNDS = 60000n;
 function kx_bytes(value) {
     return { type: 'bytes', value };
 }
-/**
- * Classify a cipher ID, or throw if it names neither outer cipher this
- * package supports. This is the single point where "supported outer cipher"
- * is defined; `kx_ivLengthFor`/`kx_encryptPayload`/`kx_decryptPayload` all
- * dispatch through it rather than each re-checking the same two IDs, so
- * there's exactly one "unsupported outer cipher" error site instead of three
- * copies (which, in kx_encryptPayload's case, could never actually be
- * reached: the only caller, `#save4`, always calls `kx_ivLengthFor` on the
- * same `cipherId` first and would already have thrown by then).
- */
+// Classify a cipher ID, or throw — the single place "supported cipher" is decided.
 function kx_cipherKind(cipherId) {
     if (bytesEqual(cipherId, CipherId.Aes256)) {
         return 'aes';
@@ -4918,7 +4652,7 @@ async function kx_decryptPayload(cipherId, cipherKey, iv, data) {
         ? aesCbcDecrypt(cipherKey, iv, data)
         : new ChaCha20(cipherKey, iv).decrypt(data);
 }
-/** Transform the composite key according to the header's KDF settings. */
+// Transform the composite key according to the header's KDF settings.
 async function kx_transformKey(header, compositeKey) {
     if (header.version.major >= 4) {
         if (!header.kdfParameters) {
@@ -4931,21 +4665,17 @@ async function kx_transformKey(header, compositeKey) {
     }
     return aesKdf(compositeKey, header.transformSeed, header.transformRounds);
 }
-/** An in-memory KDBX database. */
+// An in-memory KDBX database.
 class Kdbx {
-    /** The outer header. Random fields (seeds, IVs, salts) are regenerated on save. */
+    // The outer header. Random fields (seeds, IVs, salts) are regenerated on save.
     header;
-    /** The `<KeePassFile>` document root, with protected fields held as plaintext. */
+    // The `<KeePassFile>` document root, with protected fields held as plaintext.
     root;
-    /**
-     * Binary attachments. Read from / written to the encrypted inner header
-     * (KDBX 4.x) or `Meta/Binaries` (KDBX 3.1) — see meta-binaries.ts. Either
-     * way, Ref values in the XML always address this pool by array index.
-     */
+    // Binary attachments. XML `Ref` values index this pool (see meta-binaries.ts for KDBX 3.1).
     binaries;
     #credentials;
     #innerStreamId;
-    /** Inner random stream key (KDBX 4.x); for 3.1 the protected-stream key is in the header. */
+    // Inner random stream key (KDBX 4.x); for 3.1 the protected-stream key is in the header.
     #innerStreamKey;
     constructor(init) {
         this.header = init.header;
@@ -4955,7 +4685,7 @@ class Kdbx {
         this.#innerStreamId = init.innerStreamId;
         this.#innerStreamKey = init.innerStreamKey;
     }
-    /** The root `<Group>` element under `<Root>`. */
+    // The root `<Group>` element under `<Root>`.
     getRootGroup() {
         const rootElement = getChild(this.root, 'Root');
         const group = rootElement ? getChild(rootElement, 'Group') : undefined;
@@ -4964,37 +4694,25 @@ class Kdbx {
         }
         return group;
     }
-    /** Replace the credentials used when the database is next saved. */
+    // Replace the credentials used when the database is next saved.
     setCredentials(credentials) {
         this.#credentials = credentials;
     }
-    /**
-     * Add a binary attachment to the pool, reusing an existing identical one
-     * (by content) rather than growing the pool without bound. Returns the
-     * pool index — reference it from an entry via a
-     * `<Binary><Value Ref="N"/></Binary>` child (see model.ts's
-     * addEntryAttachment).
-     */
+    // Add a binary attachment, reusing an identical one if present; returns its pool index.
     addBinary(data) {
         for (let i = 0; i < this.binaries.length; i++) {
-            // i < this.binaries.length, so this index is always populated; the
-            // cast only satisfies noUncheckedIndexedAccess.
+            // Index is always in range here; the cast only satisfies noUncheckedIndexedAccess.
             if (bytesEqual(this.binaries[i].data, data))
                 return i;
         }
         this.binaries.push({ flags: 0, data });
         return this.binaries.length - 1;
     }
-    /** The bytes for a pool index, or undefined if out of range. */
+    // The bytes for a pool index, or undefined if out of range.
     getBinaryData(ref) {
         return this.binaries[ref]?.data;
     }
-    /**
-     * Remove any binary pool entries no longer referenced by any entry's
-     * `<Binary>` child — including History revisions, not just an entry's
-     * live state — and remap the survivors' Ref indices to stay contiguous.
-     * Called on every save; a no-op when the pool is already empty.
-     */
+    // Remove unreferenced binaries (incl. History) and remap survivors' Refs; runs on every save.
     #pruneUnreferencedBinaries() {
         if (this.binaries.length === 0)
             return;
@@ -5026,7 +4744,7 @@ class Kdbx {
         }
         this.binaries = kept;
     }
-    /** Parse a KDBX database from bytes. */
+    // Parse a KDBX database from bytes.
     static async load(data, credentials) {
         const { header, rawHeader, offset } = readOuterHeader(data);
         const compositeKey = await credentials.getCompositeKey();
@@ -5099,7 +4817,7 @@ class Kdbx {
             innerStreamKey: header.protectedStreamKey,
         });
     }
-    /** Serialize the database to KDBX bytes (regenerating all random material). */
+    // Serialize the database to KDBX bytes (regenerating all random material).
     async save() {
         return this.header.version.major >= 4 ? this.#save4() : this.#save3();
     }
@@ -5170,7 +4888,7 @@ class Kdbx {
         const rawHeader = writeOuterHeader(header);
         return concatBytes(rawHeader, encrypted);
     }
-    /** Create a new, empty database with the given credentials. */
+    // Create a new, empty database with the given credentials.
     static async create(credentials, options = {}) {
         const version = options.version ?? 4;
         const databaseName = options.databaseName ?? 'Database';
@@ -5243,33 +4961,13 @@ function kx_buildKdfParameters(options) {
 
 
 /* === ../pages/0x67/logic.js === */
-/**
- * Pure logic for the 0x67 app: field/name lookups, tree traversal, entry
- * search, and entry-edit commit, all over a decoded KDBX document. None of
- * these touch the DOM, so unlike page.ts they can be — and are — unit
- * tested directly under plain Node (see tests/0x67-logic.test.ts).
- *
- * This is a real ES module (imports kdbx's build output, same convention
- * used between argon2/chacha20/kdbx themselves — see e.g. kdbx/src/kdf.ts)
- * so it can be exercised with ordinary imports in tests. For the browser
- * build, bundle-iife strips the import below and hoists this file's exports
- * onto globalThis, right alongside the kdbx library itself — this file is
- * one of the concatenated "files" in 0x67/bundle-iife.json. page.ts consumes
- * these functions as globals, not via import — see globals.d.ts.
- *
- * Imports go directly to kdbx's model.ts/xml.ts build output, not its
- * index.ts barrel, on purpose: the barrel re-exports the whole library,
- * including kdbx.ts, whose own cross-package import of chacha20's build
- * output is written relative to *its source* location and breaks (resolves
- * one directory too shallow) when actually resolved from *its build*
- * location — a real, latent bug, undiscovered until now because nothing
- * previously resolved kdbx's build output as a genuine, executed import
- * chain (kdbx's own tests run its source; bundle-iife only text-strips
- * import lines, never resolves them). model.ts/xml.ts have no such
- * dependency, so importing them directly sidesteps the bug rather than
- * fixing it here, which would mean touching already-shipped crypto wiring
- * for an unrelated change — noted, not routed around silently.
- */
+/** Pure logic for 0x67: field/tree lookups, search, and edit-commit over a
+decoded KDBX doc — no DOM, so unit-tested directly. A real ES module;
+bundle-iife hoists its exports onto globalThis alongside kdbx.
+
+Imports kdbx's model.ts/xml.ts directly, not the index.ts barrel, to
+sidestep a latent bug: kdbx.ts's own chacha20 import resolves relative to
+source, not build, and breaks when actually run from build output. */
 
 function entryField(entry, key) {
     for (const string of getChildren(entry, 'String')) {
@@ -5287,18 +4985,13 @@ function groupName(group) {
     const n = getChild(group, 'Name');
     return n ? getText(n) : '(unnamed)';
 }
-/** An entry or group's IconID, as text — direct children, not String fields. */
+// An entry or group's IconID, as text — direct children, not String fields.
 function elementIconId(element) {
     const iconEl = getChild(element, 'IconID');
     return iconEl ? getText(iconEl) : '0';
 }
-/**
- * A small curated set of icons for entries and groups — an internal palette,
- * not KeePass's own bitmap icon spritesheet, which this text-only app has no
- * reason to vendor. IDs 0 and 49 match createEntry/createGroup's defaults.
- * A file whose IconID isn't in this palette (e.g. one edited by real
- * KeePass) still round-trips fine — it just falls back to a generic icon.
- */
+/** Curated icon palette (not KeePass's bitmap spritesheet). IDs 0/49 match
+createEntry/createGroup's defaults; unknown IDs round-trip via a generic icon. */
 const ICON_PALETTE = [
     { id: 0, emoji: '🔑', label: 'Key' },
     { id: 1, emoji: '🌐', label: 'Web' },
@@ -5323,12 +5016,12 @@ const ICON_PALETTE = [
     { id: 49, emoji: '📁', label: 'Folder' },
 ];
 const ICON_FALLBACK = '❔';
-/** The emoji for a given IconID text value, or a generic fallback. */
+// The emoji for a given IconID text value, or a generic fallback.
 function iconEmoji(iconId) {
     const id = Number.parseInt(iconId, 10);
     return ICON_PALETTE.find((icon) => icon.id === id)?.emoji ?? ICON_FALLBACK;
 }
-/** Find the group that directly contains the given entry. */
+// Find the group that directly contains the given entry.
 function findEntryParent(rootGroup, entry) {
     for (const e of getChildren(rootGroup, 'Entry')) {
         if (e === entry)
@@ -5341,8 +5034,7 @@ function findEntryParent(rootGroup, entry) {
     }
     return null;
 }
-/** Find the group that directly contains the given subgroup, or null if
- * `group` is `rootGroup` itself (which has no parent). */
+// Find the group directly containing the given subgroup, or null for rootGroup itself.
 function findGroupParent(rootGroup, group) {
     for (const sub of getChildren(rootGroup, 'Group')) {
         if (sub === group)
@@ -5353,14 +5045,13 @@ function findGroupParent(rootGroup, group) {
     }
     return null;
 }
-/** True if `candidate` is `ancestor` itself, or nested anywhere inside it —
- * used to block moving a group into its own subtree. */
+// True if candidate is ancestor itself or nested inside it (blocks moving a group into itself).
 function isDescendantGroup(ancestor, candidate) {
     if (ancestor === candidate)
         return true;
     return getChildren(ancestor, 'Group').some((sub) => isDescendantGroup(sub, candidate));
 }
-/** Collect every entry in the tree, paired with its containing group. */
+// Collect every entry in the tree, paired with its containing group.
 function collectAllEntries(group, results = []) {
     for (const entry of getChildren(group, 'Entry')) {
         results.push({ entry, group });
@@ -5370,7 +5061,7 @@ function collectAllEntries(group, results = []) {
     }
     return results;
 }
-/** Return the group path from rootGroup to target as an array of names. */
+// Return the group path from rootGroup to target as an array of names.
 function groupPathTo(rootGroup, target, path = []) {
     const thisPath = path.concat(groupName(rootGroup));
     if (rootGroup === target)
@@ -5382,10 +5073,7 @@ function groupPathTo(rootGroup, target, path = []) {
     }
     return null;
 }
-/**
- * Keep only entries with a String field or tag whose value contains the
- * query, case-insensitively.
- */
+// Keep only entries with a String field or tag matching the query, case-insensitively.
 function filterEntriesByQuery(entries, query) {
     const q = query.toLowerCase();
     return entries.filter(({ entry }) => {
@@ -5407,16 +5095,14 @@ function entrySortKey(entry, field) {
             return getEntryTimes(entry).modified;
     }
 }
-/** Sort entries by title, username, or last-modified time. Ties keep their
- * original relative order (Array#sort is stable). */
+// Sort by title, username, or modified time; ties keep original order (stable sort).
 function sortEntries(entries, field, direction) {
     const sign = direction === 'asc' ? 1 : -1;
     return entries
         .slice()
         .sort((a, b) => entrySortKey(a.entry, field).localeCompare(entrySortKey(b.entry, field)) * sign);
 }
-/** Unformatted, unmasked — page.ts formats/masks for display but copies this
- * on double-click. */
+// Unformatted/unmasked — page.ts formats for display but copies this raw value.
 function entryColumnValue(entry, column) {
     switch (column) {
         case 'username':
@@ -5448,17 +5134,20 @@ function exportFields(entry, group) {
         ['Tags', getEntryTags(entry).join(';')],
     ];
 }
-/** Quote a CSV field only when it needs it (contains a comma, quote, or
- * newline), doubling any internal quotes — RFC 4180. */
+/** A leading =, +, -, @, tab, or CR makes spreadsheets treat a CSV field
+as a formula (CWE-1236); entry data is attacker-controlled here. */
+const CSV_FORMULA_TRIGGER = /^[=+\-@\t\r]/;
+/** Quote a CSV field only when needed (RFC 4180), doubling internal quotes.
+A leading formula-trigger char is also neutralized with a leading
+apostrophe — the standard "force text" mitigation spreadsheets honor. */
 function csvField(value) {
-    if (/[",\r\n]/.test(value)) {
-        return `"${value.replace(/"/g, '""')}"`;
+    const safe = CSV_FORMULA_TRIGGER.test(value) ? `'${value}` : value;
+    if (/[",\r\n]/.test(safe)) {
+        return `"${safe.replace(/"/g, '""')}"`;
     }
-    return value;
+    return safe;
 }
-/** Serialize entries (Group, Title, UserName, Password, URL, Notes, Tags) as
- * plaintext CSV — see the caller for the "this is unencrypted" warning this
- * always needs. */
+// Serialize entries as plaintext CSV — see the caller for the required "unencrypted" warning.
 function toCsv(entries) {
     const header = ['Group', 'Title', 'UserName', 'Password', 'URL', 'Notes', 'Tags'];
     const lines = [header.join(',')];
@@ -5477,8 +5166,7 @@ function xmlEscape(value) {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&apos;');
 }
-/** Serialize entries as plaintext XML — same fields and the same "this is
- * unencrypted" caveat as {@link toCsv}. Not a KDBX document. */
+// Serialize entries as plaintext XML, same caveat as toCsv; not a KDBX document.
 function toXml(entries) {
     const rows = entries.map(({ entry, group }) => {
         const body = exportFields(entry, group)
@@ -5580,9 +5268,7 @@ function defaultExpiryLocalInputValue() {
 
 
 /* === ../pages/0x67/page.js === */
-// ============================================================
 // Application state
-// ============================================================
 const app = {
     file: null,
     filename: '',
@@ -5594,8 +5280,7 @@ const app = {
     dirty: false,
     sortField: 'title',
     sortDir: 'asc',
-    // Tile view reads better than a dense table on a narrow phone screen;
-    // this only sets the initial default, the view toggle still overrides it.
+    // Tile view reads better on narrow phones; this only sets the initial default.
     entryView: window.innerWidth <= 700 ? 'tile' : 'table',
     columnVisibility: {
         username: true,
@@ -5607,16 +5292,10 @@ const app = {
         created: false,
     },
 };
-/** True once a trusted same-origin parent frame has handed this app a vault to
- * open (see the "Host integration" section). Stays false in standalone use, so
- * every screen behaves exactly as it does without a host. */
+// True once a trusted parent frame has handed this app a vault (see "Host integration").
 let hostSession = false;
-// ============================================================
 // DOM helpers
-// ============================================================
-/** Unwrap a possibly-missing lookup, or fail loudly. The app's screens are
- * generated from its own templates, so a missing element means a real bug,
- * not a state to handle gracefully. */
+// Unwrap a possibly-missing lookup, or fail loudly — a missing element means a real bug.
 function must(value) {
     if (value === null || value === undefined) {
         throw new Error('expected element not found');
@@ -5626,33 +5305,37 @@ function must(value) {
 function byId(id) {
     return must(document.getElementById(id));
 }
-/** Clone a <template> and return the DocumentFragment. */
+// Clone a <template> and return the DocumentFragment.
 function cloneTemplate(id) {
     return byId(id).content.cloneNode(true);
 }
-/** Replace the #root content with the given fragment. */
+// Replace the #root content with the given fragment.
 function setRoot(fragment) {
     const root = byId('root');
     root.innerHTML = '';
     root.appendChild(fragment);
 }
-/** Shorthand querySelector on #root. */
+// Shorthand querySelector on #root.
 function qs(selector) {
     return must(byId('root').querySelector(selector));
 }
-// ============================================================
-// kdbx XML model helpers
-// (getChildren, getChild, getText, etc. are declared in globals.d.ts and are
-//  in scope because bundle-iife concatenates this file with the kdbx library
-//  into one script — see bundle-iife.json. entryField, entryTitle, groupName,
-//  findEntryParent, collectAllEntries, groupPathTo, filterEntriesByQuery,
-//  applyEntryEdits, isCustomField, and isValidClipboardTimeout are pure logic
-//  and live in logic.ts instead, so they can be unit tested without a DOM;
-//  they're likewise declared in globals.d.ts and concatenated in the same way.)
-// ============================================================
-// ============================================================
+// Icon button helper: this app's many small icon-only controls all share this exact shape.
+function makeIconButton(className, title, glyph, onClick) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = className;
+    btn.title = title;
+    btn.textContent = glyph;
+    btn.addEventListener('click', onClick);
+    return btn;
+}
+// Wire a dialog's ✕ button to close it, replacing a repeated line in every openXDialog.
+function wireClose(dlg) {
+    must(dlg.querySelector('[data-action="close"]')).onclick = () => dlg.close();
+}
+/** kdbx XML helpers and this file's own pure logic (entryField, etc. — see
+logic.ts) are globals from bundle-iife's concatenation; see globals.d.ts. */
 // Clipboard
-// ============================================================
 let clipboardTimer = null;
 async function copyToClipboard(text) {
     try {
@@ -5668,9 +5351,7 @@ async function copyToClipboard(text) {
         console.error('Clipboard write failed', err);
     }
 }
-// ============================================================
 // Screen: Upload
-// ============================================================
 function showUpload() {
     document.body.classList.remove('app-mode');
     setRoot(cloneTemplate('tpl-upload'));
@@ -5702,9 +5383,7 @@ async function handleFile(file) {
     app.file = await file.arrayBuffer();
     showUnlock();
 }
-// ============================================================
 // Screen: Unlock
-// ============================================================
 function showUnlock() {
     document.body.classList.remove('app-mode');
     setRoot(cloneTemplate('tpl-unlock'));
@@ -5758,9 +5437,7 @@ function showUnlock() {
         }
     });
 }
-// ============================================================
 // Screen: Create Database
-// ============================================================
 function showCreateDatabase() {
     document.body.classList.remove('app-mode');
     setRoot(cloneTemplate('tpl-create-database'));
@@ -5881,33 +5558,18 @@ function buildGroupNode(group, isRoot) {
 function buildGroupActions(group) {
     const actions = document.createElement('div');
     actions.className = 'group-actions';
-    const renameBtn = document.createElement('button');
-    renameBtn.type = 'button';
-    renameBtn.className = 'icon-btn group-action-btn';
-    renameBtn.title = 'Rename group';
-    renameBtn.textContent = '✏️';
-    renameBtn.addEventListener('click', () => {
+    const renameBtn = makeIconButton('icon-btn group-action-btn', 'Rename group', '✏️', () => {
         openGroupDialog({ type: 'rename', group }, () => {
             renderGroupTree();
             renderEntryPanel();
         });
     });
     actions.appendChild(renameBtn);
-    const moveBtn = document.createElement('button');
-    moveBtn.type = 'button';
-    moveBtn.className = 'icon-btn group-action-btn';
-    moveBtn.title = 'Move group';
-    moveBtn.textContent = '📂';
-    moveBtn.addEventListener('click', () => {
+    const moveBtn = makeIconButton('icon-btn group-action-btn', 'Move group', '📂', () => {
         openMoveToDialog('Move group to…', (candidate) => !isDescendantGroup(group, candidate), (destination) => moveGroupTo(group, destination));
     });
     actions.appendChild(moveBtn);
-    const deleteBtn = document.createElement('button');
-    deleteBtn.type = 'button';
-    deleteBtn.className = 'icon-btn group-action-btn';
-    deleteBtn.title = 'Delete group';
-    deleteBtn.textContent = '🗑';
-    deleteBtn.addEventListener('click', () => {
+    const deleteBtn = makeIconButton('icon-btn group-action-btn', 'Delete group', '🗑', () => {
         deleteGroupAction(group);
     });
     actions.appendChild(deleteBtn);
@@ -6331,25 +5993,15 @@ function buildDetailField(key, value, isProtected) {
     const actions = document.createElement('div');
     actions.className = 'detail-actions';
     if (isProtected) {
-        const revealBtn = document.createElement('button');
-        revealBtn.type = 'button';
-        revealBtn.className = 'icon-btn';
-        revealBtn.title = 'Show / hide';
-        revealBtn.textContent = '👁';
         let revealed = false;
-        revealBtn.addEventListener('click', () => {
+        const revealBtn = makeIconButton('icon-btn', 'Show / hide', '👁', () => {
             revealed = !revealed;
             valueSpan.textContent = revealed ? value : '••••••••';
             revealBtn.textContent = revealed ? '🙈' : '👁';
         });
         actions.appendChild(revealBtn);
     }
-    const copyBtn = document.createElement('button');
-    copyBtn.type = 'button';
-    copyBtn.className = 'icon-btn';
-    copyBtn.title = 'Copy';
-    copyBtn.textContent = '📋';
-    copyBtn.addEventListener('click', async () => {
+    const copyBtn = makeIconButton('icon-btn', 'Copy', '📋', async () => {
         await copyToClipboard(value);
         copyBtn.textContent = '✓';
         setTimeout(() => {
@@ -6371,12 +6023,7 @@ function renderDetailAttachments(db, entry, container) {
         const label = document.createElement('span');
         label.className = 'attachment-name';
         label.textContent = attachment.name;
-        const downloadBtn = document.createElement('button');
-        downloadBtn.type = 'button';
-        downloadBtn.className = 'icon-btn';
-        downloadBtn.title = 'Download';
-        downloadBtn.textContent = '⬇';
-        downloadBtn.addEventListener('click', () => {
+        const downloadBtn = makeIconButton('icon-btn', 'Download', '⬇', () => {
             const data = db.getBinaryData(attachment.ref);
             if (!data)
                 return;
@@ -6405,22 +6052,12 @@ function renderDetailHistory(db, entry, container) {
         label.className = 'history-label';
         const times = getEntryTimes(snapshot);
         label.textContent = `${formatDateTime(times.modified)} — ${entryTitle(snapshot)}`;
-        const restoreBtn = document.createElement('button');
-        restoreBtn.type = 'button';
-        restoreBtn.className = 'icon-btn';
-        restoreBtn.title = 'Restore this version';
-        restoreBtn.textContent = '↩';
-        restoreBtn.addEventListener('click', () => {
+        const restoreBtn = makeIconButton('icon-btn', 'Restore this version', '↩', () => {
             restoreHistoryEntry(db.root, entry, snapshot);
             app.dirty = true;
             showEntryDetail();
         });
-        const deleteBtn = document.createElement('button');
-        deleteBtn.type = 'button';
-        deleteBtn.className = 'icon-btn';
-        deleteBtn.title = 'Delete this version';
-        deleteBtn.textContent = '🗑';
-        deleteBtn.addEventListener('click', () => {
+        const deleteBtn = makeIconButton('icon-btn', 'Delete this version', '🗑', () => {
             deleteHistoryEntry(entry, snapshot);
             app.dirty = true;
             renderDetailHistory(db, entry, container);
@@ -6529,12 +6166,7 @@ function renderEditAttachments(entry, container) {
             }
             renderEditAttachments(entry, container);
         });
-        const removeBtn = document.createElement('button');
-        removeBtn.type = 'button';
-        removeBtn.className = 'icon-btn';
-        removeBtn.title = 'Remove attachment';
-        removeBtn.textContent = '✕';
-        removeBtn.addEventListener('click', () => {
+        const removeBtn = makeIconButton('icon-btn', 'Remove attachment', '✕', () => {
             removeEntryAttachment(entry, attachment.name);
             renderEditAttachments(entry, container);
         });
@@ -6561,23 +6193,13 @@ function buildEditField(key, value, isProtected, removable) {
     row.appendChild(keyInput);
     row.appendChild(valueInput);
     if (isProtected) {
-        const toggle = document.createElement('button');
-        toggle.type = 'button';
-        toggle.className = 'icon-btn';
-        toggle.title = 'Show / hide';
-        toggle.textContent = '👁';
-        toggle.addEventListener('click', () => {
+        const toggle = makeIconButton('icon-btn', 'Show / hide', '👁', () => {
             valueInput.type = valueInput.type === 'password' ? 'text' : 'password';
             toggle.textContent = valueInput.type === 'password' ? '👁' : '🙈';
         });
         row.appendChild(toggle);
     }
-    const copyBtn = document.createElement('button');
-    copyBtn.type = 'button';
-    copyBtn.className = 'icon-btn';
-    copyBtn.title = 'Copy';
-    copyBtn.textContent = '📋';
-    copyBtn.addEventListener('click', async () => {
+    const copyBtn = makeIconButton('icon-btn', 'Copy', '📋', async () => {
         // Copies whatever is currently typed, not the value the field opened
         // with — the user may have already edited it.
         await copyToClipboard(valueInput.value);
@@ -6588,12 +6210,7 @@ function buildEditField(key, value, isProtected, removable) {
     });
     row.appendChild(copyBtn);
     if (key === 'Password') {
-        const generateBtn = document.createElement('button');
-        generateBtn.type = 'button';
-        generateBtn.className = 'icon-btn';
-        generateBtn.title = 'Generate password';
-        generateBtn.textContent = '🎲';
-        generateBtn.addEventListener('click', () => {
+        const generateBtn = makeIconButton('icon-btn', 'Generate password', '🎲', () => {
             openPasswordGenerator((password) => {
                 valueInput.value = password;
             });
@@ -6601,13 +6218,8 @@ function buildEditField(key, value, isProtected, removable) {
         row.appendChild(generateBtn);
     }
     if (removable) {
-        const removeBtn = document.createElement('button');
-        removeBtn.type = 'button';
-        removeBtn.className = 'icon-btn';
-        removeBtn.title = 'Remove field';
-        removeBtn.textContent = '✕';
+        const removeBtn = makeIconButton('icon-btn', 'Remove field', '✕', () => row.remove());
         removeBtn.style.color = 'var(--danger)';
-        removeBtn.addEventListener('click', () => row.remove());
         row.appendChild(removeBtn);
     }
     return row;
@@ -6681,7 +6293,7 @@ function openSettings() {
         }
         dlg.close();
     };
-    must(dlg.querySelector('[data-action="close"]')).onclick = () => dlg.close();
+    wireClose(dlg);
     dlg.showModal();
 }
 // ============================================================
@@ -6711,7 +6323,7 @@ function openExportDialog() {
         downloadTextFile(toXml(entries), `${baseName}.xml`, 'application/xml');
         dlg.close();
     };
-    must(dlg.querySelector('[data-action="close"]')).onclick = () => dlg.close();
+    wireClose(dlg);
     dlg.showModal();
 }
 // ============================================================
@@ -6801,7 +6413,7 @@ function openPasswordGenerator(onUse) {
         onUse(preview.textContent);
         dlg.close();
     };
-    must(dlg.querySelector('[data-action="close"]')).onclick = () => dlg.close();
+    wireClose(dlg);
     regenerate();
     dlg.showModal();
 }
@@ -6857,7 +6469,7 @@ function openIconPicker(onPick) {
         });
         grid.appendChild(btn);
     }
-    must(dlg.querySelector('[data-action="close"]')).onclick = () => dlg.close();
+    wireClose(dlg);
     dlg.showModal();
 }
 function openGroupDialog(mode, onDone) {
@@ -6907,7 +6519,7 @@ function openGroupDialog(mode, onDone) {
         onDone();
     };
     must(dlg.querySelector('[data-action="cancel-group"]')).onclick = () => dlg.close();
-    must(dlg.querySelector('[data-action="close"]')).onclick = () => dlg.close();
+    wireClose(dlg);
     // Allow Enter to submit
     nameInput.onkeydown = (e) => {
         if (e.key === 'Enter') {
@@ -6948,7 +6560,7 @@ function openMoveToDialog(title, isValidTarget, onPick) {
     rootUl.appendChild(buildNode(must(app.db).getRootGroup()));
     treeEl.appendChild(rootUl);
     must(dlg.querySelector('[data-action="cancel-move"]')).onclick = () => dlg.close();
-    must(dlg.querySelector('[data-action="close"]')).onclick = () => dlg.close();
+    wireClose(dlg);
     dlg.showModal();
 }
 // ============================================================

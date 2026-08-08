@@ -6,6 +6,46 @@
   <title>KeePass Web</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 7V5a3.5 3.5 0 0 1 7 0v2' fill='none' stroke='%230e7c5a' stroke-width='2' stroke-linecap='round'/%3E%3Crect x='2' y='7' width='12' height='8' rx='2' fill='%230e7c5a'/%3E%3C/svg%3E">
   <style>
+/* ============================================================
+   Shared footer partial (pages/shared/footer.html)
+   ============================================================ */
+
+footer {
+  flex-shrink: 0;
+  padding: 0.4rem 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+footer a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+footer a:hover {
+  text-decoration: underline;
+}
+
+.footer-links {
+  flex-shrink: 0;
+  padding: 0.4rem 1rem 0;
+  font-size: 0.85rem;
+  color: var(--text);
+  text-align: center;
+}
+
+.footer-links a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.footer-links a:hover {
+  text-decoration: underline;
+}
+
 *,
 *::before,
 *::after {
@@ -148,26 +188,32 @@ a:hover {
   text-align: left;
 }
 
-.links {
-  display: flex;
-  gap: 1.5rem;
-  justify-content: center;
+.trust summary {
+  cursor: pointer;
 }
 
-.sponsor-cta {
-  margin-top: 2rem;
-  font-size: 0.9rem;
-  color: var(--text);
+.trust summary::marker {
+  color: var(--accent);
 }
 
-.sponsor-cta a {
-  font-weight: 600;
+.trust summary:hover {
+  text-decoration: underline;
 }
 
-footer {
-  margin-top: 4rem;
+.trust details p {
+  margin-top: 0.6rem;
+}
+
+.trust pre {
+  margin: 0.6rem 0;
+  padding: 0.6rem 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.375rem;
+  overflow-x: auto;
   font-size: 0.8rem;
-  color: var(--border);
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 </style>
@@ -187,20 +233,22 @@ footer {
     </div>
 
     <div class="trust">
-      <strong>This file is identical to what is served at keepass-web.app.</strong>
-      Every file on the hosted site is a verbatim copy of a published release artifact.
-      Download the release, verify the published checksum, and trust what you audit.
+      <details>
+        <summary><strong>Verify before you trust.</strong> Tampering would leave a public, permanent trace.</summary>
+        <p>Every release is cryptographically attested and logged to a public transparency log (Sigstore). Verify any downloaded file was built by this project's Release workflow, not hand-assembled:</p>
+        <pre><code>gh attestation verify &lt;file&gt; --repo keepass-web/source-application</code></pre>
+        <p>Requires the <a href="https://cli.github.com/">GitHub CLI</a>. Prefer to build it yourself from source instead? See <a href="https://github.com/keepass-web/source-application/blob/main/docs/REPRODUCING.md">Reproducing a Build</a>.</p>
+      </details>
     </div>
-
-    <div class="links">
-      <a href="https://github.com/keepass-web">GitHub</a>
-    </div>
-
-    <p class="sponsor-cta">
-      Like KeePass Web? <a href="https://github.com/sponsors/keepass-web" target="_blank" rel="noopener noreferrer">&hearts; Sponsor</a> its development.
-    </p>
   </main>
-  <footer>MIT licensed &middot; <a href="https://github.com/keepass-web">github.com/keepass-web</a> &middot; <a href="https://github.com/keepass-web/source-application/tree/v0.8.0">v0.8.0</a> committed on <time id="commit-date" datetime="2026-07-28T21:01:53-04:00">2026-07-28T21:01:53-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+  <p class="footer-links">
+  <a href="https://github.com/sponsors/keepass-web" target="_blank" rel="noopener noreferrer">&hearts; Sponsor</a>
+  &middot; <a href="https://github.com/keepass-web/source-application/blob/main/LICENSE">MIT Licensed</a>
+  &middot; <a href="https://github.com/keepass-web/.github/blob/main/profile/FAQ.md">FAQ</a>
+  &middot; <a href="https://github.com/keepass-web/source-application">Source</a>
+</p>
+<footer><a href="https://github.com/keepass-web/source-application/tree/v0.9.0">v0.9.0</a> committed on <time id="commit-date" datetime="2026-08-08T10:02:38-04:00">2026-08-08T10:02:38-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+
   <script>
 
 </script>

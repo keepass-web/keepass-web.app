@@ -84,7 +84,8 @@ footer a:hover {
   --warning-bg: #fbf0e7;
   --warning-border: #ead7c2;
   --success: #0e7c5a;
-  --sidebar-width: 210px;
+  /* 25 chars of a first-level sub-group (#63) at .group-btn's size, plus icon, padding, nesting, and the ⋯ slot. */
+  --sidebar-width: 280px;
 }
 
 body {
@@ -243,6 +244,21 @@ body:not(.app-mode) {
 .icon-btn:hover {
   color: var(--text);
   background: var(--surface-2);
+}
+
+.icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.icon-btn:disabled:hover {
+  background: none;
+}
+
+/* Marks the persistent save action as needing attention — nothing to click
+through to notice unsaved edits, unlike every other dirty-aware prompt. */
+.icon-btn.unsaved {
+  color: var(--accent);
 }
 
 .back-link {
@@ -503,6 +519,21 @@ body:not(.app-mode) {
   overflow: hidden;
 }
 
+/* A flex sibling of the rail, not an overlay on it (#63): the tree scrolls, and
+an overlaid handle would sit on top of its scrollbar. */
+.sidebar-resize {
+  flex: 0 0 6px;
+  margin: 0;
+  border: none;
+  cursor: col-resize;
+  touch-action: none; /* a drag here resizes (#63); scrolling must not claim it */
+}
+
+.sidebar-resize:hover,
+.sidebar-resize:focus-visible {
+  background: var(--accent-dim);
+}
+
 .sidebar-header {
   display: flex;
   align-items: center;
@@ -510,6 +541,11 @@ body:not(.app-mode) {
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+}
+
+.sidebar-header-actions {
+  display: flex;
+  gap: 0.15rem;
 }
 
 .sidebar-label {
@@ -541,14 +577,41 @@ body:not(.app-mode) {
   gap: 0.1rem;
 }
 
-.group-actions {
-  display: flex;
+/* Reserved on every row, shown only on the active one (#63), so selecting a
+group doesn't reflow its name. */
+.group-menu-btn {
   flex-shrink: 0;
-}
-
-.group-action-btn {
   padding: 0.2rem 0.3rem;
   font-size: 0.8rem;
+  visibility: hidden;
+}
+
+.group-row-active .group-menu-btn {
+  visibility: visible;
+}
+
+/* Inline, not a floating popup (#63): the rail and the tree both clip overflow,
+so an absolutely positioned menu would be cut off. */
+.group-menu {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.15rem 0 0.35rem 1rem;
+}
+
+.group-menu-item {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  white-space: nowrap;
+}
+
+.group-menu-item:hover {
+  background: var(--surface-2);
 }
 
 .group-btn {
@@ -776,7 +839,12 @@ body:not(.app-mode) {
   white-space: nowrap;
 }
 
+/* A tap on a cell copies (#67), so the cell must not start a text selection or
+wait on a double-tap-to-zoom before that tap registers. */
 .entry-table td {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-touch-callout: none;
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--border);
   max-width: 220px;
@@ -784,6 +852,30 @@ body:not(.app-mode) {
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
+}
+
+/* Present at rest, brighter on hover or focus (#67): hover may raise emphasis,
+never be what makes the affordance discoverable, since touch has none. */
+.copy-hint {
+  margin-left: 0.35rem;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.8em;
+  line-height: 1;
+  opacity: 0.55;
+}
+
+.entry-table td:hover .copy-hint,
+.copy-hint:focus-visible {
+  opacity: 1;
+}
+
+.entry-table-open {
+  width: 1px;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .entry-table tbody tr:hover {
@@ -854,6 +946,16 @@ body:not(.app-mode) {
     box-shadow: 2px 0 16px rgba(0, 0, 0, 0.18);
     transform: translateX(-100%);
     transition: transform 0.2s ease;
+  }
+
+  .sidebar-resize {
+    display: none;
+  }
+
+  /* Tapping a group closes the drawer (#63), so gating ⋯ on the active row
+  would put rename and move two drawer visits away; show it on every row. */
+  .group-menu-btn {
+    visibility: visible;
   }
 
   .sidebar.sidebar-open {
@@ -1440,6 +1542,35 @@ body.embedded footer {
   }
 }
 
+/* Visible for exactly as long as the clipboard holds the value (#67). */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translateX(-50%);
+  z-index: 50;
+  max-width: min(90vw, 32rem);
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  color: var(--text);
+  font-size: 0.85rem;
+}
+
+/* Announced but not drawn: gives the open column a name for table navigation. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 </style>
 </head>
 <body>
@@ -1456,10 +1587,10 @@ body.embedded footer {
         <div class="drop-zone-icon">🔑</div>
         <p class="drop-zone-label">Drop your .kdbx file here</p>
         <label class="btn btn-primary">
-          Choose file
+          Choose a database…
           <input type="file" id="file-input" accept=".kdbx,.kdb" hidden>
         </label>
-        <button type="button" class="back-link" data-action="create-database">Create a new database</button>
+        <button type="button" class="btn btn-secondary" data-action="create-database">Create a new database</button>
       </div>
     </div>
   </template>
@@ -1539,6 +1670,7 @@ body.embedded footer {
           <input type="search" id="search-input" class="search-input" placeholder="Search all entries…" autocomplete="off">
         </div>
         <div class="header-actions">
+          <button type="button" class="icon-btn" data-action="save-database" title="Save" aria-label="Save">💾</button>
           <button type="button" class="icon-btn" data-action="export" title="Export">⬆</button>
           <button type="button" class="icon-btn" data-action="settings" title="Settings">⚙</button>
           <button type="button" class="icon-btn" data-action="lock" title="Lock">🔒</button>
@@ -1550,10 +1682,14 @@ body.embedded footer {
         <aside id="sidebar" class="sidebar">
           <div class="sidebar-header">
             <span class="sidebar-label">Groups</span>
-            <button type="button" class="icon-btn" data-action="add-group" title="New group">+</button>
+            <div class="sidebar-header-actions">
+              <button type="button" class="icon-btn" data-action="add-group" title="New group">➕</button>
+              <button type="button" class="icon-btn" id="delete-group-btn" data-action="delete-group" title="Delete group" aria-label="Delete group">🗑</button>
+            </div>
           </div>
           <nav id="group-tree" class="group-tree"></nav>
         </aside>
+        <hr id="sidebar-resize" class="sidebar-resize" tabindex="0" aria-orientation="vertical" aria-label="Resize groups panel" aria-valuenow="280">
         <main class="entry-panel">
           <div class="panel-header">
             <span id="panel-title" class="panel-title"></span>
@@ -1577,7 +1713,7 @@ body.embedded footer {
                   <option value="modified:asc">Modified (oldest)</option>
                 </select>
               </div>
-              <button type="button" class="icon-btn" data-action="add-entry" title="New entry">+</button>
+              <button type="button" class="icon-btn" data-action="add-entry" title="New entry">➕</button>
             </div>
           </div>
           <div id="entry-list" class="entry-list"></div>
@@ -1665,6 +1801,10 @@ body.embedded footer {
       <div class="field">
         <label for="clipboard-timeout">Clipboard clear timeout (seconds)</label>
         <input type="number" id="clipboard-timeout" min="5" max="300" value="30">
+      </div>
+      <div class="field">
+        <label for="auto-lock-timeout">Auto-lock when tab hidden (seconds)</label>
+        <input type="number" id="auto-lock-timeout" min="10" max="3600" value="30">
       </div>
       <hr class="dialog-divider">
       <div class="field">
@@ -1777,16 +1917,20 @@ body.embedded footer {
        ============================================================ -->
   <dialog id="dlg-confirm-discard" class="kw-dialog">
     <div class="dialog-header">
-      <h2>Discard unsaved changes?</h2>
+      <h2 id="confirm-discard-title">Discard unsaved changes?</h2>
     </div>
     <div class="dialog-body">
-      <p>You have unsaved changes that will be lost.</p>
+      <p id="confirm-discard-message">You have unsaved changes that will be lost.</p>
+      <p class="save-status" data-role="confirm-discard-status" hidden></p>
     </div>
     <div class="dialog-footer">
       <button type="button" class="btn btn-secondary" data-action="cancel-discard">Cancel</button>
       <button type="button" class="btn btn-danger" data-action="confirm-discard">Discard</button>
+      <button type="button" class="btn btn-primary" data-action="confirm-save">Save</button>
     </div>
   </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <!-- ============================================================
        Dialog: New Group
@@ -1844,7 +1988,7 @@ body.embedded footer {
   &middot; <a href="https://github.com/keepass-web/.github/blob/main/profile/FAQ.md">FAQ</a>
   &middot; <a href="https://github.com/keepass-web/source-application">Source</a>
 </p>
-<footer><a href="https://github.com/keepass-web/source-application/tree/v0.9.1">v0.9.1</a> committed on <time id="commit-date" datetime="2026-08-08T15:30:21-04:00">2026-08-08T15:30:21-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+<footer><a href="https://github.com/keepass-web/source-application/tree/v0.10.0">v0.10.0</a> committed on <time id="commit-date" datetime="2026-09-07T16:23:57-04:00">2026-09-07T16:23:57-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
 
 
   <script>
@@ -1855,8 +1999,8 @@ body.embedded footer {
 /** `embed-protocol` — the same-origin postMessage contract between a
 keepass-web implementation and whatever host embeds it in an iframe.
 Centralizes shapes/guards/builders (previously duplicated per side) so
-both ends provably agree on the wire format: kw-ready, kw-open, kw-save,
-kw-saved, kw-close-request, kw-close-ack, kw-close. */
+both ends provably agree on the wire format: kw-ready, kw-open, kw-create,
+kw-save, kw-saved, kw-title, kw-close-request, kw-close-ack, kw-close. */
 function hasType(data, type) {
     return (data !== null && typeof data === 'object' && data.type === type);
 }
@@ -1873,6 +2017,9 @@ function isReadyMessage(data) {
 function isOpenMessage(data) {
     return isFileMessage(data, 'kw-open');
 }
+function isCreateMessage(data) {
+    return hasType(data, 'kw-create');
+}
 function isSaveMessage(data) {
     return isFileMessage(data, 'kw-save');
 }
@@ -1883,6 +2030,12 @@ function isSavedMessage(data) {
     if (typeof rec.ok !== 'boolean')
         return false;
     return rec.error === undefined || typeof rec.error === 'string';
+}
+function isTitleMessage(data) {
+    if (!hasType(data, 'kw-title'))
+        return false;
+    const rec = data;
+    return typeof rec.filename === 'string' && typeof rec.locked === 'boolean';
 }
 function isCloseRequestMessage(data) {
     return hasType(data, 'kw-close-request');
@@ -1900,11 +2053,17 @@ function readyMessage() {
 function openMessage(filename, bytes) {
     return { type: 'kw-open', filename, bytes };
 }
+function createMessage() {
+    return { type: 'kw-create' };
+}
 function saveMessage(filename, bytes) {
     return { type: 'kw-save', filename, bytes };
 }
 function savedMessage(ok, error) {
     return error === undefined ? { type: 'kw-saved', ok } : { type: 'kw-saved', ok, error };
+}
+function titleMessage(filename, locked) {
+    return { type: 'kw-title', filename, locked };
 }
 function closeRequestMessage() {
     return { type: 'kw-close-request' };
@@ -5203,6 +5362,10 @@ function isCustomField(key) {
 function isValidClipboardTimeout(seconds) {
     return !Number.isNaN(seconds) && seconds >= 5;
 }
+/** The settings dialog's minimum accepted auto-lock delay, in seconds. */
+function isValidAutoLockTimeout(seconds) {
+    return !Number.isNaN(seconds) && seconds >= 10;
+}
 /** Character classes offered by the password generator. */
 const GENERATOR_CHARSETS = {
     upper: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
@@ -5277,6 +5440,7 @@ const app = {
     currentEntry: null,
     searchQuery: '',
     clipboardTimeout: 30,
+    autoLockTimeout: 30,
     dirty: false,
     sortField: 'title',
     sortDir: 'asc',
@@ -5294,6 +5458,23 @@ const app = {
 };
 // True once a trusted parent frame has handed this app a vault (see "Host integration").
 let hostSession = false;
+// True while this tab holds a database: loaded, newly created, or locked (#66).
+function hasDatabase() {
+    return app.db !== null || app.file !== null;
+}
+// The one place app.dirty changes, so the persistent save indicator can never drift from it.
+function setDirty(value) {
+    app.dirty = value;
+    updateSaveIndicator();
+}
+// No-op off the entry list — the save button only exists in tpl-entry-list.
+function updateSaveIndicator() {
+    const btn = document.querySelector('#root [data-action="save-database"]');
+    if (!btn)
+        return;
+    btn.disabled = !app.dirty;
+    btn.classList.toggle('unsaved', app.dirty);
+}
 // DOM helpers
 // Unwrap a possibly-missing lookup, or fail loudly — a missing element means a real bug.
 function must(value) {
@@ -5337,14 +5518,39 @@ function wireClose(dlg) {
 logic.ts) are globals from bundle-iife's concatenation; see globals.d.ts. */
 // Clipboard
 let clipboardTimer = null;
-async function copyToClipboard(text) {
+/* The most recent auto-clear (#67). Every copy waits for it before writing, so
+a clear can never resolve on top of a newer value and wipe it; a settled one
+costs nothing to await, which is why this is never null. */
+let clipboardClear = Promise.resolve();
+const FIELD_LABELS = { UserName: 'Username' };
+// KeePass's own field keys are not what the rest of the app calls them (#67).
+function fieldLabel(key) {
+    return FIELD_LABELS[key] ?? key;
+}
+/* Names the field, never the value (#67): the toast is a reminder that a secret
+is on the clipboard, so it must not put that secret on screen as well. */
+function showClipboardToast(label) {
+    const toast = byId('toast');
+    toast.textContent = `${label} copied to clipboard`;
+    toast.hidden = false;
+}
+async function copyToClipboard(text, label = 'Value') {
     try {
+        await clipboardClear;
         await navigator.clipboard.writeText(text);
         if (clipboardTimer)
             clearTimeout(clipboardTimer);
+        showClipboardToast(label);
+        /* One timer drives both the wipe and the toast (#67), so the toast is gone
+        exactly when the clipboard is, rather than on a schedule of its own. */
         clipboardTimer = setTimeout(() => {
-            navigator.clipboard.writeText('').catch(() => { });
             clipboardTimer = null;
+            clipboardClear = navigator.clipboard
+                .writeText('')
+                .then(() => {
+                byId('toast').hidden = true;
+            })
+                .catch(() => { }); // the clear failed, so the value is still there and the toast stays
         }, app.clipboardTimeout * 1000);
     }
     catch (err) {
@@ -5355,6 +5561,7 @@ async function copyToClipboard(text) {
 function showUpload() {
     document.body.classList.remove('app-mode');
     setRoot(cloneTemplate('tpl-upload'));
+    publishTitle();
     const dropZone = qs('#drop-zone');
     const fileInput = qs('#file-input');
     fileInput.addEventListener('change', () => {
@@ -5384,9 +5591,14 @@ async function handleFile(file) {
     showUnlock();
 }
 // Screen: Unlock
-function showUnlock() {
+/** `preserveDirty` is true only when arriving here from lockDatabase(), whose
+edits were never actually persisted anywhere — everywhere else, unlocking
+starts a database whose only state is what's on disk/the host, so nothing is
+unsaved yet. */
+function showUnlock(preserveDirty = false) {
     document.body.classList.remove('app-mode');
     setRoot(cloneTemplate('tpl-unlock'));
+    publishTitle();
     qs('#db-filename').textContent = app.filename;
     const passwordInput = qs('#master-password');
     passwordInput.focus();
@@ -5424,7 +5636,7 @@ function showUnlock() {
             app.db = await Kdbx.load(new Uint8Array(must(app.file)), creds);
             app.currentGroup = app.db.getRootGroup();
             app.searchQuery = '';
-            app.dirty = false;
+            setDirty(preserveDirty && app.dirty);
             showEntryList();
         }
         catch (err) {
@@ -5441,6 +5653,7 @@ function showUnlock() {
 function showCreateDatabase() {
     document.body.classList.remove('app-mode');
     setRoot(cloneTemplate('tpl-create-database'));
+    publishTitle();
     const nameInput = qs('#create-name');
     const passwordInput = qs('#create-password');
     const confirmInput = qs('#create-password-confirm');
@@ -5484,7 +5697,7 @@ function showCreateDatabase() {
             app.filename = `${databaseName}.kdbx`;
             app.currentGroup = app.db.getRootGroup();
             app.searchQuery = '';
-            app.dirty = true;
+            setDirty(true);
             showEntryList();
         }
         catch (err) {
@@ -5501,9 +5714,11 @@ function showCreateDatabase() {
 function showEntryList() {
     document.body.classList.add('app-mode');
     setRoot(cloneTemplate('tpl-entry-list'));
+    publishTitle();
     renderGroupTree();
     renderEntryPanel();
     wireEntryListEvents();
+    updateSaveIndicator();
 }
 /** No-op outside the mobile drawer layout, where the sidebar toggle and
  * backdrop are invisible/unreachable — cheap to call unconditionally. */
@@ -5511,30 +5726,98 @@ function setSidebarOpen(open) {
     qs('#sidebar').classList.toggle('sidebar-open', open);
     qs('#sidebar-backdrop').hidden = !open;
 }
+const SIDEBAR_WIDTH_MIN = 180;
+const SIDEBAR_WIDTH_MAX = 520;
+const SIDEBAR_WIDTH_STEP = 16;
+/* Null until the user adjusts the handle, so the rail opens at the CSS default
+that fits 25 characters (#63); the width stays in memory because one silently
+restored forever would be implicit state, yet it must survive a re-render. */
+let sidebarWidth = null;
+/* Sets the custom property rather than an inline width (#63); an inline width
+outranks the drawer's own rule, so a rail widened on a desktop stayed that wide
+once the viewport narrowed. */
+function setSidebarWidth(px) {
+    sidebarWidth = Math.min(SIDEBAR_WIDTH_MAX, Math.max(SIDEBAR_WIDTH_MIN, Math.round(px)));
+    document.documentElement.style.setProperty('--sidebar-width', `${sidebarWidth}px`);
+    qs('#sidebar-resize').setAttribute('aria-valuenow', String(sidebarWidth));
+}
+// The rail as rendered until the user picks a width; their choice after that (#63).
+function currentSidebarWidth() {
+    return sidebarWidth ?? qs('#sidebar').getBoundingClientRect().width;
+}
+/* Pointer events rather than mouse events (#63): one path covers mouse, touch
+and pen, so the rail is resizable wherever it is visible. */
+function wireSidebarResize() {
+    const handle = qs('#sidebar-resize');
+    handle.setAttribute('aria-valuemin', String(SIDEBAR_WIDTH_MIN));
+    handle.setAttribute('aria-valuemax', String(SIDEBAR_WIDTH_MAX));
+    if (sidebarWidth !== null)
+        setSidebarWidth(sidebarWidth); // resync the fresh handle's aria
+    handle.addEventListener('pointerdown', (down) => {
+        down.preventDefault();
+        handle.setPointerCapture(down.pointerId);
+        const startX = down.clientX;
+        const startWidth = currentSidebarWidth();
+        const onMove = (move) => setSidebarWidth(startWidth + move.clientX - startX);
+        const onDone = () => {
+            handle.releasePointerCapture(down.pointerId);
+            handle.removeEventListener('pointermove', onMove);
+            handle.removeEventListener('pointerup', onDone);
+            handle.removeEventListener('pointercancel', onDone);
+        };
+        handle.addEventListener('pointermove', onMove);
+        handle.addEventListener('pointerup', onDone);
+        handle.addEventListener('pointercancel', onDone);
+    });
+    handle.addEventListener('keydown', (key) => {
+        if (key.key !== 'ArrowLeft' && key.key !== 'ArrowRight')
+            return;
+        key.preventDefault();
+        const step = key.key === 'ArrowLeft' ? -SIDEBAR_WIDTH_STEP : SIDEBAR_WIDTH_STEP;
+        setSidebarWidth(currentSidebarWidth() + step);
+    });
+}
+/* The group whose ⋯ menu is open, not a flag (#63): the drawer shows ⋯ on every
+row, so the menu belongs to a row rather than to the selection. */
+let groupMenuFor = null;
 function renderGroupTree() {
     const container = qs('#group-tree');
     container.innerHTML = '';
+    const rootGroup = must(app.db).getRootGroup();
     const ul = document.createElement('ul');
     ul.className = 'group-list';
-    ul.appendChild(buildGroupNode(must(app.db).getRootGroup(), true));
+    ul.appendChild(buildGroupNode(rootGroup, true));
     container.appendChild(ul);
+    // Deleting acts on the selection (#63); the root group is the database itself.
+    const selected = must(app.currentGroup);
+    qs('#delete-group-btn').disabled =
+        selected === rootGroup || isRecycleBinGroup(selected);
+}
+/* Opening ⋯ selects the row too (#63); the drawer shows ⋯ on every row, so
+without this the header's delete could act on a different group than the menu
+the user is looking at. */
+function selectGroup(group) {
+    app.currentGroup = group;
+    app.searchQuery = '';
+    const searchInput = document.querySelector('#search-input');
+    if (searchInput)
+        searchInput.value = '';
+    renderGroupTree();
+    renderEntryPanel();
 }
 function buildGroupNode(group, isRoot) {
     const li = document.createElement('li');
     const row = document.createElement('div');
-    row.className = 'group-row';
+    const isActive = group === app.currentGroup;
+    row.className = `group-row${isActive ? ' group-row-active' : ''}`;
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = `group-btn${group === app.currentGroup ? ' active' : ''}`;
+    btn.className = `group-btn${isActive ? ' active' : ''}`;
     btn.textContent = `${iconEmoji(elementIconId(group))} ${groupName(group)}`;
+    btn.title = groupName(group); // the rail truncates; hover still gives the whole name (#63)
     btn.addEventListener('click', () => {
-        app.currentGroup = group;
-        app.searchQuery = '';
-        const searchInput = document.querySelector('#search-input');
-        if (searchInput)
-            searchInput.value = '';
-        renderGroupTree();
-        renderEntryPanel();
+        groupMenuFor = null;
+        selectGroup(group);
         setSidebarOpen(false);
     });
     row.appendChild(btn);
@@ -5542,9 +5825,15 @@ function buildGroupNode(group, isRoot) {
     // settings (its master password/name), not as an ordinary group, and
     // neither movable nor deletable.
     if (!isRoot) {
-        row.appendChild(buildGroupActions(group));
+        row.appendChild(makeIconButton('icon-btn group-menu-btn', 'Group actions', '⋯', () => {
+            groupMenuFor = groupMenuFor === group ? null : group;
+            selectGroup(group);
+        }));
     }
     li.appendChild(row);
+    if (!isRoot && groupMenuFor === group) {
+        li.appendChild(buildGroupMenu(group));
+    }
     const subgroups = getChildren(group, 'Group');
     if (subgroups.length > 0) {
         const ul = document.createElement('ul');
@@ -5555,25 +5844,53 @@ function buildGroupNode(group, isRoot) {
     }
     return li;
 }
-function buildGroupActions(group) {
-    const actions = document.createElement('div');
-    actions.className = 'group-actions';
-    const renameBtn = makeIconButton('icon-btn group-action-btn', 'Rename group', '✏️', () => {
+function makeMenuItem(label, onClick) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'group-menu-item';
+    btn.textContent = label;
+    // Closing here, not in each action, also covers a dialog the user cancels (#63).
+    btn.addEventListener('click', () => {
+        groupMenuFor = null;
+        renderGroupTree();
+        onClick();
+    });
+    return btn;
+}
+function buildGroupMenu(group) {
+    const menu = document.createElement('div');
+    menu.className = 'group-menu';
+    menu.appendChild(makeMenuItem('Rename', () => {
         openGroupDialog({ type: 'rename', group }, () => {
             renderGroupTree();
             renderEntryPanel();
         });
-    });
-    actions.appendChild(renameBtn);
-    const moveBtn = makeIconButton('icon-btn group-action-btn', 'Move group', '📂', () => {
+    }));
+    menu.appendChild(makeMenuItem('Move', () => {
         openMoveToDialog('Move group to…', (candidate) => !isDescendantGroup(group, candidate), (destination) => moveGroupTo(group, destination));
-    });
-    actions.appendChild(moveBtn);
-    const deleteBtn = makeIconButton('icon-btn group-action-btn', 'Delete group', '🗑', () => {
-        deleteGroupAction(group);
-    });
-    actions.appendChild(deleteBtn);
-    return actions;
+    }));
+    if (isTrashedGroup(group)) {
+        menu.appendChild(makeMenuItem('Undelete', () => undeleteGroup(group)));
+    }
+    return menu;
+}
+/* The bin reports itself as inside itself (#63), so deleting it would take the
+permanent branch and destroy every trashed item; it is never an ordinary
+delete target. */
+function isRecycleBinGroup(group) {
+    return isInRecycleBin(must(app.db).root, group) && !isTrashedGroup(group);
+}
+/* Tests the parent, not the group (#63): isInRecycleBin counts the bin as
+containing itself, which would offer the bin an Undelete of its own. */
+function isTrashedGroup(group) {
+    const db = must(app.db);
+    const parent = findGroupParent(db.getRootGroup(), group);
+    return parent !== null && isInRecycleBin(db.root, parent);
+}
+/* Restores to the root group (#63); KDBX records no previous location, so this
+matches where a trashed entry is restored to. */
+function undeleteGroup(group) {
+    moveGroupTo(group, must(app.db).getRootGroup());
 }
 /** Deselect (back to root) if the current selection is `group` or nested
  * inside it — used when a group is moved or trashed out from under the
@@ -5590,12 +5907,15 @@ function moveGroupTo(group, destination) {
     if (parent && parent !== destination) {
         parent.children = parent.children.filter((c) => c !== group);
         appendChild(destination, group);
-        app.dirty = true;
+        setDirty(true);
     }
     renderGroupTree();
     renderEntryPanel();
 }
 function deleteGroupAction(group) {
+    // The row is about to move or vanish; its menu should not travel with it (#63).
+    groupMenuFor = null;
+    renderGroupTree();
     const db = must(app.db);
     const rootGroup = db.getRootGroup();
     if (isInRecycleBin(db.root, group)) {
@@ -5609,17 +5929,20 @@ function deleteGroupAction(group) {
             if (parent)
                 parent.children = parent.children.filter((c) => c !== group);
             resetSelectionIfAffected(rootGroup, group);
-            app.dirty = true;
+            setDirty(true);
             renderGroupTree();
             renderEntryPanel();
         });
         return;
     }
-    // Outside the bin, deleting a group is "Trash" — reversible, so (like
-    // trashing an entry) it needs no confirmation.
-    const bin = findOrCreateRecycleBin(db.root);
-    resetSelectionIfAffected(rootGroup, group);
-    moveGroupTo(group, bin);
+    /* Trashing is reversible, but a group carries its whole subtree with it, so
+    it asks first (#63) where a single entry does not. */
+    openConfirmDelete('Move to Recycle Bin?', `"${groupName(group)}" and everything in it can be restored from the bin.`, () => {
+        // Created inside the callback so cancelling leaves no empty bin behind.
+        const bin = findOrCreateRecycleBin(db.root);
+        resetSelectionIfAffected(rootGroup, group);
+        moveGroupTo(group, bin);
+    }, 'Move to Bin', false);
 }
 function renderEntryPanel() {
     const panelTitle = qs('#panel-title');
@@ -5700,7 +6023,7 @@ const ENTRY_COLUMNS = [
     { key: 'created', label: 'Created' },
 ];
 /** Display text: dates formatted, password masked. entryColumnValue itself
- * (unmasked) is what a double-click copies — see buildEntryTable. */
+ * (unmasked) is what a tap copies — see buildEntryTable. */
 function entryColumnDisplayValue(entry, column) {
     const raw = entryColumnValue(entry, column);
     if (column === 'password')
@@ -5709,29 +6032,35 @@ function entryColumnDisplayValue(entry, column) {
         return formatDateTime(raw);
     return raw;
 }
-// Delays opening a row so a second click (a double-click) has time to cancel
-// it via wireCopyOnDblClick, rather than racing ahead of the copy.
-let entryRowOpenTimer = null;
-const ENTRY_ROW_OPEN_DELAY_MS = 250;
-function openEntryDetailDelayed(entry) {
-    if (entryRowOpenTimer)
-        clearTimeout(entryRowOpenTimer);
-    entryRowOpenTimer = setTimeout(() => {
-        entryRowOpenTimer = null;
-        app.currentEntry = entry;
-        showEntryDetail();
-    }, ENTRY_ROW_OPEN_DELAY_MS);
+function openEntry(entry) {
+    app.currentEntry = entry;
+    showEntryDetail();
 }
-function wireCopyOnDblClick(cell, value) {
-    cell.addEventListener('dblclick', (e) => {
-        e.stopPropagation();
-        if (entryRowOpenTimer) {
-            clearTimeout(entryRowOpenTimer);
-            entryRowOpenTimer = null;
-        }
+/* A click copies (#67); opening the card is the row's own button instead. The
+browser already decides what counts as a click, so a scroll that starts on a
+cell copies nothing and a secondary button never reaches here at all. */
+function wireCellCopy(cell, value, label) {
+    cell.addEventListener('click', (event) => {
+        if (event.target !== event.currentTarget)
+            return; // the copy button runs its own handler
         if (value)
-            copyToClipboard(value);
+            copyToClipboard(value, label);
     });
+}
+/* A button, not decoration (#67): dim at rest so hover only raises its emphasis,
+and focusable so copying is reachable without a pointer at all. */
+function copyHint(value, label) {
+    return makeIconButton('copy-hint', `Copy ${label.toLowerCase()}`, '📋', () => {
+        copyToClipboard(value, label);
+    });
+}
+function buildEntryCell(display, value, label) {
+    const td = document.createElement('td');
+    td.appendChild(document.createTextNode(display));
+    if (value)
+        td.appendChild(copyHint(value, label));
+    wireCellCopy(td, value, label);
+    return td;
 }
 function buildEntryTable(rows) {
     const table = document.createElement('table');
@@ -5747,25 +6076,31 @@ function buildEntryTable(rows) {
         th.textContent = column.label;
         headRow.appendChild(th);
     }
+    const openTh = document.createElement('th');
+    const openLabel = document.createElement('span');
+    openLabel.className = 'visually-hidden';
+    openLabel.textContent = 'Open';
+    openTh.appendChild(openLabel);
+    headRow.appendChild(openTh);
     thead.appendChild(headRow);
     table.appendChild(thead);
     const tbody = document.createElement('tbody');
     for (const { entry } of rows) {
         const tr = document.createElement('tr');
-        const titleTd = document.createElement('td');
+        const titleTd = buildEntryCell(`${iconEmoji(elementIconId(entry))} ${entryTitle(entry)}`, entryTitle(entry), 'Title');
         titleTd.className = 'entry-table-title';
-        titleTd.textContent = `${iconEmoji(elementIconId(entry))} ${entryTitle(entry)}`;
-        wireCopyOnDblClick(titleTd, entryTitle(entry));
         tr.appendChild(titleTd);
         for (const column of visibleColumns) {
-            const td = document.createElement('td');
-            td.textContent = entryColumnDisplayValue(entry, column.key);
+            const td = buildEntryCell(entryColumnDisplayValue(entry, column.key), entryColumnValue(entry, column.key), column.label);
             if (column.key === 'password')
                 td.classList.add('entry-table-protected');
-            wireCopyOnDblClick(td, entryColumnValue(entry, column.key));
             tr.appendChild(td);
         }
-        tr.addEventListener('click', () => openEntryDetailDelayed(entry));
+        // The only way into the card, so opening to edit stays a deliberate act (#67).
+        const openTd = document.createElement('td');
+        openTd.className = 'entry-table-open';
+        openTd.appendChild(makeIconButton('icon-btn', 'Open entry', '›', () => openEntry(entry)));
+        tr.appendChild(openTd);
         tbody.appendChild(tr);
     }
     table.appendChild(tbody);
@@ -5796,6 +6131,55 @@ function updateViewToggleUI() {
     qs('#column-picker-menu').hidden = true;
     qs('#panel-menu').classList.remove('panel-menu-open');
 }
+let autoLockTimer = null;
+function cancelAutoLock() {
+    if (autoLockTimer === null)
+        return;
+    clearTimeout(autoLockTimer);
+    autoLockTimer = null;
+}
+/* A tab nobody is looking at is an unattended screen: the database sits there
+decrypted in memory for as long as it stays that way. Locking re-encrypts the
+current state, unsaved edits included, so this can fire on its own without
+asking anything of someone who has already walked away (#64). */
+function handleVisibilityChange() {
+    cancelAutoLock();
+    if (document.visibilityState !== 'hidden' || app.db === null)
+        return;
+    autoLockTimer = setTimeout(() => {
+        autoLockTimer = null;
+        void lockDatabase();
+    }, app.autoLockTimeout * 1000);
+}
+/** Re-encrypts the current in-memory state (including anything not yet
+saved) rather than reloading the original file, so locking never loses an
+edit on its own — only choosing to discard at the prompt above does that. */
+async function lockDatabase() {
+    cancelAutoLock();
+    const bytes = await must(app.db).save();
+    app.file = bytes.buffer;
+    const wasDirty = app.dirty;
+    Object.assign(app, { db: null, currentGroup: null, currentEntry: null, searchQuery: '' });
+    showUnlock(wasDirty);
+}
+function closeDatabase() {
+    cancelAutoLock();
+    Object.assign(app, {
+        db: null,
+        file: null,
+        filename: '',
+        currentGroup: null,
+        currentEntry: null,
+        searchQuery: '',
+    });
+    setDirty(false);
+    if (isEmbedded()) {
+        postToHost(closeMessage());
+    }
+    else {
+        showUpload();
+    }
+}
 function wireEntryListEvents() {
     qs('#search-input').addEventListener('input', (e) => {
         app.searchQuery = e.target.value.trim();
@@ -5809,46 +6193,41 @@ function wireEntryListEvents() {
         app.sortDir = direction;
         renderEntryPanel();
     });
-    qs('[data-action="lock"]').addEventListener('click', async () => {
-        // Re-encrypt the current in-memory state (including anything not yet
-        // saved) rather than reloading the original file, so locking never loses
-        // an edit — only Close does that, and only with confirmation.
-        const bytes = await must(app.db).save();
-        app.file = bytes.buffer;
-        Object.assign(app, { db: null, currentGroup: null, currentEntry: null, searchQuery: '' });
-        showUnlock();
+    qs('[data-action="save-database"]').addEventListener('click', openSaveDialog);
+    qs('[data-action="lock"]').addEventListener('click', () => {
+        confirmUnsavedChanges({
+            title: 'Lock without saving?',
+            message: "Your edits will stay in this tab, but they still haven't been saved anywhere else.",
+            discardLabel: 'Lock Anyway',
+            discardDanger: false,
+        }, lockDatabase);
     });
     qs('[data-action="close"]').addEventListener('click', () => {
-        confirmDiscardIfDirty(() => {
-            Object.assign(app, {
-                db: null,
-                file: null,
-                filename: '',
-                currentGroup: null,
-                currentEntry: null,
-                searchQuery: '',
-                dirty: false,
-            });
-            if (isEmbedded()) {
-                postToHost(closeMessage());
-            }
-            else {
-                showUpload();
-            }
-        });
+        confirmUnsavedChanges(DISCARD_PROMPT, closeDatabase, CLOSE_PROMPT);
     });
     qs('[data-action="settings"]').addEventListener('click', openSettings);
-    qs('[data-action="export"]').addEventListener('click', openExportDialog);
+    qs('[data-action="export"]').addEventListener('click', () => {
+        confirmUnsavedChanges({
+            title: 'Export without saving?',
+            message: 'The export reflects your current edits, but the database itself has not been saved yet.',
+            discardLabel: 'Export Anyway',
+            discardDanger: false,
+        }, openExportDialog);
+    });
     qs('[data-action="add-entry"]').addEventListener('click', () => {
         const newEntry = createEntry({ title: 'New Entry' });
         appendChild(must(app.currentGroup), newEntry);
         app.currentEntry = newEntry;
-        app.dirty = true;
+        setDirty(true);
         showEntryEdit(true);
     });
     qs('[data-action="add-group"]').addEventListener('click', () => {
         openGroupDialog({ type: 'create', parent: must(app.currentGroup) }, () => showEntryList());
     });
+    qs('[data-action="delete-group"]').addEventListener('click', () => {
+        deleteGroupAction(must(app.currentGroup));
+    });
+    wireSidebarResize();
     qs('[data-action="view-tile"]').addEventListener('click', () => {
         app.entryView = 'tile';
         updateViewToggleUI();
@@ -5927,7 +6306,7 @@ function showEntryDetail() {
             if (parent && parent !== destination) {
                 parent.children = parent.children.filter((c) => c !== entry);
                 appendChild(destination, entry);
-                app.dirty = true;
+                setDirty(true);
             }
             app.currentEntry = null;
             showEntryList();
@@ -5951,7 +6330,7 @@ function showEntryDetail() {
         if (parent && parent !== bin) {
             parent.children = parent.children.filter((c) => c !== entry);
             appendChild(bin, entry);
-            app.dirty = true;
+            setDirty(true);
         }
         app.currentEntry = null;
         showEntryList();
@@ -5962,7 +6341,7 @@ function showEntryDetail() {
         if (parent && parent !== rootGroup) {
             parent.children = parent.children.filter((c) => c !== entry);
             appendChild(rootGroup, entry);
-            app.dirty = true;
+            setDirty(true);
         }
         app.currentEntry = null;
         showEntryList();
@@ -5972,7 +6351,7 @@ function showEntryDetail() {
             const parent = findEntryParent(db.getRootGroup(), entry);
             if (parent) {
                 parent.children = parent.children.filter((c) => c !== entry);
-                app.dirty = true;
+                setDirty(true);
             }
             app.currentEntry = null;
             showEntryList();
@@ -6001,12 +6380,8 @@ function buildDetailField(key, value, isProtected) {
         });
         actions.appendChild(revealBtn);
     }
-    const copyBtn = makeIconButton('icon-btn', 'Copy', '📋', async () => {
-        await copyToClipboard(value);
-        copyBtn.textContent = '✓';
-        setTimeout(() => {
-            copyBtn.textContent = '📋';
-        }, 1500);
+    const copyBtn = makeIconButton('icon-btn', 'Copy', '📋', () => {
+        copyToClipboard(value, fieldLabel(key));
     });
     actions.appendChild(copyBtn);
     valueWrap.appendChild(valueSpan);
@@ -6054,12 +6429,12 @@ function renderDetailHistory(db, entry, container) {
         label.textContent = `${formatDateTime(times.modified)} — ${entryTitle(snapshot)}`;
         const restoreBtn = makeIconButton('icon-btn', 'Restore this version', '↩', () => {
             restoreHistoryEntry(db.root, entry, snapshot);
-            app.dirty = true;
+            setDirty(true);
             showEntryDetail();
         });
         const deleteBtn = makeIconButton('icon-btn', 'Delete this version', '🗑', () => {
             deleteHistoryEntry(entry, snapshot);
-            app.dirty = true;
+            setDirty(true);
             renderDetailHistory(db, entry, container);
         });
         row.appendChild(label);
@@ -6199,14 +6574,10 @@ function buildEditField(key, value, isProtected, removable) {
         });
         row.appendChild(toggle);
     }
-    const copyBtn = makeIconButton('icon-btn', 'Copy', '📋', async () => {
+    const copyBtn = makeIconButton('icon-btn', 'Copy', '📋', () => {
         // Copies whatever is currently typed, not the value the field opened
         // with — the user may have already edited it.
-        await copyToClipboard(valueInput.value);
-        copyBtn.textContent = '✓';
-        setTimeout(() => {
-            copyBtn.textContent = '📋';
-        }, 1500);
+        copyToClipboard(valueInput.value, fieldLabel(keyInput.value) || 'Value');
     });
     row.appendChild(copyBtn);
     if (key === 'Password') {
@@ -6242,7 +6613,7 @@ function commitEdits(entry, fieldsEl, isNew) {
     const expiryInput = qs('#edit-expiry-time');
     setEntryExpiry(entry, expiresCheckbox.checked, expiryInput.value ? localInputValueToIso(expiryInput.value) : '');
     touchLastModified(entry);
-    app.dirty = true;
+    setDirty(true);
     // Return to detail, then prompt to save
     showEntryDetail();
     openSaveDialog();
@@ -6254,6 +6625,8 @@ function openSettings() {
     const dlg = byId('dlg-settings');
     const timeoutInput = byId('clipboard-timeout');
     timeoutInput.value = String(app.clipboardTimeout);
+    const autoLockInput = byId('auto-lock-timeout');
+    autoLockInput.value = String(app.autoLockTimeout);
     const newPasswordInput = byId('settings-new-password');
     const confirmInput = byId('settings-new-password-confirm');
     const keyfileInput = byId('settings-keyfile-input');
@@ -6279,6 +6652,9 @@ function openSettings() {
         const v = Number.parseInt(timeoutInput.value, 10);
         if (isValidClipboardTimeout(v))
             app.clipboardTimeout = v;
+        const autoLock = Number.parseInt(autoLockInput.value, 10);
+        if (isValidAutoLockTimeout(autoLock))
+            app.autoLockTimeout = autoLock;
         if (newPasswordInput.value || confirmInput.value) {
             if (newPasswordInput.value !== confirmInput.value) {
                 errorEl.textContent = 'Passwords do not match.';
@@ -6289,7 +6665,7 @@ function openSettings() {
             if (keyfileData)
                 input.keyFile = keyfileData;
             must(app.db).setCredentials(new Credentials(input));
-            app.dirty = true;
+            setDirty(true);
         }
         dlg.close();
     };
@@ -6349,11 +6725,28 @@ function openSaveDialog() {
     hostBtn.hidden = !hostSession;
     laterBtn.textContent = 'Later';
     downloadBtn.onclick = async () => {
-        await downloadDatabase();
+        await performSave();
         dlg.close();
     };
     hostBtn.onclick = async () => {
-        await saveToHost(status, hostBtn);
+        status.hidden = false;
+        status.textContent = 'Saving…';
+        hostBtn.disabled = true;
+        const result = await performSave();
+        hostBtn.disabled = false;
+        if (result.ok) {
+            status.textContent = 'Saved.';
+            status.classList.add('ok');
+            // Retrying no longer makes sense once the save has succeeded — collapse
+            // the footer to a single acknowledgement instead of leaving stale
+            // "Later" / "Save" actions from before the save was requested.
+            laterBtn.textContent = 'Close';
+            hostBtn.hidden = true;
+        }
+        else {
+            status.textContent = result.error ? `Save failed: ${result.error}` : 'Save failed.';
+            status.classList.add('error');
+        }
     };
     // Both close buttons (Later + ✕) dismiss
     for (const btn of dlg.querySelectorAll('[data-action="close"]')) {
@@ -6361,18 +6754,36 @@ function openSaveDialog() {
     }
     dlg.showModal();
 }
-async function downloadDatabase() {
+/** Persists the current database: a download standalone, a write-back to the
+host when embedded. The host round trip is asynchronous (kw-save/kw-saved);
+a download is not, but both are awaited here so every caller sees one
+consistent, awaitable outcome regardless of destination. Never rejects —
+failure comes back as `{ ok: false }` so callers can show it inline rather
+than an unhandled rejection. */
+async function performSave() {
+    if (!hostSession) {
+        const bytes = await must(app.db).save();
+        const blob = new Blob([new Uint8Array(bytes)], { type: 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = app.filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        setDirty(false);
+        return { ok: true };
+    }
     const bytes = await must(app.db).save();
-    const blob = new Blob([new Uint8Array(bytes)], { type: 'application/octet-stream' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = app.filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    app.dirty = false;
+    // Copy into a fresh, exactly-sized ArrayBuffer for the structured clone.
+    postToHost(saveMessage(app.filename, new Uint8Array(bytes).buffer));
+    const result = await new Promise((resolve) => {
+        pendingSave = resolve;
+    });
+    if (result.ok)
+        setDirty(false);
+    return result;
 }
 // ============================================================
 // Dialog: Generate Password
@@ -6417,33 +6828,90 @@ function openPasswordGenerator(onUse) {
     regenerate();
     dlg.showModal();
 }
-// ============================================================
-// Dialog: Confirm Discard
-// ============================================================
-/** Run `proceed` immediately if there's nothing unsaved to lose; otherwise
- * confirm first, since locking/closing here discards in-memory edits rather
- * than saving them (there's no autosave). */
-function confirmDiscardIfDirty(proceed) {
+// Shared by every trigger where discarding really does throw the edits away.
+const DISCARD_PROMPT = {
+    title: 'Discard unsaved changes?',
+    message: 'You have unsaved changes that will be lost.',
+    discardLabel: 'Discard',
+    discardDanger: true,
+};
+/* Closing loses no data once everything is saved, so this asks without the
+danger styling a real discard gets; it asks at all because reopening the
+database can cost another sign-in or another hunt for the file (#66). */
+const CLOSE_PROMPT = {
+    title: 'Close this database?',
+    message: 'Opening it again means finding and unlocking the file.',
+    discardLabel: 'Close',
+    discardDanger: false,
+};
+/** Run `proceed` immediately when nothing is at stake. With unsaved edits,
+ask: discard, save first, or cancel — reused by closing, locking, exporting,
+and a host's close request. `cleanPrompt`, passed only by the paths that give
+the database up, asks a cheaper question when nothing is unsaved but
+reopening would still cost a sign-in or a hunt for the file (#66). */
+function confirmUnsavedChanges(prompt, proceed, cleanPrompt) {
+    let active = prompt;
     if (!app.dirty) {
-        proceed();
-        return;
+        if (cleanPrompt === undefined || !hasDatabase()) {
+            proceed();
+            return;
+        }
+        active = cleanPrompt;
     }
     const dlg = byId('dlg-confirm-discard');
-    must(dlg.querySelector('[data-action="confirm-discard"]')).onclick = () => {
+    byId('confirm-discard-title').textContent = active.title;
+    byId('confirm-discard-message').textContent = active.message;
+    const status = must(dlg.querySelector('[data-role="confirm-discard-status"]'));
+    status.hidden = true;
+    status.textContent = '';
+    status.className = 'save-status';
+    const discardBtn = must(dlg.querySelector('[data-action="confirm-discard"]'));
+    discardBtn.textContent = active.discardLabel;
+    // With no Save beside it, confirming is the dialog's only affirmative action (#66).
+    let discardStyle = app.dirty ? 'btn-secondary' : 'btn-primary';
+    if (active.discardDanger)
+        discardStyle = 'btn-danger';
+    discardBtn.className = `btn ${discardStyle}`;
+    discardBtn.disabled = false;
+    discardBtn.onclick = () => {
         dlg.close();
         proceed();
     };
     must(dlg.querySelector('[data-action="cancel-discard"]')).onclick = () => dlg.close();
+    const saveBtn = must(dlg.querySelector('[data-action="confirm-save"]'));
+    saveBtn.textContent = hostSession ? 'Save' : 'Download';
+    saveBtn.hidden = !app.dirty; // there is nothing to save when the prompt is only about closing
+    saveBtn.disabled = false;
+    saveBtn.onclick = async () => {
+        saveBtn.disabled = true;
+        discardBtn.disabled = true;
+        status.hidden = false;
+        status.textContent = 'Saving…';
+        const result = await performSave();
+        if (result.ok) {
+            dlg.close();
+            proceed();
+            return;
+        }
+        saveBtn.disabled = false;
+        discardBtn.disabled = false;
+        status.textContent = result.error ? `Save failed: ${result.error}` : 'Save failed.';
+        status.classList.add('error');
+    };
     dlg.showModal();
+    saveBtn.focus();
 }
 // ============================================================
 // Dialog: Confirm Delete
 // ============================================================
-function openConfirmDelete(title, message, callback) {
+function openConfirmDelete(title, message, callback, confirmLabel = 'Delete', danger = true) {
     const dlg = byId('dlg-confirm-delete');
     byId('confirm-delete-title').textContent = title;
     byId('confirm-delete-message').textContent = message;
-    must(dlg.querySelector('[data-action="confirm-delete"]')).onclick = () => {
+    const confirmBtn = must(dlg.querySelector('[data-action="confirm-delete"]'));
+    confirmBtn.textContent = confirmLabel;
+    confirmBtn.className = danger ? 'btn btn-danger' : 'btn btn-primary';
+    confirmBtn.onclick = () => {
         dlg.close();
         callback();
     };
@@ -6514,7 +6982,7 @@ function openGroupDialog(mode, onDone) {
             appendChild(mode.parent, newGroup);
             app.currentGroup = newGroup;
         }
-        app.dirty = true;
+        setDirty(true);
         dlg.close();
         onDone();
     };
@@ -6577,8 +7045,9 @@ function openMoveToDialog(title, isValidTarget, onPick) {
 // The message shapes and guards are shared with every host in
 // packages/embed-protocol, rather than hand-checked here, so the app and host
 // side of the protocol can't drift out of sync with each other:
-//   app  → host : kw-ready          app booted, send a vault
+//   app  → host : kw-ready          app booted, send a vault or a create instruction
 //   host → app  : kw-open           open this vault (filename, bytes: ArrayBuffer)
+//   host → app  : kw-create         start a brand-new, empty vault
 //   app  → host : kw-save           user saved; please persist (filename, bytes: ArrayBuffer)
 //   host → app  : kw-saved          result of that persist (ok, error?)
 //   host → app  : kw-close-request  host wants to remove this iframe; may I?
@@ -6589,13 +7058,28 @@ function openMoveToDialog(title, isValidTarget, onPick) {
 // page's own origin; anything else is ignored. Nothing here runs unless the
 // app is actually framed, so standalone use is entirely unaffected.
 const HOST_ORIGIN = window.location.origin;
-/** The status element + button awaiting a `kw-saved` reply, or null. */
-let pendingHostSave = null;
+// This page's own title, kept so a closed database can hand the tab back (#65).
+const BASE_TITLE = document.title;
+/** Resolves the in-flight performSave()'s promise once a `kw-saved` reply
+arrives, or null when no save is outstanding. */
+let pendingSave = null;
 function isEmbedded() {
     return window.parent !== window;
 }
 function postToHost(message) {
     window.parent.postMessage(message, HOST_ORIGIN);
+}
+/** The tab title belongs to whichever document owns the tab: the host when
+embedded, this page when standalone. Every screen announces itself, so the
+tab bar names the open database and its lock state without being opened (#65). */
+function publishTitle() {
+    const locked = app.db === null;
+    if (isEmbedded()) {
+        postToHost(titleMessage(app.filename, locked));
+        return;
+    }
+    const icon = locked ? '🔒' : '🔓';
+    document.title = app.filename ? `${icon} ${app.filename} - ${BASE_TITLE}` : BASE_TITLE;
 }
 function handleHostMessage(event) {
     if (event.origin !== HOST_ORIGIN || event.source !== window.parent)
@@ -6606,43 +7090,18 @@ function handleHostMessage(event) {
         app.file = event.data.bytes;
         showUnlock();
     }
+    else if (isCreateMessage(event.data)) {
+        hostSession = true;
+        showCreateDatabase();
+    }
     else if (isSavedMessage(event.data)) {
-        notifyHostSaveResult(event.data.ok, event.data.error);
+        const resolve = pendingSave;
+        pendingSave = null;
+        const { ok, error } = event.data;
+        resolve?.(error === undefined ? { ok } : { ok, error });
     }
     else if (isCloseRequestMessage(event.data)) {
-        confirmDiscardIfDirty(() => postToHost(closeAckMessage()));
-    }
-}
-async function saveToHost(status, button) {
-    const bytes = await must(app.db).save();
-    status.hidden = false;
-    status.className = 'save-status';
-    status.textContent = 'Saving…';
-    button.disabled = true;
-    pendingHostSave = { status, button };
-    // Copy into a fresh, exactly-sized ArrayBuffer for the structured clone.
-    postToHost(saveMessage(app.filename, new Uint8Array(bytes).buffer));
-}
-function notifyHostSaveResult(ok, error) {
-    if (!pendingHostSave)
-        return;
-    const { status, button } = pendingHostSave;
-    pendingHostSave = null;
-    button.disabled = false;
-    if (ok) {
-        app.dirty = false;
-        status.textContent = 'Saved.';
-        status.classList.add('ok');
-        // Retrying no longer makes sense once the save has succeeded — collapse
-        // the footer to a single acknowledgement instead of leaving stale
-        // "Later" / "Save" actions from before the save was requested.
-        const dlg = byId('dlg-save');
-        must(dlg.querySelector('[data-role="save-later"]')).textContent = 'Close';
-        button.hidden = true;
-    }
-    else {
-        status.textContent = error ? `Save failed: ${error}` : 'Save failed.';
-        status.classList.add('error');
+        confirmUnsavedChanges(DISCARD_PROMPT, () => postToHost(closeAckMessage()), CLOSE_PROMPT);
     }
 }
 // ============================================================
@@ -6651,21 +7110,31 @@ function notifyHostSaveResult(ok, error) {
 if (isEmbedded()) {
     document.body.classList.add('embedded'); // the host page has its own footer
     window.addEventListener('message', handleHostMessage);
-    // Announce readiness so the host knows it can send the vault. Handshaking
-    // this way (rather than the host racing the iframe's load event) means the
-    // host only sends once the listener above is definitely attached.
+    // Announce readiness so the host knows it can send a vault or a create
+    // instruction. Handshaking this way (rather than the host racing the
+    // iframe's load event) means the host only sends once the listener above is
+    // definitely attached.
     postToHost(readyMessage());
 }
-// Closing the tab, reloading, or navigating away with unsaved edits would
-// otherwise discard them with no warning — there's no autosave to fall back
-// on. This is the browser's own native prompt, not a custom dialog.
+// Shows the upload screen even when embedded: kw-open/kw-create (almost
+// always arriving within the same tick, since the host already has its bytes
+// or its create decision ready before it ever sets this iframe's src)
+// immediately replaces it. Without this fallback, a host whose reply
+// postMessage never arrives — e.g. file://, where each document gets its own
+// opaque origin and same-origin delivery silently never matches — would
+// leave the app permanently blank instead of at least usable standalone.
+showUpload();
+/* Closing the tab, reloading, or navigating away takes the whole session
+with it: unsaved edits, which have no autosave to fall back on, and the file
+itself, which cost a sign-in or a hunt for a USB stick to get here (#66).
+This is the browser's own native prompt, not a custom dialog. */
 window.addEventListener('beforeunload', (e) => {
-    if (!app.dirty)
+    if (!hasDatabase())
         return;
     e.preventDefault();
     e.returnValue = true;
 });
-showUpload();
+document.addEventListener('visibilitychange', handleVisibilityChange);
 
 
 /* --- public exports --- */
@@ -6712,6 +7181,7 @@ if (typeof toXml !== 'undefined') globalThis.toXml = toXml;
 if (typeof applyEntryEdits !== 'undefined') globalThis.applyEntryEdits = applyEntryEdits;
 if (typeof isCustomField !== 'undefined') globalThis.isCustomField = isCustomField;
 if (typeof isValidClipboardTimeout !== 'undefined') globalThis.isValidClipboardTimeout = isValidClipboardTimeout;
+if (typeof isValidAutoLockTimeout !== 'undefined') globalThis.isValidAutoLockTimeout = isValidAutoLockTimeout;
 if (typeof generatePassword !== 'undefined') globalThis.generatePassword = generatePassword;
 if (typeof elementIconId !== 'undefined') globalThis.elementIconId = elementIconId;
 if (typeof iconEmoji !== 'undefined') globalThis.iconEmoji = iconEmoji;
@@ -6720,10 +7190,12 @@ if (typeof isoToLocalInputValue !== 'undefined') globalThis.isoToLocalInputValue
 if (typeof localInputValueToIso !== 'undefined') globalThis.localInputValueToIso = localInputValueToIso;
 if (typeof defaultExpiryLocalInputValue !== 'undefined') globalThis.defaultExpiryLocalInputValue = defaultExpiryLocalInputValue;
 if (typeof isOpenMessage !== 'undefined') globalThis.isOpenMessage = isOpenMessage;
+if (typeof isCreateMessage !== 'undefined') globalThis.isCreateMessage = isCreateMessage;
 if (typeof isSavedMessage !== 'undefined') globalThis.isSavedMessage = isSavedMessage;
 if (typeof isCloseRequestMessage !== 'undefined') globalThis.isCloseRequestMessage = isCloseRequestMessage;
 if (typeof readyMessage !== 'undefined') globalThis.readyMessage = readyMessage;
 if (typeof saveMessage !== 'undefined') globalThis.saveMessage = saveMessage;
+if (typeof titleMessage !== 'undefined') globalThis.titleMessage = titleMessage;
 if (typeof closeAckMessage !== 'undefined') globalThis.closeAckMessage = closeAckMessage;
 if (typeof closeMessage !== 'undefined') globalThis.closeMessage = closeMessage;
 })();

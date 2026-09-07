@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KeePass Web — Google Drive</title>
+  <title>KeePass Web - Google Drive</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 7V5a3.5 3.5 0 0 1 7 0v2' fill='none' stroke='%230e7c5a' stroke-width='2' stroke-linecap='round'/%3E%3Crect x='2' y='7' width='12' height='8' rx='2' fill='%230e7c5a'/%3E%3C/svg%3E">
   <style>
 /* ============================================================
@@ -140,10 +140,14 @@ body {
 
 /* #root is a flex-shrink:0 sibling away from footer below, so it grows to
    fill whatever space footer doesn't need — see .screen-host, which used to
-   claim a flat 100vh of its own and is now sized off this instead. */
+   claim a flat 100vh of its own and is now sized off this instead.
+   overflow-y then scrolls tall content (e.g. the picker screen) internally on
+   a short viewport instead of it spilling out over the fixed-height footer,
+   since body's fixed height means the page itself can't grow to fit. */
 #root {
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
 }
 
 /* ============================================================
@@ -239,10 +243,11 @@ body {
 .picker-body {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 1rem;
   max-width: 460px;
   margin: 6vh auto 0;
+  text-align: center;
 }
 
 .pick-status {
@@ -310,12 +315,15 @@ body {
   <template id="tpl-picker">
     <div class="screen screen-picker">
       <header class="picker-header">
-        <span class="wordmark">Google Drive</span>
+        <a class="back-link" href="index.html">← Back to KeePass Web</a>
         <button type="button" class="btn btn-secondary" data-action="signout">Sign out</button>
       </header>
       <div class="picker-body">
+        <div class="wordmark"><span class="mark"></span>KeePass Web</div>
+        <h1>Open a database from Google Drive</h1>
         <p class="description">Choose a KeePass database from your Google Drive to open.</p>
         <button type="button" class="btn btn-primary" data-action="pick">Choose a database…</button>
+        <button type="button" class="btn btn-secondary" data-action="create-database">Create a new database</button>
         <p id="pick-status" class="pick-status" hidden></p>
       </div>
     </div>
@@ -340,7 +348,7 @@ body {
   &middot; <a href="https://github.com/keepass-web/.github/blob/main/profile/FAQ.md">FAQ</a>
   &middot; <a href="https://github.com/keepass-web/source-application">Source</a>
 </p>
-<footer><a href="https://github.com/keepass-web/source-application/tree/v0.9.1">v0.9.1</a> committed on <time id="commit-date" datetime="2026-08-08T15:30:21-04:00">2026-08-08T15:30:21-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+<footer><a href="https://github.com/keepass-web/source-application/tree/v0.10.0">v0.10.0</a> committed on <time id="commit-date" datetime="2026-09-07T16:23:57-04:00">2026-09-07T16:23:57-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
 
 
   <script>
@@ -395,8 +403,8 @@ function identifyFormat(header) {
 /** `embed-protocol` — the same-origin postMessage contract between a
 keepass-web implementation and whatever host embeds it in an iframe.
 Centralizes shapes/guards/builders (previously duplicated per side) so
-both ends provably agree on the wire format: kw-ready, kw-open, kw-save,
-kw-saved, kw-close-request, kw-close-ack, kw-close. */
+both ends provably agree on the wire format: kw-ready, kw-open, kw-create,
+kw-save, kw-saved, kw-title, kw-close-request, kw-close-ack, kw-close. */
 function hasType(data, type) {
     return (data !== null && typeof data === 'object' && data.type === type);
 }
@@ -413,6 +421,9 @@ function isReadyMessage(data) {
 function isOpenMessage(data) {
     return isFileMessage(data, 'kw-open');
 }
+function isCreateMessage(data) {
+    return hasType(data, 'kw-create');
+}
 function isSaveMessage(data) {
     return isFileMessage(data, 'kw-save');
 }
@@ -423,6 +434,12 @@ function isSavedMessage(data) {
     if (typeof rec.ok !== 'boolean')
         return false;
     return rec.error === undefined || typeof rec.error === 'string';
+}
+function isTitleMessage(data) {
+    if (!hasType(data, 'kw-title'))
+        return false;
+    const rec = data;
+    return typeof rec.filename === 'string' && typeof rec.locked === 'boolean';
 }
 function isCloseRequestMessage(data) {
     return hasType(data, 'kw-close-request');
@@ -440,11 +457,17 @@ function readyMessage() {
 function openMessage(filename, bytes) {
     return { type: 'kw-open', filename, bytes };
 }
+function createMessage() {
+    return { type: 'kw-create' };
+}
 function saveMessage(filename, bytes) {
     return { type: 'kw-save', filename, bytes };
 }
 function savedMessage(ok, error) {
     return error === undefined ? { type: 'kw-saved', ok } : { type: 'kw-saved', ok, error };
+}
+function titleMessage(filename, locked) {
+    return { type: 'kw-title', filename, locked };
 }
 function closeRequestMessage() {
     return { type: 'kw-close-request' };
@@ -458,8 +481,8 @@ function closeMessage() {
 
 
 /* === ../pages/cloud-google-drive/logic.js === */
-/** Pure logic for the Drive connector: URL construction and the must()
-guard — no DOM/network state, so unit-tested directly. Sign-in and
+/** Pure logic for the Drive connector: URL/request-body construction and the
+must() guard — no DOM/network state, so unit-tested directly. Sign-in and
 browsing live in Google's own SDKs, not here. */
 // Unwrap a possibly-missing DOM lookup, or fail loudly; kept here so its throw branch is testable.
 function must(value) {
@@ -476,15 +499,35 @@ function buildDriveDownloadUrl(apiBase, id) {
 function buildDriveUpdateUrl(uploadBase, id) {
     return `${uploadBase}/files/${encodeURIComponent(id)}?uploadType=media`;
 }
+// Build the multipart-upload URL that creates a brand-new file.
+function buildDriveCreateUrl(uploadBase) {
+    return `${uploadBase}/files?uploadType=multipart`;
+}
+/** Build a multipart/related body for that create call: a JSON metadata part
+naming the file (root of My Drive — drive.file grants no folder browsing to
+place it elsewhere), then the raw bytes. Returns the boundary alongside the
+body since the caller needs it for the Content-Type header. */
+function buildMultipartBody(filename, bytes) {
+    const boundary = crypto.randomUUID();
+    const metadata = JSON.stringify({ name: filename });
+    const body = new Blob([
+        `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${metadata}\r\n`,
+        `--${boundary}\r\nContent-Type: application/octet-stream\r\n\r\n`,
+        bytes,
+        `\r\n--${boundary}--`,
+    ]);
+    return { body, boundary };
+}
 
 
 /* === ../pages/cloud-google-drive/page.js === */
-/** Opens/saves a database in the user's own Google Drive, without touching
-local disk. Never parses or decrypts itself: signs in, picks a file with
-the Picker, embeds the real 0x67 app in an iframe, and hands it the
-bytes over postMessage (see 0x67/page.ts's "Host integration"). Loads
-Google's own SDKs as a scoped no-external-libraries exception — the
-0x67 iframe itself still loads nothing external. */
+/** Opens/creates/saves a database in the user's own Google Drive, without
+touching local disk. Never parses or decrypts itself: signs in, then either
+picks a file with the Picker or starts a create, embeds the real 0x67 app in
+an iframe, and hands it the bytes (or a create instruction) over postMessage
+(see 0x67/page.ts's "Host integration"). Loads Google's own SDKs as a
+scoped no-external-libraries exception — the 0x67 iframe itself still loads
+nothing external. */
 // --- Configuration ---------------------------------------------------------
 // OAuth client ID, public by design; GIS requires this origin be authorized on the client.
 const CLIENT_ID = '14808408917-6cecfggtk8npdabf40h66h7gh16e7bon.apps.googleusercontent.com';
@@ -502,10 +545,17 @@ const GAPI_SRC = 'https://apis.google.com/js/api.js';
 // drive.file: only files the user picks or creates — non-sensitive, no CASA audit needed.
 const SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const APP_ORIGIN = window.location.origin;
+// The only current KDBX implementation. Opening detects this from a file's
+// bytes via packages/router; creating has no bytes to sniff, so it's named directly.
+const APP_IMPLEMENTATION = '0x67.html';
+// This page's own title, kept so closing the app can hand the tab back (#65).
+const BASE_TITLE = document.title;
 // --- In-memory state (never persisted) -------------------------------------
 let accessToken = null;
+// The Drive file a save writes back to — null until create's first save
+// makes one, or open picks an existing one.
 let currentFile = null;
-let pendingOpen = null;
+let pendingAction = null;
 let pickerApiLoaded = false;
 let tokenClient = null;
 // Set while waiting for a kw-close-ack, so handleFrameMessage knows what to run once safe.
@@ -602,6 +652,7 @@ function showChooser() {
     qs('[data-action="pick"]').addEventListener('click', () => {
         void chooseFile();
     });
+    qs('[data-action="create-database"]').addEventListener('click', () => showHostForCreate());
     qs('[data-action="signout"]').addEventListener('click', signOut);
 }
 function setPickStatus(text) {
@@ -682,9 +733,19 @@ async function openPickedFile(file) {
 // ============================================================
 function showHost(file, bytes, implementation) {
     currentFile = file;
-    pendingOpen = { filename: file.name, bytes };
+    pendingAction = { kind: 'open', filename: file.name, bytes };
+    embedApp(file.name, implementation);
+}
+// No file was picked — nothing to hand over, so the header shows a
+// placeholder until the app's first save both names and creates the file.
+function showHostForCreate() {
+    currentFile = null;
+    pendingAction = { kind: 'create' };
+    embedApp('New database', APP_IMPLEMENTATION);
+}
+function embedApp(headerLabel, implementation) {
     setRoot(cloneTemplate('tpl-host'));
-    qs('#host-filename').textContent = file.name;
+    qs('#host-filename').textContent = headerLabel;
     qs('[data-action="back-to-drive"]').addEventListener('click', () => {
         requestCloseIframe(tearDownIframe);
     });
@@ -695,8 +756,9 @@ function showHost(file, bytes, implementation) {
 }
 function tearDownIframe() {
     window.removeEventListener('message', handleFrameMessage);
+    document.title = BASE_TITLE;
     currentFile = null;
-    pendingOpen = null;
+    pendingAction = null;
     showChooser();
 }
 /** Ask the embedded app whether it's safe to remove the iframe — it may have
@@ -717,11 +779,22 @@ function handleFrameMessage(event) {
         return;
     const source = event.source;
     if (isReadyMessage(event.data)) {
-        const open = must(pendingOpen);
-        source.postMessage(openMessage(open.filename, open.bytes), APP_ORIGIN);
+        const action = must(pendingAction);
+        source.postMessage(action.kind === 'open' ? openMessage(action.filename, action.bytes) : createMessage(), APP_ORIGIN);
     }
     else if (isSaveMessage(event.data)) {
-        void saveToDrive(event.data.bytes, source);
+        qs('#host-filename').textContent = event.data.filename;
+        if (currentFile) {
+            void saveToDrive(event.data.bytes, source);
+        }
+        else {
+            void createFileOnDrive(event.data.filename, event.data.bytes, source);
+        }
+    }
+    else if (isTitleMessage(event.data)) {
+        const { filename, locked } = event.data;
+        const icon = locked ? '🔒' : '🔓';
+        document.title = filename ? `${icon} ${filename} - ${BASE_TITLE}` : BASE_TITLE;
     }
     else if (isCloseAckMessage(event.data)) {
         const afterClose = pendingClose;
@@ -751,10 +824,33 @@ async function saveToDrive(bytes, source) {
         source.postMessage(savedMessage(false, 'network error'), APP_ORIGIN);
     }
 }
+/** First save of a create-originated session: no Drive file exists yet, so
+this creates one instead of the PATCH saveToDrive uses, then remembers it so
+every later save in this session updates that same file. */
+async function createFileOnDrive(filename, bytes, source) {
+    const { body, boundary } = buildMultipartBody(filename, bytes);
+    try {
+        const response = await fetch(buildDriveCreateUrl(UPLOAD_API), {
+            method: 'POST',
+            headers: { ...authHeader(), 'Content-Type': `multipart/related; boundary=${boundary}` },
+            body,
+        });
+        if (!response.ok) {
+            source.postMessage(savedMessage(false, `HTTP ${response.status}`), APP_ORIGIN);
+            return;
+        }
+        const created = (await response.json());
+        currentFile = { id: created.id, name: filename };
+        source.postMessage(savedMessage(true), APP_ORIGIN);
+    }
+    catch {
+        source.postMessage(savedMessage(false, 'network error'), APP_ORIGIN);
+    }
+}
 function signOut() {
     accessToken = null;
     currentFile = null;
-    pendingOpen = null;
+    pendingAction = null;
     showSignIn();
 }
 // ============================================================
@@ -768,11 +864,15 @@ if (typeof identifyFormat !== 'undefined') globalThis.identifyFormat = identifyF
 if (typeof must !== 'undefined') globalThis.must = must;
 if (typeof buildDriveDownloadUrl !== 'undefined') globalThis.buildDriveDownloadUrl = buildDriveDownloadUrl;
 if (typeof buildDriveUpdateUrl !== 'undefined') globalThis.buildDriveUpdateUrl = buildDriveUpdateUrl;
+if (typeof buildDriveCreateUrl !== 'undefined') globalThis.buildDriveCreateUrl = buildDriveCreateUrl;
+if (typeof buildMultipartBody !== 'undefined') globalThis.buildMultipartBody = buildMultipartBody;
 if (typeof isReadyMessage !== 'undefined') globalThis.isReadyMessage = isReadyMessage;
 if (typeof isSaveMessage !== 'undefined') globalThis.isSaveMessage = isSaveMessage;
+if (typeof isTitleMessage !== 'undefined') globalThis.isTitleMessage = isTitleMessage;
 if (typeof isCloseAckMessage !== 'undefined') globalThis.isCloseAckMessage = isCloseAckMessage;
 if (typeof isCloseMessage !== 'undefined') globalThis.isCloseMessage = isCloseMessage;
 if (typeof openMessage !== 'undefined') globalThis.openMessage = openMessage;
+if (typeof createMessage !== 'undefined') globalThis.createMessage = createMessage;
 if (typeof savedMessage !== 'undefined') globalThis.savedMessage = savedMessage;
 if (typeof closeRequestMessage !== 'undefined') globalThis.closeRequestMessage = closeRequestMessage;
 })();

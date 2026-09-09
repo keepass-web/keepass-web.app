@@ -348,7 +348,7 @@ body {
   &middot; <a href="https://github.com/keepass-web/.github/blob/main/profile/FAQ.md">FAQ</a>
   &middot; <a href="https://github.com/keepass-web/source-application">Source</a>
 </p>
-<footer><a href="https://github.com/keepass-web/source-application/tree/v0.10.0">v0.10.0</a> committed on <time id="commit-date" datetime="2026-09-07T16:23:57-04:00">2026-09-07T16:23:57-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+<footer><a href="https://github.com/keepass-web/source-application/tree/v0.10.1">v0.10.1</a> committed on <time id="commit-date" datetime="2026-09-08T20:31:32-04:00">2026-09-08T20:31:32-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
 
 
   <script>
@@ -404,7 +404,8 @@ function identifyFormat(header) {
 keepass-web implementation and whatever host embeds it in an iframe.
 Centralizes shapes/guards/builders (previously duplicated per side) so
 both ends provably agree on the wire format: kw-ready, kw-open, kw-create,
-kw-save, kw-saved, kw-title, kw-close-request, kw-close-ack, kw-close. */
+kw-save, kw-saved, kw-title, kw-find, kw-close-request, kw-close-ack,
+kw-close. */
 function hasType(data, type) {
     return (data !== null && typeof data === 'object' && data.type === type);
 }
@@ -441,6 +442,9 @@ function isTitleMessage(data) {
     const rec = data;
     return typeof rec.filename === 'string' && typeof rec.locked === 'boolean';
 }
+function isFindMessage(data) {
+    return hasType(data, 'kw-find');
+}
 function isCloseRequestMessage(data) {
     return hasType(data, 'kw-close-request');
 }
@@ -469,6 +473,9 @@ function savedMessage(ok, error) {
 function titleMessage(filename, locked) {
     return { type: 'kw-title', filename, locked };
 }
+function findMessage() {
+    return { type: 'kw-find' };
+}
 function closeRequestMessage() {
     return { type: 'kw-close-request' };
 }
@@ -477,6 +484,44 @@ function closeAckMessage() {
 }
 function closeMessage() {
     return { type: 'kw-close' };
+}
+
+
+/* === ../pages/shared/logic.js === */
+/** Tab chrome for every page that can hold a database: the name a tab carries
+and the icon it shows. The document that owns the tab is not always the one
+that knows the state — an embedded app reports it back over embed-protocol —
+so the connector pages and the app itself both end up here, and the icons are
+defined once instead of once per page. */
+/* Hue and silhouette rather than an open versus closed shackle (#73): a tab
+gives an icon 16 pixels, where a shackle's gap is about two of them and the two
+states are indistinguishable. Unlocked is a different color and shows rows,
+because rows are what clicking that tab is about to put on screen. */
+const LOCKED_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.4' fill='%230e7c5a'/%3E%3Cpath d='M6 8.4V7a2 2 0 0 1 4 0v1.4' fill='none' stroke='%23fff' stroke-width='1.35' stroke-linecap='round'/%3E%3Crect x='4.5' y='8.4' width='7' height='4.5' rx='1.1' fill='%23fff'/%3E%3C/svg%3E";
+const UNLOCKED_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.4' fill='%238a5a1e'/%3E%3Crect x='3.7' y='4.4' width='8.6' height='1.9' rx='.95' fill='%23fff'/%3E%3Crect x='3.7' y='7.05' width='8.6' height='1.9' rx='.95' fill='%23fff'/%3E%3Crect x='3.7' y='9.7' width='8.6' height='1.9' rx='.95' fill='%23fff'/%3E%3C/svg%3E";
+/** The tab's name. It spells the state out as well as showing it, because 🔒
+and 🔓 are as hard to tell apart in a title as they are in a tab (#73). */
+function tabTitle(baseTitle, filename, locked) {
+    if (!filename)
+        return baseTitle;
+    return `${locked ? '🔒' : '🔓'} ${filename} - ${locked ? 'Locked' : 'Unlocked'} - ${baseTitle}`;
+}
+/** Name the tab and mark it with the database's state; no filename means no
+database, which leaves the page's own icon alone. */
+function applyTabState(doc, baseTitle, filename, locked) {
+    doc.title = tabTitle(baseTitle, filename, locked);
+    const link = doc.querySelector('link[rel="icon"]');
+    if (!link)
+        return;
+    /* Kept on the element rather than in this module, so it is captured once per
+    document and before anything overwrites it: giving a database up has to hand
+    the tab back the icon its own page shipped with (#73). */
+    if (link.dataset.pageIcon === undefined)
+        link.dataset.pageIcon = link.getAttribute('href') ?? '';
+    let icon = link.dataset.pageIcon;
+    if (filename)
+        icon = locked ? LOCKED_ICON : UNLOCKED_ICON;
+    link.setAttribute('href', icon);
 }
 
 
@@ -750,13 +795,31 @@ function embedApp(headerLabel, implementation) {
         requestCloseIframe(tearDownIframe);
     });
     window.addEventListener('message', handleFrameMessage);
+    window.addEventListener('keydown', handleFindKey);
     // Setting src last means the iframe's script (and its kw-ready handshake)
     // can't fire before the listener above is attached.
     qs('#app-frame').src = implementation;
 }
+/* The app reports its lock state for the tab (#65); a find is only worth
+forwarding once it is unlocked and has entries to look through (#78). */
+let appUnlocked = false;
+/* Focus outside the iframe means this document gets the keystroke, so the find
+is forwarded rather than left to the browser's own, which can only see this
+page's chrome (#78). */
+function handleFindKey(event) {
+    if (event.key !== 'f' || event.altKey || event.shiftKey || !(event.metaKey || event.ctrlKey)) {
+        return;
+    }
+    if (!appUnlocked)
+        return;
+    event.preventDefault();
+    must(qs('#app-frame').contentWindow).postMessage(findMessage(), APP_ORIGIN);
+}
 function tearDownIframe() {
     window.removeEventListener('message', handleFrameMessage);
-    document.title = BASE_TITLE;
+    window.removeEventListener('keydown', handleFindKey);
+    appUnlocked = false;
+    applyTabState(document, BASE_TITLE, '', true);
     currentFile = null;
     pendingAction = null;
     showChooser();
@@ -792,9 +855,8 @@ function handleFrameMessage(event) {
         }
     }
     else if (isTitleMessage(event.data)) {
-        const { filename, locked } = event.data;
-        const icon = locked ? '🔒' : '🔓';
-        document.title = filename ? `${icon} ${filename} - ${BASE_TITLE}` : BASE_TITLE;
+        appUnlocked = !event.data.locked;
+        applyTabState(document, BASE_TITLE, event.data.filename, event.data.locked);
     }
     else if (isCloseAckMessage(event.data)) {
         const afterClose = pendingClose;
@@ -875,6 +937,8 @@ if (typeof openMessage !== 'undefined') globalThis.openMessage = openMessage;
 if (typeof createMessage !== 'undefined') globalThis.createMessage = createMessage;
 if (typeof savedMessage !== 'undefined') globalThis.savedMessage = savedMessage;
 if (typeof closeRequestMessage !== 'undefined') globalThis.closeRequestMessage = closeRequestMessage;
+if (typeof applyTabState !== 'undefined') globalThis.applyTabState = applyTabState;
+if (typeof findMessage !== 'undefined') globalThis.findMessage = findMessage;
 })();
 </script>
 </body>

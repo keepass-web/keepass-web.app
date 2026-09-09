@@ -822,8 +822,12 @@ so an absolutely positioned menu would be cut off. */
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
+  /* Only under fixed layout does a column's width mean anything (#77). */
+  table-layout: fixed;
 }
 
+/* Starting proportions, not caps: spare width is shared out among them, and a
+drag replaces the value outright (#77). */
 .entry-table th {
   position: sticky;
   top: 0;
@@ -837,6 +841,45 @@ so an absolutely positioned menu would be cut off. */
   text-transform: uppercase;
   color: var(--muted);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 10rem;
+}
+
+.entry-table th[data-column="title"],
+.entry-table th[data-column="url"] {
+  width: 15rem;
+}
+
+.entry-table th[data-column="password"] {
+  width: 8rem;
+}
+
+/* Sits inside the sticky header, which is its containing block (#77). */
+.col-resize {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 12px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.col-resize::before {
+  content: "";
+  position: absolute;
+  top: 25%;
+  bottom: 25%;
+  right: 5px;
+  width: 1px;
+  background: var(--border);
+}
+
+.col-resize:hover::before,
+.col-resize:focus-visible::before {
+  width: 2px;
+  background: var(--accent);
 }
 
 /* A tap on a cell copies (#67), so the cell must not start a text selection or
@@ -847,17 +890,30 @@ wait on a double-tap-to-zoom before that tap registers. */
   -webkit-touch-callout: none;
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--border);
-  max-width: 220px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+/* min-width:0 is what lets the text box shrink below its content, so it is the
+text that ellipsizes and the copy control that keeps its place (#76). */
+.entry-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.entry-cell-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  cursor: pointer;
 }
 
 /* Present at rest, brighter on hover or focus (#67): hover may raise emphasis,
 never be what makes the affordance discoverable, since touch has none. */
 .copy-hint {
-  margin-left: 0.35rem;
+  margin-left: auto;
+  flex: 0 0 auto;
   padding: 0;
   border: none;
   background: none;
@@ -872,8 +928,11 @@ never be what makes the affordance discoverable, since touch has none. */
   opacity: 1;
 }
 
+.entry-table th.entry-table-open {
+  width: 2.5rem;
+}
+
 .entry-table-open {
-  width: 1px;
   text-align: right;
   white-space: nowrap;
 }
@@ -1988,7 +2047,7 @@ body.embedded footer {
   &middot; <a href="https://github.com/keepass-web/.github/blob/main/profile/FAQ.md">FAQ</a>
   &middot; <a href="https://github.com/keepass-web/source-application">Source</a>
 </p>
-<footer><a href="https://github.com/keepass-web/source-application/tree/v0.10.0">v0.10.0</a> committed on <time id="commit-date" datetime="2026-09-07T16:23:57-04:00">2026-09-07T16:23:57-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+<footer><a href="https://github.com/keepass-web/source-application/tree/v0.10.1">v0.10.1</a> committed on <time id="commit-date" datetime="2026-09-08T20:31:32-04:00">2026-09-08T20:31:32-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
 
 
   <script>
@@ -2000,7 +2059,8 @@ body.embedded footer {
 keepass-web implementation and whatever host embeds it in an iframe.
 Centralizes shapes/guards/builders (previously duplicated per side) so
 both ends provably agree on the wire format: kw-ready, kw-open, kw-create,
-kw-save, kw-saved, kw-title, kw-close-request, kw-close-ack, kw-close. */
+kw-save, kw-saved, kw-title, kw-find, kw-close-request, kw-close-ack,
+kw-close. */
 function hasType(data, type) {
     return (data !== null && typeof data === 'object' && data.type === type);
 }
@@ -2037,6 +2097,9 @@ function isTitleMessage(data) {
     const rec = data;
     return typeof rec.filename === 'string' && typeof rec.locked === 'boolean';
 }
+function isFindMessage(data) {
+    return hasType(data, 'kw-find');
+}
 function isCloseRequestMessage(data) {
     return hasType(data, 'kw-close-request');
 }
@@ -2064,6 +2127,9 @@ function savedMessage(ok, error) {
 }
 function titleMessage(filename, locked) {
     return { type: 'kw-title', filename, locked };
+}
+function findMessage() {
+    return { type: 'kw-find' };
 }
 function closeRequestMessage() {
     return { type: 'kw-close-request' };
@@ -5119,6 +5185,44 @@ function kx_buildKdfParameters(options) {
 }
 
 
+/* === ../pages/shared/logic.js === */
+/** Tab chrome for every page that can hold a database: the name a tab carries
+and the icon it shows. The document that owns the tab is not always the one
+that knows the state — an embedded app reports it back over embed-protocol —
+so the connector pages and the app itself both end up here, and the icons are
+defined once instead of once per page. */
+/* Hue and silhouette rather than an open versus closed shackle (#73): a tab
+gives an icon 16 pixels, where a shackle's gap is about two of them and the two
+states are indistinguishable. Unlocked is a different color and shows rows,
+because rows are what clicking that tab is about to put on screen. */
+const LOCKED_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.4' fill='%230e7c5a'/%3E%3Cpath d='M6 8.4V7a2 2 0 0 1 4 0v1.4' fill='none' stroke='%23fff' stroke-width='1.35' stroke-linecap='round'/%3E%3Crect x='4.5' y='8.4' width='7' height='4.5' rx='1.1' fill='%23fff'/%3E%3C/svg%3E";
+const UNLOCKED_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.4' fill='%238a5a1e'/%3E%3Crect x='3.7' y='4.4' width='8.6' height='1.9' rx='.95' fill='%23fff'/%3E%3Crect x='3.7' y='7.05' width='8.6' height='1.9' rx='.95' fill='%23fff'/%3E%3Crect x='3.7' y='9.7' width='8.6' height='1.9' rx='.95' fill='%23fff'/%3E%3C/svg%3E";
+/** The tab's name. It spells the state out as well as showing it, because 🔒
+and 🔓 are as hard to tell apart in a title as they are in a tab (#73). */
+function tabTitle(baseTitle, filename, locked) {
+    if (!filename)
+        return baseTitle;
+    return `${locked ? '🔒' : '🔓'} ${filename} - ${locked ? 'Locked' : 'Unlocked'} - ${baseTitle}`;
+}
+/** Name the tab and mark it with the database's state; no filename means no
+database, which leaves the page's own icon alone. */
+function applyTabState(doc, baseTitle, filename, locked) {
+    doc.title = tabTitle(baseTitle, filename, locked);
+    const link = doc.querySelector('link[rel="icon"]');
+    if (!link)
+        return;
+    /* Kept on the element rather than in this module, so it is captured once per
+    document and before anything overwrites it: giving a database up has to hand
+    the tab back the icon its own page shipped with (#73). */
+    if (link.dataset.pageIcon === undefined)
+        link.dataset.pageIcon = link.getAttribute('href') ?? '';
+    let icon = link.dataset.pageIcon;
+    if (filename)
+        icon = locked ? LOCKED_ICON : UNLOCKED_ICON;
+    link.setAttribute('href', icon);
+}
+
+
 /* === ../pages/0x67/logic.js === */
 /** Pure logic for 0x67: field/tree lookups, search, and edit-commit over a
 decoded KDBX doc — no DOM, so unit-tested directly. A real ES module;
@@ -5510,6 +5614,13 @@ function makeIconButton(className, title, glyph, onClick) {
     btn.addEventListener('click', onClick);
     return btn;
 }
+/* A pointer press moves focus to the button before the click lands, so a
+control that acts on a field takes the caret out of that field; suppressing
+the press's default leaves focus and caret exactly where they were, while a
+keyboard user still reaches the button by tabbing to it (#72). */
+function keepFieldFocus(button) {
+    button.addEventListener('mousedown', (event) => event.preventDefault());
+}
 // Wire a dialog's ✕ button to close it, replacing a repeated line in every openXDialog.
 function wireClose(dlg) {
     must(dlg.querySelector('[data-action="close"]')).onclick = () => dlg.close();
@@ -5609,6 +5720,7 @@ function showUnlock(preserveDirty = false) {
         showUpload();
     });
     const togglePasswordBtn = qs('[data-action="toggle-password"]');
+    keepFieldFocus(togglePasswordBtn);
     togglePasswordBtn.addEventListener('click', () => {
         passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password';
         togglePasswordBtn.textContent = passwordInput.type === 'password' ? '👁' : '🙈';
@@ -5973,7 +6085,9 @@ function renderEntryPanel() {
     }
     rows = sortEntries(rows, app.sortField, app.sortDir);
     if (app.entryView === 'table') {
-        listEl.appendChild(buildEntryTable(rows));
+        const table = buildEntryTable(rows);
+        listEl.appendChild(table);
+        publishColumnWidths(table);
     }
     else {
         for (const { entry, group } of rows) {
@@ -6041,8 +6155,9 @@ browser already decides what counts as a click, so a scroll that starts on a
 cell copies nothing and a secondary button never reaches here at all. */
 function wireCellCopy(cell, value, label) {
     cell.addEventListener('click', (event) => {
-        if (event.target !== event.currentTarget)
-            return; // the copy button runs its own handler
+        // Anywhere but the copy button, which runs its own handler (#76).
+        if (event.target.closest('.copy-hint'))
+            return;
         if (value)
             copyToClipboard(value, label);
     });
@@ -6054,13 +6169,94 @@ function copyHint(value, label) {
         copyToClipboard(value, label);
     });
 }
+/* The text ellipsizes inside its own box so the copy control keeps its place at
+the cell's right edge (#76); appended straight after the text it rode past the
+edge and out of sight the moment a value was longer than its column. */
 function buildEntryCell(display, value, label) {
     const td = document.createElement('td');
-    td.appendChild(document.createTextNode(display));
+    const inner = document.createElement('div');
+    inner.className = 'entry-cell';
+    const text = document.createElement('span');
+    text.className = 'entry-cell-text';
+    text.textContent = display;
+    inner.appendChild(text);
     if (value)
-        td.appendChild(copyHint(value, label));
+        inner.appendChild(copyHint(value, label));
+    td.appendChild(inner);
     wireCellCopy(td, value, label);
     return td;
+}
+const COLUMN_WIDTH_MIN = 80;
+const COLUMN_WIDTH_MAX = 640;
+const COLUMN_WIDTH_STEP = 16;
+/* Widths stay in memory for the same reason the group rail's does (#63, #77):
+one silently restored forever would be state nobody asked to keep, yet it has
+to outlive the table, which is rebuilt from scratch on every render. */
+const columnWidths = new Map();
+// The column as rendered until the user picks a width; their choice after that (#77).
+function currentColumnWidth(th) {
+    return columnWidths.get(must(th.dataset.column)) ?? th.getBoundingClientRect().width;
+}
+function setColumnWidth(th, px) {
+    const width = Math.min(COLUMN_WIDTH_MAX, Math.max(COLUMN_WIDTH_MIN, Math.round(px)));
+    columnWidths.set(must(th.dataset.column), width);
+    th.style.width = `${width}px`;
+    must(th.querySelector('.col-resize')).setAttribute('aria-valuenow', String(width));
+}
+/* Pointer events rather than mouse events (#77), as the group rail does: one
+path covers mouse, touch and pen, so a column resizes wherever it is visible. */
+function addColumnHandle(th, label) {
+    const handle = document.createElement('span');
+    handle.className = 'col-resize';
+    handle.tabIndex = 0;
+    handle.setAttribute('role', 'separator');
+    handle.setAttribute('aria-orientation', 'vertical');
+    handle.setAttribute('aria-label', `Resize ${label} column`);
+    handle.setAttribute('aria-valuemin', String(COLUMN_WIDTH_MIN));
+    handle.setAttribute('aria-valuemax', String(COLUMN_WIDTH_MAX));
+    handle.addEventListener('pointerdown', (down) => {
+        down.preventDefault();
+        handle.setPointerCapture(down.pointerId);
+        const startX = down.clientX;
+        const startWidth = currentColumnWidth(th);
+        const onMove = (move) => setColumnWidth(th, startWidth + move.clientX - startX);
+        const onDone = () => {
+            handle.releasePointerCapture(down.pointerId);
+            handle.removeEventListener('pointermove', onMove);
+            handle.removeEventListener('pointerup', onDone);
+            handle.removeEventListener('pointercancel', onDone);
+        };
+        handle.addEventListener('pointermove', onMove);
+        handle.addEventListener('pointerup', onDone);
+        handle.addEventListener('pointercancel', onDone);
+    });
+    handle.addEventListener('keydown', (key) => {
+        if (key.key !== 'ArrowLeft' && key.key !== 'ArrowRight')
+            return;
+        key.preventDefault();
+        const step = key.key === 'ArrowLeft' ? -COLUMN_WIDTH_STEP : COLUMN_WIDTH_STEP;
+        setColumnWidth(th, currentColumnWidth(th) + step);
+    });
+    th.appendChild(handle);
+}
+function buildColumnHeader(id, label) {
+    const th = document.createElement('th');
+    th.textContent = label;
+    th.dataset.column = id;
+    const chosen = columnWidths.get(id);
+    if (chosen !== undefined)
+        th.style.width = `${chosen}px`;
+    addColumnHandle(th, label);
+    return th;
+}
+/* A column only has a measurable width once the table is in the document, so
+the starting value a screen reader reads out is published after it is attached
+rather than while it is being built (#77). */
+function publishColumnWidths(table) {
+    for (const handle of table.querySelectorAll('.col-resize')) {
+        const th = must(handle.parentElement);
+        handle.setAttribute('aria-valuenow', String(Math.round(currentColumnWidth(th))));
+    }
 }
 function buildEntryTable(rows) {
     const table = document.createElement('table');
@@ -6068,15 +6264,13 @@ function buildEntryTable(rows) {
     const visibleColumns = ENTRY_COLUMNS.filter((column) => app.columnVisibility[column.key]);
     const thead = document.createElement('thead');
     const headRow = document.createElement('tr');
-    const titleTh = document.createElement('th');
-    titleTh.textContent = 'Title';
-    headRow.appendChild(titleTh);
+    headRow.appendChild(buildColumnHeader('title', 'Title'));
     for (const column of visibleColumns) {
-        const th = document.createElement('th');
-        th.textContent = column.label;
-        headRow.appendChild(th);
+        headRow.appendChild(buildColumnHeader(column.key, column.label));
     }
+    // Only wide enough for the row control, and not the user's to resize.
     const openTh = document.createElement('th');
+    openTh.className = 'entry-table-open';
     const openLabel = document.createElement('span');
     openLabel.className = 'visually-hidden';
     openLabel.textContent = 'Open';
@@ -6251,6 +6445,27 @@ function wireEntryListEvents() {
     });
     buildColumnPickerMenu();
     updateViewToggleUI();
+}
+/* What someone pressing find wants is an entry, not a word on the screen in
+front of them, and the search field looks through the whole database rather
+than the page (#78). The edit screen keeps the browser's own find: it holds
+typing nobody has committed, and leaving would throw it away. */
+function startFind() {
+    if (app.db === null)
+        return false;
+    // A dialog holds the keyboard while it is open, so the list behind it is not the subject.
+    if (document.querySelector('dialog[open]') !== null)
+        return false;
+    if (document.querySelector('#root .screen-edit') !== null)
+        return false;
+    if (document.querySelector('#root .screen-detail') !== null) {
+        app.currentEntry = null;
+        showEntryList();
+    }
+    const search = qs('#search-input');
+    search.focus();
+    search.select();
+    return true;
 }
 // ============================================================
 // Screen: Entry Detail
@@ -6572,6 +6787,7 @@ function buildEditField(key, value, isProtected, removable) {
             valueInput.type = valueInput.type === 'password' ? 'text' : 'password';
             toggle.textContent = valueInput.type === 'password' ? '👁' : '🙈';
         });
+        keepFieldFocus(toggle);
         row.appendChild(toggle);
     }
     const copyBtn = makeIconButton('icon-btn', 'Copy', '📋', () => {
@@ -6579,6 +6795,7 @@ function buildEditField(key, value, isProtected, removable) {
         // with — the user may have already edited it.
         copyToClipboard(valueInput.value, fieldLabel(keyInput.value) || 'Value');
     });
+    keepFieldFocus(copyBtn);
     row.appendChild(copyBtn);
     if (key === 'Password') {
         const generateBtn = makeIconButton('icon-btn', 'Generate password', '🎲', () => {
@@ -6586,6 +6803,7 @@ function buildEditField(key, value, isProtected, removable) {
                 valueInput.value = password;
             });
         });
+        keepFieldFocus(generateBtn);
         row.appendChild(generateBtn);
     }
     if (removable) {
@@ -7048,6 +7266,7 @@ function openMoveToDialog(title, isValidTarget, onPick) {
 //   app  → host : kw-ready          app booted, send a vault or a create instruction
 //   host → app  : kw-open           open this vault (filename, bytes: ArrayBuffer)
 //   host → app  : kw-create         start a brand-new, empty vault
+//   host → app  : kw-find           host saw the find keystroke; take it
 //   app  → host : kw-save           user saved; please persist (filename, bytes: ArrayBuffer)
 //   host → app  : kw-saved          result of that persist (ok, error?)
 //   host → app  : kw-close-request  host wants to remove this iframe; may I?
@@ -7069,17 +7288,16 @@ function isEmbedded() {
 function postToHost(message) {
     window.parent.postMessage(message, HOST_ORIGIN);
 }
-/** The tab title belongs to whichever document owns the tab: the host when
-embedded, this page when standalone. Every screen announces itself, so the
-tab bar names the open database and its lock state without being opened (#65). */
+/** The tab belongs to whichever document owns it: the host when embedded, this
+page when standalone. Every screen announces itself, so the tab bar names the
+open database and shows its lock state without being opened (#65, #73). */
 function publishTitle() {
     const locked = app.db === null;
     if (isEmbedded()) {
         postToHost(titleMessage(app.filename, locked));
         return;
     }
-    const icon = locked ? '🔒' : '🔓';
-    document.title = app.filename ? `${icon} ${app.filename} - ${BASE_TITLE}` : BASE_TITLE;
+    applyTabState(document, BASE_TITLE, app.filename, locked);
 }
 function handleHostMessage(event) {
     if (event.origin !== HOST_ORIGIN || event.source !== window.parent)
@@ -7099,6 +7317,10 @@ function handleHostMessage(event) {
         pendingSave = null;
         const { ok, error } = event.data;
         resolve?.(error === undefined ? { ok } : { ok, error });
+    }
+    else if (isFindMessage(event.data)) {
+        // The host already swallowed the keystroke, so its outcome is nothing to report.
+        startFind();
     }
     else if (isCloseRequestMessage(event.data)) {
         confirmUnsavedChanges(DISCARD_PROMPT, () => postToHost(closeAckMessage()), CLOSE_PROMPT);
@@ -7135,6 +7357,14 @@ window.addEventListener('beforeunload', (e) => {
     e.returnValue = true;
 });
 document.addEventListener('visibilitychange', handleVisibilityChange);
+/* Only taken when there is something to search; on the upload, unlock and edit
+screens the browser's own find is still the right answer (#78). */
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'f' || e.altKey || e.shiftKey || !(e.metaKey || e.ctrlKey))
+        return;
+    if (startFind())
+        e.preventDefault();
+});
 
 
 /* --- public exports --- */
@@ -7198,6 +7428,8 @@ if (typeof saveMessage !== 'undefined') globalThis.saveMessage = saveMessage;
 if (typeof titleMessage !== 'undefined') globalThis.titleMessage = titleMessage;
 if (typeof closeAckMessage !== 'undefined') globalThis.closeAckMessage = closeAckMessage;
 if (typeof closeMessage !== 'undefined') globalThis.closeMessage = closeMessage;
+if (typeof applyTabState !== 'undefined') globalThis.applyTabState = applyTabState;
+if (typeof isFindMessage !== 'undefined') globalThis.isFindMessage = isFindMessage;
 })();
 </script>
 </body>

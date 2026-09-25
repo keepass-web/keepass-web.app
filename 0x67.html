@@ -1493,6 +1493,7 @@ input.attachment-name:focus {
 
 .dialog-footer {
   display: flex;
+  flex-wrap: wrap; /* recovering an expired session adds actions this row cannot fit at phone width (#85) */
   justify-content: flex-end;
   gap: 0.5rem;
   padding: 1rem 1.25rem;
@@ -1924,6 +1925,7 @@ body.embedded footer {
       <button type="button" class="btn btn-secondary" data-action="close" data-role="save-later">Later</button>
       <button type="button" class="btn btn-primary" data-action="download">Download</button>
       <button type="button" class="btn btn-primary" data-action="save-host" hidden>Save</button>
+      <button type="button" class="btn btn-primary" data-action="reconnect" hidden>Reconnect</button>
     </div>
   </dialog>
 
@@ -1986,6 +1988,8 @@ body.embedded footer {
       <button type="button" class="btn btn-secondary" data-action="cancel-discard">Cancel</button>
       <button type="button" class="btn btn-danger" data-action="confirm-discard">Discard</button>
       <button type="button" class="btn btn-primary" data-action="confirm-save">Save</button>
+      <button type="button" class="btn btn-secondary" data-action="download" hidden>Download</button>
+      <button type="button" class="btn btn-primary" data-action="reconnect" hidden>Reconnect</button>
     </div>
   </dialog>
 
@@ -2047,7 +2051,7 @@ body.embedded footer {
   &middot; <a href="https://github.com/keepass-web/.github/blob/main/profile/FAQ.md">FAQ</a>
   &middot; <a href="https://github.com/keepass-web/source-application">Source</a>
 </p>
-<footer><a href="https://github.com/keepass-web/source-application/tree/v0.10.1">v0.10.1</a> committed on <time id="commit-date" datetime="2026-09-08T20:31:32-04:00">2026-09-08T20:31:32-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+<footer><a href="https://github.com/keepass-web/source-application/tree/v0.11.0">v0.11.0</a> committed on <time id="commit-date" datetime="2026-09-25T13:36:15-04:00">2026-09-25T13:36:15-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
 
 
   <script>
@@ -2055,12 +2059,11 @@ body.embedded footer {
 (function() {
 
 /* === embed-protocol/src/index.js === */
-/** `embed-protocol` — the same-origin postMessage contract between a
+/** `embed-protocol` — the equivalent-origin postMessage contract between a
 keepass-web implementation and whatever host embeds it in an iframe.
-Centralizes shapes/guards/builders (previously duplicated per side) so
-both ends provably agree on the wire format: kw-ready, kw-open, kw-create,
-kw-save, kw-saved, kw-title, kw-find, kw-close-request, kw-close-ack,
-kw-close. */
+Centralizes shapes/guards/builders so both ends provably agree on the wire
+format: kw-ready, kw-open, kw-create, kw-save, kw-saved, kw-title, kw-find,
+kw-close-request, kw-close-ack, kw-close (#1), kw-reconnect, kw-reconnected (#85). */
 function hasType(data, type) {
     return (data !== null && typeof data === 'object' && data.type === type);
 }
@@ -2085,6 +2088,19 @@ function isSaveMessage(data) {
 }
 function isSavedMessage(data) {
     if (!hasType(data, 'kw-saved'))
+        return false;
+    const rec = data;
+    if (typeof rec.ok !== 'boolean')
+        return false;
+    if (rec.error !== undefined && typeof rec.error !== 'string')
+        return false;
+    return rec.reason === undefined || rec.reason === 'auth-expired';
+}
+function isReconnectMessage(data) {
+    return hasType(data, 'kw-reconnect');
+}
+function isReconnectedMessage(data) {
+    if (!hasType(data, 'kw-reconnected'))
         return false;
     const rec = data;
     if (typeof rec.ok !== 'boolean')
@@ -2122,8 +2138,21 @@ function createMessage() {
 function saveMessage(filename, bytes) {
     return { type: 'kw-save', filename, bytes };
 }
-function savedMessage(ok, error) {
-    return error === undefined ? { type: 'kw-saved', ok } : { type: 'kw-saved', ok, error };
+function savedMessage(ok, error, reason) {
+    const message = { type: 'kw-saved', ok };
+    if (error !== undefined)
+        message.error = error;
+    if (reason !== undefined)
+        message.reason = reason;
+    return message;
+}
+function reconnectMessage() {
+    return { type: 'kw-reconnect' };
+}
+function reconnectedMessage(ok, error) {
+    return error === undefined
+        ? { type: 'kw-reconnected', ok }
+        : { type: 'kw-reconnected', ok, error };
 }
 function titleMessage(filename, locked) {
     return { type: 'kw-title', filename, locked };
@@ -2139,6 +2168,17 @@ function closeAckMessage() {
 }
 function closeMessage() {
     return { type: 'kw-close' };
+}
+// --- Origins ------------------------------------------------------------
+/* Each file:// document gets its own opaque origin, so neither side can name
+the other; a tuple target is never delivered and arriving messages read "null"
+(#83). Widening the target is safe there because nothing crossing it is a secret
+the filesystem does not already hold; the master password and the decrypted
+entries never leave the implementation. */
+function peerOrigin(protocol, origin) {
+    return protocol === 'file:'
+        ? { target: '*', accept: 'null' }
+        : { target: origin, accept: origin };
 }
 
 
@@ -5197,12 +5237,13 @@ states are indistinguishable. Unlocked is a different color and shows rows,
 because rows are what clicking that tab is about to put on screen. */
 const LOCKED_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.4' fill='%230e7c5a'/%3E%3Cpath d='M6 8.4V7a2 2 0 0 1 4 0v1.4' fill='none' stroke='%23fff' stroke-width='1.35' stroke-linecap='round'/%3E%3Crect x='4.5' y='8.4' width='7' height='4.5' rx='1.1' fill='%23fff'/%3E%3C/svg%3E";
 const UNLOCKED_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.4' fill='%238a5a1e'/%3E%3Crect x='3.7' y='4.4' width='8.6' height='1.9' rx='.95' fill='%23fff'/%3E%3Crect x='3.7' y='7.05' width='8.6' height='1.9' rx='.95' fill='%23fff'/%3E%3Crect x='3.7' y='9.7' width='8.6' height='1.9' rx='.95' fill='%23fff'/%3E%3C/svg%3E";
-/** The tab's name. It spells the state out as well as showing it, because 🔒
-and 🔓 are as hard to tell apart in a title as they are in a tab (#73). */
+/** The tab's name. The state is named in words and not repeated as a glyph:
+the icon beside it already carries it as a picture, and the padlock emoji says
+the same thing a second time in the form that reads least well (#73). */
 function tabTitle(baseTitle, filename, locked) {
     if (!filename)
         return baseTitle;
-    return `${locked ? '🔒' : '🔓'} ${filename} - ${locked ? 'Locked' : 'Unlocked'} - ${baseTitle}`;
+    return `${filename} - ${locked ? 'Locked' : 'Unlocked'} - ${baseTitle}`;
 }
 /** Name the tab and mark it with the database's state; no filename means no
 database, which leaves the page's own icon alone. */
@@ -5560,8 +5601,10 @@ const app = {
         created: false,
     },
 };
-// True once a trusted parent frame has handed this app a vault (see "Host integration").
-let hostSession = false;
+let hostState = 'standalone';
+function isHosted() {
+    return hostState === 'hosted';
+}
 // True while this tab holds a database: loaded, newly created, or locked (#66).
 function hasDatabase() {
     return app.db !== null || app.file !== null;
@@ -6367,7 +6410,7 @@ function closeDatabase() {
         searchQuery: '',
     });
     setDirty(false);
-    if (isEmbedded()) {
+    if (isHosted()) {
         postToHost(closeMessage());
     }
     else {
@@ -6923,6 +6966,64 @@ function openExportDialog() {
 // ============================================================
 // Dialog: Save / Download
 // ============================================================
+// Escape closes a <dialog> on its own, which an expired session must not allow (#85).
+function blockDismiss(event) {
+    event.preventDefault();
+}
+function setSaveStatus(status, text, kind) {
+    status.hidden = false;
+    status.className = kind === undefined ? 'save-status' : `save-status ${kind}`;
+    status.textContent = text;
+}
+const EXPIRED_MESSAGE = 'Your session with the storage provider expired. Reconnect to save, or download a copy.';
+const LOCKED_OUT_MESSAGE = 'The database locked while this dialog was open. Unlock it to save.';
+function showExpired(session) {
+    setSaveStatus(session.status, EXPIRED_MESSAGE, 'error');
+    session.apply('expired');
+    session.reconnectBtn.focus(); // the control that had focus was just hidden
+}
+/** Renew the credential, then let the dialog's own save run again. Both
+dialogs route through here so neither can answer an expired session its own
+way (#85). */
+async function runReconnect(session) {
+    setSaveStatus(session.status, 'Reconnecting…');
+    session.reconnectBtn.disabled = true;
+    session.downloadBtn.disabled = true;
+    const result = await requestReconnect();
+    if (!result.ok) {
+        setSaveStatus(session.status, result.error ? `Reconnect failed: ${result.error}` : 'Reconnect failed.', 'error');
+        session.apply('expired');
+        return;
+    }
+    if (app.db === null) {
+        setSaveStatus(session.status, LOCKED_OUT_MESSAGE, 'error');
+        session.apply('locked-out');
+        return;
+    }
+    await session.retrySave();
+}
+/* Auto-lock runs off its own timer and does not care that a dialog is open, so
+the database can be gone before either control is used; locking re-encrypted
+the edits, leaving nothing here to save or copy (#85). */
+async function runDownload(session) {
+    if (app.db === null) {
+        setSaveStatus(session.status, LOCKED_OUT_MESSAGE, 'error');
+        session.apply('locked-out');
+        return;
+    }
+    try {
+        downloadCopy(await must(app.db).save());
+    }
+    catch {
+        // A throw here would leave the held dialog with no status and no way out (#85).
+        setSaveStatus(session.status, 'Could not prepare a copy to download.', 'error');
+        session.apply('expired');
+        return;
+    }
+    // A copy on disk means the edits are no longer stranded, so the dialog lets go.
+    setSaveStatus(session.status, 'Copy downloaded. Reconnect to save back to the provider.');
+    session.apply('recovered');
+}
 function openSaveDialog() {
     const dlg = byId('dlg-save');
     // In a host session (opened from the cloud connector), saving writes back to
@@ -6933,43 +7034,76 @@ function openSaveDialog() {
     const status = must(dlg.querySelector('[data-role="save-status"]'));
     const downloadBtn = must(dlg.querySelector('[data-action="download"]'));
     const hostBtn = must(dlg.querySelector('[data-action="save-host"]'));
+    const reconnectBtn = must(dlg.querySelector('[data-action="reconnect"]'));
     const laterBtn = must(dlg.querySelector('[data-role="save-later"]'));
+    const dismissBtns = Array.from(dlg.querySelectorAll('[data-action="close"]'));
+    function apply(state) {
+        const expired = state === 'expired';
+        // A copy being out does not make the provider current, so recovery stays offered.
+        const offeringRecovery = expired || state === 'recovered';
+        /* Nothing may dismiss: while expired the edits exist nowhere but this tab,
+        and a save in flight owns the one slot its reply lands in, so dismissing and
+        starting another would leave the first to settle the second's wait (#85). */
+        const held = expired || state === 'retrying' || state === 'saving';
+        // Still asking its original question, rather than reporting an outcome.
+        const asking = state === 'normal' || state === 'saving' || state === 'recovered';
+        for (const btn of dismissBtns) {
+            btn.hidden = held;
+            btn.onclick = () => dlg.close();
+        }
+        // Retrying no longer makes sense once the save has landed, so the footer
+        // collapses to a single acknowledgement.
+        laterBtn.textContent = state === 'saved' ? 'Close' : 'Later';
+        dlg.removeEventListener('cancel', blockDismiss);
+        if (held)
+            dlg.addEventListener('cancel', blockDismiss);
+        hostBtn.hidden = !(asking && isHosted());
+        hostBtn.disabled = state === 'saving';
+        hostBtn.onclick = () => void saveToHost();
+        reconnectBtn.hidden = !offeringRecovery;
+        reconnectBtn.disabled = false;
+        reconnectBtn.onclick = () => void runReconnect(session);
+        downloadBtn.hidden = offeringRecovery ? false : !(asking && !isHosted());
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = offeringRecovery ? 'Download a copy' : 'Download';
+        downloadBtn.className = offeringRecovery ? 'btn btn-secondary' : 'btn btn-primary';
+        downloadBtn.onclick = offeringRecovery
+            ? () => void runDownload(session)
+            : () => void downloadAndClose();
+    }
+    async function downloadAndClose() {
+        await performSave();
+        dlg.close();
+    }
+    async function saveToHost(held = false) {
+        setSaveStatus(status, 'Saving…');
+        apply(held ? 'retrying' : 'saving');
+        const result = await performSave();
+        if (result.ok) {
+            setSaveStatus(status, 'Saved.', 'ok');
+            apply('saved');
+            return;
+        }
+        if (result.reason === 'auth-expired') {
+            showExpired(session);
+            return;
+        }
+        setSaveStatus(status, result.error ? `Save failed: ${result.error}` : 'Save failed.', 'error');
+        apply('normal');
+    }
+    const session = {
+        status,
+        reconnectBtn,
+        downloadBtn,
+        apply,
+        retrySave: () => saveToHost(true),
+    };
     status.hidden = true;
     status.textContent = '';
     status.className = 'save-status';
-    localMsg.hidden = hostSession;
-    hostMsg.hidden = !hostSession;
-    downloadBtn.hidden = hostSession;
-    hostBtn.hidden = !hostSession;
-    laterBtn.textContent = 'Later';
-    downloadBtn.onclick = async () => {
-        await performSave();
-        dlg.close();
-    };
-    hostBtn.onclick = async () => {
-        status.hidden = false;
-        status.textContent = 'Saving…';
-        hostBtn.disabled = true;
-        const result = await performSave();
-        hostBtn.disabled = false;
-        if (result.ok) {
-            status.textContent = 'Saved.';
-            status.classList.add('ok');
-            // Retrying no longer makes sense once the save has succeeded — collapse
-            // the footer to a single acknowledgement instead of leaving stale
-            // "Later" / "Save" actions from before the save was requested.
-            laterBtn.textContent = 'Close';
-            hostBtn.hidden = true;
-        }
-        else {
-            status.textContent = result.error ? `Save failed: ${result.error}` : 'Save failed.';
-            status.classList.add('error');
-        }
-    };
-    // Both close buttons (Later + ✕) dismiss
-    for (const btn of dlg.querySelectorAll('[data-action="close"]')) {
-        btn.onclick = () => dlg.close();
-    }
+    localMsg.hidden = isHosted();
+    hostMsg.hidden = !isHosted();
+    apply('normal');
     dlg.showModal();
 }
 /** Persists the current database: a download standalone, a write-back to the
@@ -6978,26 +7112,46 @@ a download is not, but both are awaited here so every caller sees one
 consistent, awaitable outcome regardless of destination. Never rejects —
 failure comes back as `{ ok: false }` so callers can show it inline rather
 than an unhandled rejection. */
+function downloadCopy(bytes) {
+    const blob = new Blob([new Uint8Array(bytes)], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = app.filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+/* The held retry state removes every way out of the dialog, so a host that
+never answers a save would seal it shut; same budget as the reconnect (#85). */
+const SAVE_TIMEOUT_MS = 120_000;
 async function performSave() {
-    if (!hostSession) {
-        const bytes = await must(app.db).save();
-        const blob = new Blob([new Uint8Array(bytes)], { type: 'application/octet-stream' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = app.filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+    let bytes;
+    try {
+        bytes = await must(app.db).save();
+    }
+    catch {
+        /* The held states hide every way out of the dialog, so a throw on this side
+        would seal the edits in rather than report them; the timeout below only
+        covers a host that goes quiet, not a failure here (#85). */
+        return { ok: false, error: 'could not prepare the database' };
+    }
+    if (!isHosted()) {
+        downloadCopy(bytes);
         setDirty(false);
         return { ok: true };
     }
-    const bytes = await must(app.db).save();
     // Copy into a fresh, exactly-sized ArrayBuffer for the structured clone.
     postToHost(saveMessage(app.filename, new Uint8Array(bytes).buffer));
     const result = await new Promise((resolve) => {
-        pendingSave = resolve;
+        const settle = (value) => {
+            window.clearTimeout(timer);
+            pendingSave = null;
+            resolve(value);
+        };
+        const timer = window.setTimeout(() => settle({ ok: false, error: 'the provider did not answer' }), SAVE_TIMEOUT_MS);
+        pendingSave = settle;
     });
     if (result.ok)
         setDirty(false);
@@ -7083,39 +7237,77 @@ function confirmUnsavedChanges(prompt, proceed, cleanPrompt) {
     status.hidden = true;
     status.textContent = '';
     status.className = 'save-status';
+    const downloadBtn = must(dlg.querySelector('[data-action="download"]'));
+    const reconnectBtn = must(dlg.querySelector('[data-action="reconnect"]'));
+    const cancelBtn = must(dlg.querySelector('[data-action="cancel-discard"]'));
     const discardBtn = must(dlg.querySelector('[data-action="confirm-discard"]'));
-    discardBtn.textContent = active.discardLabel;
+    const saveBtn = must(dlg.querySelector('[data-action="confirm-save"]'));
     // With no Save beside it, confirming is the dialog's only affirmative action (#66).
     let discardStyle = app.dirty ? 'btn-secondary' : 'btn-primary';
     if (active.discardDanger)
         discardStyle = 'btn-danger';
-    discardBtn.className = `btn ${discardStyle}`;
-    discardBtn.disabled = false;
-    discardBtn.onclick = () => {
-        dlg.close();
-        proceed();
-    };
-    must(dlg.querySelector('[data-action="cancel-discard"]')).onclick = () => dlg.close();
-    const saveBtn = must(dlg.querySelector('[data-action="confirm-save"]'));
-    saveBtn.textContent = hostSession ? 'Save' : 'Download';
-    saveBtn.hidden = !app.dirty; // there is nothing to save when the prompt is only about closing
-    saveBtn.disabled = false;
-    saveBtn.onclick = async () => {
-        saveBtn.disabled = true;
-        discardBtn.disabled = true;
-        status.hidden = false;
-        status.textContent = 'Saving…';
+    function apply(state) {
+        const expired = state === 'expired';
+        const offeringRecovery = expired || state === 'recovered';
+        /* The same hold as the save dialog, with a second reason of its own: this
+        prompt runs proceed() on success, so a cancel landing mid-save would close a
+        database the user just backed out of (#85). */
+        const held = expired || state === 'retrying' || state === 'saving';
+        const asking = state === 'normal' || state === 'saving' || state === 'recovered';
+        cancelBtn.hidden = held;
+        cancelBtn.onclick = () => dlg.close();
+        dlg.removeEventListener('cancel', blockDismiss);
+        if (held)
+            dlg.addEventListener('cancel', blockDismiss);
+        /* Discarding is what actually throws the edits away, so it waits with Save.
+        A locked database keeps its edits in app.file behind the unlock screen, and
+        proceeding would tear the frame down and take them with it (#85). */
+        discardBtn.hidden = held || state === 'locked-out';
+        discardBtn.disabled = state === 'saving';
+        discardBtn.textContent = active.discardLabel;
+        discardBtn.className = `btn ${discardStyle}`;
+        discardBtn.onclick = () => {
+            dlg.close();
+            proceed();
+        };
+        // There is nothing to save when the prompt is only about closing.
+        saveBtn.hidden = !(asking && app.dirty);
+        saveBtn.disabled = state === 'saving';
+        saveBtn.textContent = isHosted() ? 'Save' : 'Download';
+        saveBtn.onclick = () => void saveThenProceed();
+        reconnectBtn.hidden = !offeringRecovery;
+        reconnectBtn.disabled = false;
+        reconnectBtn.onclick = () => void runReconnect(session);
+        downloadBtn.hidden = !offeringRecovery;
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = 'Download a copy';
+        downloadBtn.className = 'btn btn-secondary';
+        downloadBtn.onclick = () => void runDownload(session);
+    }
+    async function saveThenProceed(held = false) {
+        setSaveStatus(status, 'Saving…');
+        apply(held ? 'retrying' : 'saving');
         const result = await performSave();
         if (result.ok) {
             dlg.close();
             proceed();
             return;
         }
-        saveBtn.disabled = false;
-        discardBtn.disabled = false;
-        status.textContent = result.error ? `Save failed: ${result.error}` : 'Save failed.';
-        status.classList.add('error');
+        if (result.reason === 'auth-expired') {
+            showExpired(session);
+            return;
+        }
+        setSaveStatus(status, result.error ? `Save failed: ${result.error}` : 'Save failed.', 'error');
+        apply('normal');
+    }
+    const session = {
+        status,
+        reconnectBtn,
+        downloadBtn,
+        apply,
+        retrySave: () => saveThenProceed(true),
     };
+    apply('normal');
     dlg.showModal();
     saveBtn.focus();
 }
@@ -7254,8 +7446,8 @@ function openMoveToDialog(title, isValidTarget, onPick) {
 // ============================================================
 //
 // This app is self-contained: opened directly, it never talks to another
-// window, and everything below is dormant. When it is embedded in a
-// same-origin parent frame — any chooser page, e.g. the local-file page or
+// window, and everything below is dormant. When it is embedded in an
+// equivalent-origin parent frame — any chooser page, e.g. the local-file page or
 // the Google Drive connector — that parent can hand it a vault to open and
 // receive the edited vault back, without the app reimplementing any of its
 // own file handling.
@@ -7268,53 +7460,86 @@ function openMoveToDialog(title, isValidTarget, onPick) {
 //   host → app  : kw-create         start a brand-new, empty vault
 //   host → app  : kw-find           host saw the find keystroke; take it
 //   app  → host : kw-save           user saved; please persist (filename, bytes: ArrayBuffer)
-//   host → app  : kw-saved          result of that persist (ok, error?)
+//   host → app  : kw-saved          result of that persist (ok, error?, reason?)
+//   app  → host : kw-reconnect      the host credential expired; please renew it
+//   host → app  : kw-reconnected    result of that renewal (ok, error?)
 //   host → app  : kw-close-request  host wants to remove this iframe; may I?
-//   app  → host : kw-close-ack      yes — nothing unsaved, or the user chose to discard
-//   app  → host : kw-close          app's own ✕ was clicked; safe to remove me now
+//   app  → host : kw-close-ack      request received; outcome follows as kw-close, or not at all
+//   app  → host : kw-close          app is closing: its own ✕, or consent to a close request
 //
-// Every inbound message is checked to come from the parent frame at this
-// page's own origin; anything else is ignored. Nothing here runs unless the
+// Every inbound message is checked to come from the parent frame at the origin
+// peerOrigin accepts; anything else is ignored. Nothing here runs unless the
 // app is actually framed, so standalone use is entirely unaffected.
-const HOST_ORIGIN = window.location.origin;
+const PEER = peerOrigin(window.location.protocol, window.location.origin);
+const HOST_REPLY_GRACE_MS = 1000;
 // This page's own title, kept so a closed database can hand the tab back (#65).
 const BASE_TITLE = document.title;
 /** Resolves the in-flight performSave()'s promise once a `kw-saved` reply
 arrives, or null when no save is outstanding. */
 let pendingSave = null;
+let pendingReconnect = null;
+/* Long enough for a real consent flow, since the expired dialog removes every
+other way out and a host that never answers would seal it shut (#85). */
+const RECONNECT_TIMEOUT_MS = 120_000;
+/** Ask the host to renew the credential a save just failed on. Only the host
+holds it, and the app re-sends its own save once this succeeds rather than
+leaving database bytes parked over there for a user-paced reconnect (#85). */
+function requestReconnect() {
+    postToHost(reconnectMessage());
+    return new Promise((resolve) => {
+        const settle = (result) => {
+            window.clearTimeout(timer);
+            pendingReconnect = null;
+            resolve(result);
+        };
+        const timer = window.setTimeout(() => settle({ ok: false, error: 'the provider did not answer' }), RECONNECT_TIMEOUT_MS);
+        pendingReconnect = settle;
+    });
+}
 function isEmbedded() {
     return window.parent !== window;
 }
 function postToHost(message) {
-    window.parent.postMessage(message, HOST_ORIGIN);
+    window.parent.postMessage(message, PEER.target);
 }
 /** The tab belongs to whichever document owns it: the host when embedded, this
 page when standalone. Every screen announces itself, so the tab bar names the
 open database and shows its lock state without being opened (#65, #73). */
 function publishTitle() {
     const locked = app.db === null;
-    if (isEmbedded()) {
+    if (isHosted()) {
         postToHost(titleMessage(app.filename, locked));
         return;
     }
     applyTabState(document, BASE_TITLE, app.filename, locked);
 }
 function handleHostMessage(event) {
-    if (event.origin !== HOST_ORIGIN || event.source !== window.parent)
+    if (event.origin !== PEER.accept || event.source !== window.parent)
         return;
     if (isOpenMessage(event.data)) {
-        hostSession = true;
+        hostState = 'hosted';
         app.filename = event.data.filename;
         app.file = event.data.bytes;
         showUnlock();
     }
     else if (isCreateMessage(event.data)) {
-        hostSession = true;
+        hostState = 'hosted';
         showCreateDatabase();
     }
     else if (isSavedMessage(event.data)) {
         const resolve = pendingSave;
         pendingSave = null;
+        const { ok, error, reason } = event.data;
+        const result = { ok };
+        if (error !== undefined)
+            result.error = error;
+        if (reason !== undefined)
+            result.reason = reason;
+        resolve?.(result);
+    }
+    else if (isReconnectedMessage(event.data)) {
+        const resolve = pendingReconnect;
+        pendingReconnect = null;
         const { ok, error } = event.data;
         resolve?.(error === undefined ? { ok } : { ok, error });
     }
@@ -7323,28 +7548,35 @@ function handleHostMessage(event) {
         startFind();
     }
     else if (isCloseRequestMessage(event.data)) {
-        confirmUnsavedChanges(DISCARD_PROMPT, () => postToHost(closeAckMessage()), CLOSE_PROMPT);
+        postToHost(closeAckMessage());
+        confirmUnsavedChanges(DISCARD_PROMPT, () => postToHost(closeMessage()), CLOSE_PROMPT);
     }
 }
 // ============================================================
 // Boot
 // ============================================================
 if (isEmbedded()) {
-    document.body.classList.add('embedded'); // the host page has its own footer
+    // The host's chrome is on screen whether or not it answers, so its footer wins (#83).
+    document.body.classList.add('embedded');
     window.addEventListener('message', handleHostMessage);
+    hostState = 'awaiting';
     // Announce readiness so the host knows it can send a vault or a create
     // instruction. Handshaking this way (rather than the host racing the
     // iframe's load event) means the host only sends once the listener above is
     // definitely attached.
     postToHost(readyMessage());
+    /* A host replies to kw-ready in the same tick, so silence past this point
+    means no host is coming and this app runs as it does standalone (#83). */
+    window.setTimeout(() => {
+        if (hostState !== 'awaiting')
+            return;
+        hostState = 'standalone';
+        publishTitle();
+    }, HOST_REPLY_GRACE_MS);
 }
-// Shows the upload screen even when embedded: kw-open/kw-create (almost
-// always arriving within the same tick, since the host already has its bytes
-// or its create decision ready before it ever sets this iframe's src)
-// immediately replaces it. Without this fallback, a host whose reply
-// postMessage never arrives — e.g. file://, where each document gets its own
-// opaque origin and same-origin delivery silently never matches — would
-// leave the app permanently blank instead of at least usable standalone.
+/* Runs even when embedded: a host that is there replaces this with kw-open or
+kw-create in the same tick, and one that never answers leaves it standing, so
+the app is usable rather than blank either way (#83). */
 showUpload();
 /* Closing the tab, reloading, or navigating away takes the whole session
 with it: unsaved edits, which have no autosave to fall back on, and the file
@@ -7430,6 +7662,9 @@ if (typeof closeAckMessage !== 'undefined') globalThis.closeAckMessage = closeAc
 if (typeof closeMessage !== 'undefined') globalThis.closeMessage = closeMessage;
 if (typeof applyTabState !== 'undefined') globalThis.applyTabState = applyTabState;
 if (typeof isFindMessage !== 'undefined') globalThis.isFindMessage = isFindMessage;
+if (typeof peerOrigin !== 'undefined') globalThis.peerOrigin = peerOrigin;
+if (typeof isReconnectedMessage !== 'undefined') globalThis.isReconnectedMessage = isReconnectedMessage;
+if (typeof reconnectMessage !== 'undefined') globalThis.reconnectMessage = reconnectMessage;
 })();
 </script>
 </body>

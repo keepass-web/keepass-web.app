@@ -348,7 +348,7 @@ body {
   &middot; <a href="https://github.com/keepass-web/.github/blob/main/profile/FAQ.md">FAQ</a>
   &middot; <a href="https://github.com/keepass-web/source-application">Source</a>
 </p>
-<footer><a href="https://github.com/keepass-web/source-application/tree/v0.10.1">v0.10.1</a> committed on <time id="commit-date" datetime="2026-09-08T20:31:32-04:00">2026-09-08T20:31:32-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+<footer><a href="https://github.com/keepass-web/source-application/tree/v0.11.0">v0.11.0</a> committed on <time id="commit-date" datetime="2026-09-25T13:36:15-04:00">2026-09-25T13:36:15-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
 
 
   <script>
@@ -400,12 +400,11 @@ function identifyFormat(header) {
 
 
 /* === embed-protocol/src/index.js === */
-/** `embed-protocol` — the same-origin postMessage contract between a
+/** `embed-protocol` — the equivalent-origin postMessage contract between a
 keepass-web implementation and whatever host embeds it in an iframe.
-Centralizes shapes/guards/builders (previously duplicated per side) so
-both ends provably agree on the wire format: kw-ready, kw-open, kw-create,
-kw-save, kw-saved, kw-title, kw-find, kw-close-request, kw-close-ack,
-kw-close. */
+Centralizes shapes/guards/builders so both ends provably agree on the wire
+format: kw-ready, kw-open, kw-create, kw-save, kw-saved, kw-title, kw-find,
+kw-close-request, kw-close-ack, kw-close (#1), kw-reconnect, kw-reconnected (#85). */
 function hasType(data, type) {
     return (data !== null && typeof data === 'object' && data.type === type);
 }
@@ -430,6 +429,19 @@ function isSaveMessage(data) {
 }
 function isSavedMessage(data) {
     if (!hasType(data, 'kw-saved'))
+        return false;
+    const rec = data;
+    if (typeof rec.ok !== 'boolean')
+        return false;
+    if (rec.error !== undefined && typeof rec.error !== 'string')
+        return false;
+    return rec.reason === undefined || rec.reason === 'auth-expired';
+}
+function isReconnectMessage(data) {
+    return hasType(data, 'kw-reconnect');
+}
+function isReconnectedMessage(data) {
+    if (!hasType(data, 'kw-reconnected'))
         return false;
     const rec = data;
     if (typeof rec.ok !== 'boolean')
@@ -467,8 +479,21 @@ function createMessage() {
 function saveMessage(filename, bytes) {
     return { type: 'kw-save', filename, bytes };
 }
-function savedMessage(ok, error) {
-    return error === undefined ? { type: 'kw-saved', ok } : { type: 'kw-saved', ok, error };
+function savedMessage(ok, error, reason) {
+    const message = { type: 'kw-saved', ok };
+    if (error !== undefined)
+        message.error = error;
+    if (reason !== undefined)
+        message.reason = reason;
+    return message;
+}
+function reconnectMessage() {
+    return { type: 'kw-reconnect' };
+}
+function reconnectedMessage(ok, error) {
+    return error === undefined
+        ? { type: 'kw-reconnected', ok }
+        : { type: 'kw-reconnected', ok, error };
 }
 function titleMessage(filename, locked) {
     return { type: 'kw-title', filename, locked };
@@ -485,6 +510,17 @@ function closeAckMessage() {
 function closeMessage() {
     return { type: 'kw-close' };
 }
+// --- Origins ------------------------------------------------------------
+/* Each file:// document gets its own opaque origin, so neither side can name
+the other; a tuple target is never delivered and arriving messages read "null"
+(#83). Widening the target is safe there because nothing crossing it is a secret
+the filesystem does not already hold; the master password and the decrypted
+entries never leave the implementation. */
+function peerOrigin(protocol, origin) {
+    return protocol === 'file:'
+        ? { target: '*', accept: 'null' }
+        : { target: origin, accept: origin };
+}
 
 
 /* === ../pages/shared/logic.js === */
@@ -499,12 +535,13 @@ states are indistinguishable. Unlocked is a different color and shows rows,
 because rows are what clicking that tab is about to put on screen. */
 const LOCKED_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.4' fill='%230e7c5a'/%3E%3Cpath d='M6 8.4V7a2 2 0 0 1 4 0v1.4' fill='none' stroke='%23fff' stroke-width='1.35' stroke-linecap='round'/%3E%3Crect x='4.5' y='8.4' width='7' height='4.5' rx='1.1' fill='%23fff'/%3E%3C/svg%3E";
 const UNLOCKED_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.4' fill='%238a5a1e'/%3E%3Crect x='3.7' y='4.4' width='8.6' height='1.9' rx='.95' fill='%23fff'/%3E%3Crect x='3.7' y='7.05' width='8.6' height='1.9' rx='.95' fill='%23fff'/%3E%3Crect x='3.7' y='9.7' width='8.6' height='1.9' rx='.95' fill='%23fff'/%3E%3C/svg%3E";
-/** The tab's name. It spells the state out as well as showing it, because 🔒
-and 🔓 are as hard to tell apart in a title as they are in a tab (#73). */
+/** The tab's name. The state is named in words and not repeated as a glyph:
+the icon beside it already carries it as a picture, and the padlock emoji says
+the same thing a second time in the form that reads least well (#73). */
 function tabTitle(baseTitle, filename, locked) {
     if (!filename)
         return baseTitle;
-    return `${locked ? '🔒' : '🔓'} ${filename} - ${locked ? 'Locked' : 'Unlocked'} - ${baseTitle}`;
+    return `${filename} - ${locked ? 'Locked' : 'Unlocked'} - ${baseTitle}`;
 }
 /** Name the tab and mark it with the database's state; no filename means no
 database, which leaves the page's own icon alone. */
@@ -563,6 +600,45 @@ function buildMultipartBody(filename, bytes) {
     ]);
     return { body, boundary };
 }
+// The reasons Drive gives when a 403 is a throttle rather than a permission failure.
+const RETRYABLE_403_REASONS = ['rateLimitExceeded', 'userRateLimitExceeded'];
+// Not every expired credential comes back as a 401; these 403s mean the same thing (#85).
+const AUTH_403_REASONS = ['authError', 'invalidCredentials'];
+/** Drive reports a throttle as a 403 carrying the reason only in its body, so
+the body is the one way to tell it from a permanent permission failure (#85). */
+function driveErrorReason(body) {
+    const reason = body?.error
+        ?.errors?.[0]?.reason;
+    return typeof reason === 'string' ? reason : undefined;
+}
+/** Classify a Drive status. 'auth-expired' stays separate from 'fail' because
+renewing the token opens Google's popup, which a blocker stops unless a user
+gesture drives it; the UI has to ask rather than the request path retrying on
+its own (#85). */
+function classifyDriveResponse(status, reason) {
+    if (status >= 200 && status < 300)
+        return 'ok';
+    if (status === 401)
+        return 'auth-expired';
+    if (status === 429 || status >= 500)
+        return 'retry';
+    if (status === 403 && reason !== undefined) {
+        if (AUTH_403_REASONS.includes(reason))
+            return 'auth-expired';
+        if (RETRYABLE_403_REASONS.includes(reason))
+            return 'retry';
+    }
+    return 'fail';
+}
+// Counts the first try, so this allows two retries (#85).
+const MAX_DRIVE_ATTEMPTS = 3;
+const BASE_RETRY_DELAY_MS = 500;
+const MAX_RETRY_DELAY_MS = 8000;
+/** Full jitter over an exponentially growing window, so retries from separate
+tabs spread out instead of landing together (#85). */
+function backoffDelayMs(retry, random = Math.random) {
+    return Math.round(random() * Math.min(BASE_RETRY_DELAY_MS * 2 ** retry, MAX_RETRY_DELAY_MS));
+}
 
 
 /* === ../pages/cloud-google-drive/page.js === */
@@ -589,7 +665,7 @@ const GIS_SRC = 'https://accounts.google.com/gsi/client';
 const GAPI_SRC = 'https://apis.google.com/js/api.js';
 // drive.file: only files the user picks or creates — non-sensitive, no CASA audit needed.
 const SCOPE = 'https://www.googleapis.com/auth/drive.file';
-const APP_ORIGIN = window.location.origin;
+const PEER = peerOrigin(window.location.protocol, window.location.origin);
 // The only current KDBX implementation. Opening detects this from a file's
 // bytes via packages/router; creating has no bytes to sniff, so it's named directly.
 const APP_IMPLEMENTATION = '0x67.html';
@@ -603,10 +679,16 @@ let currentFile = null;
 let pendingAction = null;
 let pickerApiLoaded = false;
 let tokenClient = null;
-// Set while waiting for a kw-close-ack, so handleFrameMessage knows what to run once safe.
-let pendingClose = null;
+/* Whether the embedded app has announced itself with kw-ready. A frame that
+never did cannot answer a close request, and holds nothing the user reached
+through this page, so it is removed without asking (#83). */
+let appReady = false;
 // Cached so the GIS script loads at most once, and concurrent callers share it.
 let gisReady = null;
+/* One in-flight token request shared by every caller, so a sign-in and a
+reconnect can never open two consent popups at once (#85). */
+let tokenRequest = null;
+let settleToken = null;
 // DOM helpers
 function byId(id) {
     return must(document.getElementById(id));
@@ -635,6 +717,52 @@ function loadScript(src) {
         document.head.appendChild(script);
     });
 }
+function delay(ms) {
+    return new Promise((resolve) => {
+        window.setTimeout(resolve, ms);
+    });
+}
+// Only a 403 carries a reason worth reading, and no other failing body is used (#85).
+async function throttleReason(response) {
+    if (response.status !== 403)
+        return undefined;
+    try {
+        return driveErrorReason(await response.json());
+    }
+    catch {
+        return undefined;
+    }
+}
+/** Issue an authorized Drive request, backing off through transient failures.
+A thrown fetch never reached Drive at all, so only a status Drive itself chose
+is retried; a 401 comes back for the UI to offer a reconnect, because renewing
+the token needs a user gesture (#85). */
+async function driveFetch(url, init) {
+    let lastStatus = 0;
+    for (let attempt = 0; attempt < MAX_DRIVE_ATTEMPTS; attempt += 1) {
+        if (attempt > 0)
+            await delay(backoffDelayMs(attempt - 1));
+        let response;
+        try {
+            response = await fetch(url, { ...init, headers: { ...authHeader(), ...init.headers } });
+        }
+        catch {
+            return { outcome: 'unreachable', error: 'network error' };
+        }
+        const outcome = classifyDriveResponse(response.status, await throttleReason(response));
+        if (outcome === 'ok')
+            return { outcome: 'ok', response };
+        lastStatus = response.status;
+        if (outcome !== 'retry')
+            return { outcome, error: `HTTP ${lastStatus}` };
+    }
+    return { outcome: 'fail', error: `HTTP ${lastStatus}` };
+}
+function openFailureText(name, outcome, error) {
+    if (outcome === 'unreachable')
+        return `Network error while opening ${name}.`;
+    return `Could not open ${name} (${error}).`;
+}
 // ============================================================
 // Screen: Sign in (GIS token model)
 // ============================================================
@@ -649,7 +777,7 @@ function showSignInError(message) {
     error.textContent = message;
     error.hidden = false;
 }
-/** Load GIS (once) and initialise the token client, wiring the token and error
+/** Load GIS (once) and initialize the token client, wiring the token and error
  * callbacks. */
 function ensureGis() {
     if (gisReady === null) {
@@ -664,30 +792,82 @@ function ensureGis() {
     }
     return gisReady;
 }
-async function onSignIn() {
+/** Resolve a usable access token. Renders nothing and navigates nowhere, so
+the sign-in screen and a mid-session reconnect can both await it and decide for
+themselves what to show. `silent` asks Google to answer without a popup, which
+is all a reconnect can do: its click lands in the embedded app, and the gesture
+a popup needs may never reach this frame. Sign-in has that gesture, so it asks
+outright (#85). */
+function getAccessToken(silent) {
+    if (tokenRequest === null) {
+        tokenRequest = requestToken(silent);
+        const clear = () => {
+            tokenRequest = null;
+            settleToken = null;
+        };
+        tokenRequest.then(clear, clear);
+    }
+    return tokenRequest;
+}
+/* GIS never calls back when its popup is simply abandoned, and the cached
+request above would then hand every later attempt the same dead promise instead
+of opening a new one. Shorter than the app's own wait, so a stuck sign-in is
+reported from here, where the next attempt can be freed (#85). */
+const TOKEN_TIMEOUT_MS = 90_000;
+async function requestToken(silent) {
     try {
         await ensureGis();
     }
     catch {
         gisReady = null; // let a retry re-load the script
-        showSignInError('Could not load Google sign-in. Check your connection and try again.');
+        throw new Error('Could not load Google sign-in. Check your connection and try again.');
+    }
+    return new Promise((resolve, reject) => {
+        const timer = window.setTimeout(() => {
+            settleToken = null;
+            reject(new Error('Google sign-in timed out. Try again.'));
+        }, TOKEN_TIMEOUT_MS);
+        settleToken = {
+            resolve: (token) => {
+                window.clearTimeout(timer);
+                resolve(token);
+            },
+            reject: (error) => {
+                window.clearTimeout(timer);
+                reject(error);
+            },
+        };
+        /* `prompt: ''` means Google answers without a popup for anyone who has
+        consented before, which is the ordinary hourly expiry. */
+        must(tokenClient).requestAccessToken(silent ? { prompt: '' } : undefined);
+    });
+}
+async function onSignIn() {
+    try {
+        await getAccessToken(false);
+    }
+    catch (error) {
+        showSignInError(error.message);
         return;
     }
-    // Opens Google's own sign-in popup; the result arrives at the callbacks below.
-    must(tokenClient).requestAccessToken();
+    showChooser();
 }
 function handleTokenResponse(response) {
+    const pending = settleToken;
+    settleToken = null;
     if (typeof response.access_token === 'string' && response.access_token !== '') {
         accessToken = response.access_token;
-        showChooser();
+        pending?.resolve(response.access_token);
         return;
     }
-    showSignInError('Google sign-in did not complete. Please try again.');
+    pending?.reject(new Error('Google sign-in did not complete. Please try again.'));
 }
 function handleTokenError(error) {
-    showSignInError(error.type === 'popup_failed_to_open'
+    const pending = settleToken;
+    settleToken = null;
+    pending?.reject(new Error(error.type === 'popup_failed_to_open'
         ? 'The sign-in popup was blocked. Allow popups for this site, then try again.'
-        : 'Google sign-in was cancelled.');
+        : 'Google sign-in was cancelled.'));
 }
 // ============================================================
 // Screen: Choose a file (Google Picker)
@@ -748,30 +928,38 @@ function handlePickerResult(data) {
 }
 async function openPickedFile(file) {
     setPickStatus(`Opening ${file.name}…`);
+    const result = await driveFetch(buildDriveDownloadUrl(DRIVE_API, file.id), {});
+    if (result.outcome === 'auth-expired') {
+        /* Nothing is unsaved on this screen, so the honest answer is the sign-in it
+        would take anyway rather than telling the user to find it (#85). */
+        accessToken = null;
+        showSignIn();
+        showSignInError('Your Google session expired. Sign in again to open your database.');
+        return;
+    }
+    if (result.outcome !== 'ok') {
+        setPickStatus(openFailureText(file.name, result.outcome, result.error));
+        return;
+    }
+    let bytes;
     try {
-        const response = await fetch(buildDriveDownloadUrl(DRIVE_API, file.id), {
-            headers: authHeader(),
-        });
-        if (!response.ok) {
-            setPickStatus(`Could not open ${file.name} (HTTP ${response.status}).`);
-            return;
-        }
-        const bytes = await response.arrayBuffer();
-        const header = new Uint8Array(bytes, 0, Math.min(8, bytes.byteLength));
-        const result = identifyFormat(header);
-        if (result.kind === 'invalid') {
-            setPickStatus(`${file.name} doesn't look like a KDBX file — no recognized signature found.`);
-            return;
-        }
-        if (!result.implementation) {
-            setPickStatus(`${file.name} is ${result.label}, which isn't supported yet.`);
-            return;
-        }
-        showHost(file, bytes, result.implementation);
+        bytes = await result.response.arrayBuffer();
     }
     catch {
         setPickStatus(`Network error while opening ${file.name}.`);
+        return;
     }
+    const header = new Uint8Array(bytes, 0, Math.min(8, bytes.byteLength));
+    const identified = identifyFormat(header);
+    if (identified.kind === 'invalid') {
+        setPickStatus(`${file.name} doesn't look like a KDBX file — no recognized signature found.`);
+        return;
+    }
+    if (!identified.implementation) {
+        setPickStatus(`${file.name} is ${identified.label}, which isn't supported yet.`);
+        return;
+    }
+    showHost(file, bytes, identified.implementation);
 }
 // ============================================================
 // Screen: Embedded app (0x67 in an iframe)
@@ -792,7 +980,7 @@ function embedApp(headerLabel, implementation) {
     setRoot(cloneTemplate('tpl-host'));
     qs('#host-filename').textContent = headerLabel;
     qs('[data-action="back-to-drive"]').addEventListener('click', () => {
-        requestCloseIframe(tearDownIframe);
+        requestCloseIframe();
     });
     window.addEventListener('message', handleFrameMessage);
     window.addEventListener('keydown', handleFindKey);
@@ -813,37 +1001,40 @@ function handleFindKey(event) {
     if (!appUnlocked)
         return;
     event.preventDefault();
-    must(qs('#app-frame').contentWindow).postMessage(findMessage(), APP_ORIGIN);
+    must(qs('#app-frame').contentWindow).postMessage(findMessage(), PEER.target);
 }
 function tearDownIframe() {
     window.removeEventListener('message', handleFrameMessage);
     window.removeEventListener('keydown', handleFindKey);
+    appReady = false;
     appUnlocked = false;
     applyTabState(document, BASE_TITLE, '', true);
     currentFile = null;
     pendingAction = null;
     showChooser();
 }
-/** Ask the embedded app whether it's safe to remove the iframe — it may have
- * unsaved edits, in which case it shows its own discard-confirmation dialog
- * and only acks if the user agrees. `afterClose` runs once that ack arrives
- * (see handleFrameMessage's isCloseAckMessage branch); if the user cancels,
- * no ack ever comes and nothing happens, exactly like cancelling the same
- * dialog standalone. */
-function requestCloseIframe(afterClose) {
-    pendingClose = afterClose;
-    must(qs('#app-frame').contentWindow).postMessage(closeRequestMessage(), APP_ORIGIN);
+/* Ask the embedded app whether it's safe to remove the iframe; it may have
+unsaved edits, in which case it confirms discard first and only sends kw-close
+if the user agrees. A user who cancels sends nothing and the iframe stays, the
+same as cancelling that dialog standalone (#83). */
+function requestCloseIframe() {
+    if (!appReady) {
+        tearDownIframe();
+        return;
+    }
+    must(qs('#app-frame').contentWindow).postMessage(closeRequestMessage(), PEER.target);
 }
 function handleFrameMessage(event) {
-    if (event.origin !== APP_ORIGIN)
+    if (event.origin !== PEER.accept)
         return;
     const iframe = document.getElementById('app-frame');
     if (iframe === null || event.source === null || event.source !== iframe.contentWindow)
         return;
     const source = event.source;
     if (isReadyMessage(event.data)) {
+        appReady = true;
         const action = must(pendingAction);
-        source.postMessage(action.kind === 'open' ? openMessage(action.filename, action.bytes) : createMessage(), APP_ORIGIN);
+        source.postMessage(action.kind === 'open' ? openMessage(action.filename, action.bytes) : createMessage(), PEER.target);
     }
     else if (isSaveMessage(event.data)) {
         qs('#host-filename').textContent = event.data.filename;
@@ -858,56 +1049,72 @@ function handleFrameMessage(event) {
         appUnlocked = !event.data.locked;
         applyTabState(document, BASE_TITLE, event.data.filename, event.data.locked);
     }
-    else if (isCloseAckMessage(event.data)) {
-        const afterClose = pendingClose;
-        pendingClose = null;
-        afterClose?.();
+    else if (isReconnectMessage(event.data)) {
+        void reconnect(source);
     }
     else if (isCloseMessage(event.data)) {
-        // App-initiated (its own ✕ button) — no request/ack round-trip needed.
         tearDownIframe();
     }
 }
 async function saveToDrive(bytes, source) {
     const file = must(currentFile);
-    try {
-        const response = await fetch(buildDriveUpdateUrl(UPLOAD_API, file.id), {
-            method: 'PATCH',
-            headers: { ...authHeader(), 'Content-Type': 'application/octet-stream' },
-            body: bytes,
-        });
-        if (!response.ok) {
-            source.postMessage(savedMessage(false, `HTTP ${response.status}`), APP_ORIGIN);
-            return;
-        }
-        source.postMessage(savedMessage(true), APP_ORIGIN);
+    const result = await driveFetch(buildDriveUpdateUrl(UPLOAD_API, file.id), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: bytes,
+    });
+    if (result.outcome === 'ok') {
+        source.postMessage(savedMessage(true), PEER.target);
+        return;
     }
-    catch {
-        source.postMessage(savedMessage(false, 'network error'), APP_ORIGIN);
-    }
+    source.postMessage(savedMessage(false, result.error, result.outcome === 'auth-expired' ? 'auth-expired' : undefined), PEER.target);
 }
 /** First save of a create-originated session: no Drive file exists yet, so
 this creates one instead of the PATCH saveToDrive uses, then remembers it so
 every later save in this session updates that same file. */
 async function createFileOnDrive(filename, bytes, source) {
     const { body, boundary } = buildMultipartBody(filename, bytes);
+    const result = await driveFetch(buildDriveCreateUrl(UPLOAD_API), {
+        method: 'POST',
+        headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+        body,
+    });
+    if (result.outcome !== 'ok') {
+        source.postMessage(savedMessage(false, result.error, result.outcome === 'auth-expired' ? 'auth-expired' : undefined), PEER.target);
+        return;
+    }
+    let created = {};
     try {
-        const response = await fetch(buildDriveCreateUrl(UPLOAD_API), {
-            method: 'POST',
-            headers: { ...authHeader(), 'Content-Type': `multipart/related; boundary=${boundary}` },
-            body,
-        });
-        if (!response.ok) {
-            source.postMessage(savedMessage(false, `HTTP ${response.status}`), APP_ORIGIN);
-            return;
-        }
-        const created = (await response.json());
-        currentFile = { id: created.id, name: filename };
-        source.postMessage(savedMessage(true), APP_ORIGIN);
+        created = (await result.response.json());
     }
     catch {
-        source.postMessage(savedMessage(false, 'network error'), APP_ORIGIN);
+        created = {};
     }
+    /* Drive made the file, but without a usable id no later save can update that
+    same one; reporting success would clear the edits against a file this session
+    can no longer reach (#85). */
+    if (typeof created.id !== 'string' || created.id === '') {
+        source.postMessage(savedMessage(false, 'unexpected response'), PEER.target);
+        return;
+    }
+    currentFile = { id: created.id, name: filename };
+    source.postMessage(savedMessage(true), PEER.target);
+}
+/** Renew the Google credential without leaving the host screen, so a save that
+failed on an expired session can be retried with the edits still in the app (#85). */
+async function reconnect(source) {
+    try {
+        await getAccessToken(true);
+    }
+    catch {
+        /* A reconnect can only ask silently, so whatever went wrong the answer is
+        the same: Google wants a real sign-in, and only the chooser's own button
+        carries the gesture that can open one. Going back there closes the database,
+        so the copy has to come first (#85). */
+        source.postMessage(reconnectedMessage(false, 'Google needs a full sign-in. Download a copy first, since leaving closes this database.'), PEER.target);
+        return;
+    }
+    source.postMessage(reconnectedMessage(true), PEER.target);
 }
 function signOut() {
     accessToken = null;
@@ -931,7 +1138,6 @@ if (typeof buildMultipartBody !== 'undefined') globalThis.buildMultipartBody = b
 if (typeof isReadyMessage !== 'undefined') globalThis.isReadyMessage = isReadyMessage;
 if (typeof isSaveMessage !== 'undefined') globalThis.isSaveMessage = isSaveMessage;
 if (typeof isTitleMessage !== 'undefined') globalThis.isTitleMessage = isTitleMessage;
-if (typeof isCloseAckMessage !== 'undefined') globalThis.isCloseAckMessage = isCloseAckMessage;
 if (typeof isCloseMessage !== 'undefined') globalThis.isCloseMessage = isCloseMessage;
 if (typeof openMessage !== 'undefined') globalThis.openMessage = openMessage;
 if (typeof createMessage !== 'undefined') globalThis.createMessage = createMessage;
@@ -939,6 +1145,13 @@ if (typeof savedMessage !== 'undefined') globalThis.savedMessage = savedMessage;
 if (typeof closeRequestMessage !== 'undefined') globalThis.closeRequestMessage = closeRequestMessage;
 if (typeof applyTabState !== 'undefined') globalThis.applyTabState = applyTabState;
 if (typeof findMessage !== 'undefined') globalThis.findMessage = findMessage;
+if (typeof peerOrigin !== 'undefined') globalThis.peerOrigin = peerOrigin;
+if (typeof driveErrorReason !== 'undefined') globalThis.driveErrorReason = driveErrorReason;
+if (typeof classifyDriveResponse !== 'undefined') globalThis.classifyDriveResponse = classifyDriveResponse;
+if (typeof MAX_DRIVE_ATTEMPTS !== 'undefined') globalThis.MAX_DRIVE_ATTEMPTS = MAX_DRIVE_ATTEMPTS;
+if (typeof backoffDelayMs !== 'undefined') globalThis.backoffDelayMs = backoffDelayMs;
+if (typeof isReconnectMessage !== 'undefined') globalThis.isReconnectMessage = isReconnectMessage;
+if (typeof reconnectedMessage !== 'undefined') globalThis.reconnectedMessage = reconnectedMessage;
 })();
 </script>
 </body>

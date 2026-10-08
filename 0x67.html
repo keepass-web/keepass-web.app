@@ -780,6 +780,7 @@ so an absolutely positioned menu would be cut off. */
 }
 
 .entry-row {
+  position: relative;
   padding: 1rem 0.75rem;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -895,7 +896,7 @@ wait on a double-tap-to-zoom before that tap registers. */
 }
 
 /* min-width:0 is what lets the text box shrink below its content, so it is the
-text that ellipsizes and the copy control that keeps its place (#76). */
+text that ellipsizes and the controls beside it that keep their place (#76). */
 .entry-cell {
   display: flex;
   align-items: center;
@@ -904,6 +905,7 @@ text that ellipsizes and the copy control that keeps its place (#76). */
 }
 
 .entry-cell-text {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -911,8 +913,8 @@ text that ellipsizes and the copy control that keeps its place (#76). */
 
 /* Present at rest, brighter on hover or focus (#67): hover may raise emphasis,
 never be what makes the affordance discoverable, since touch has none. */
-.copy-hint {
-  margin-left: auto;
+.copy-hint,
+.open-hint {
   flex: 0 0 auto;
   padding: 0;
   border: none;
@@ -923,8 +925,16 @@ never be what makes the affordance discoverable, since touch has none. */
   opacity: 0.55;
 }
 
-.entry-table td:hover .copy-hint,
-.copy-hint:focus-visible {
+/* In the tile's top padding, clear of a centered title however long (#86). */
+.entry-row .open-hint {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.5rem;
+}
+
+.entry-table td:hover :is(.copy-hint, .open-hint),
+.entry-row:hover .open-hint,
+:is(.copy-hint, .open-hint):focus-visible {
   opacity: 1;
 }
 
@@ -932,9 +942,22 @@ never be what makes the affordance discoverable, since touch has none. */
   width: 2.5rem;
 }
 
+.entry-table th.entry-table-icon {
+  width: 2rem;
+}
+
+.entry-table-icon {
+  text-align: center;
+}
+
 .entry-table-open {
   text-align: right;
   white-space: nowrap;
+}
+
+/* Clicking these cells does nothing, so they should not look as if it would (#87). */
+.entry-table td:is(.entry-table-icon, .entry-table-open) {
+  cursor: default;
 }
 
 .entry-table tbody tr:hover {
@@ -1073,9 +1096,15 @@ body.app-mode .screen-detail {
   height: 100%;
 }
 
+/* Centered, #root shrinks to its content and leaves width: 100% nothing to fill (#89). */
+body:not(.app-mode) #root:has(> .screen-detail, > .screen-edit) {
+  align-self: stretch;
+}
+
 body:not(.app-mode) .screen-detail {
   max-width: 640px;
   width: 100%;
+  margin-inline: auto;
 }
 
 .detail-header {
@@ -1183,8 +1212,9 @@ body:not(.app-mode) .screen-detail {
 }
 
 .detail-value {
-  flex: 1;
+  flex: 0 1 auto; /* sized to its text, so the buttons after it follow the value (#87) */
   word-break: break-all;
+  white-space: pre-wrap; /* notes keep the lines they were written in (#89) */
   font-size: 0.9rem;
 }
 
@@ -1214,6 +1244,7 @@ body:not(.app-mode) .screen-detail {
 body:not(.app-mode) .screen-edit {
   max-width: 640px;
   width: 100%;
+  margin-inline: auto;
 }
 
 .edit-header {
@@ -1297,6 +1328,37 @@ body:not(.app-mode) .screen-edit {
 
 .edit-value:focus {
   outline: none;
+}
+
+textarea.edit-value {
+  min-height: 6em;
+  resize: vertical;
+  /* What browsers give the single-line inputs beside it (#89). */
+  font-family: system-ui, sans-serif;
+}
+
+.edit-field:has(textarea) {
+  align-items: flex-start;
+}
+
+.edit-actions {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.edit-actions .icon-btn {
+  padding-inline: 0.25rem;
+}
+
+/* The label takes a line of its own so the value gets the row's full width (#89). */
+@media (max-width: 700px) {
+  .edit-field {
+    flex-wrap: wrap;
+  }
+
+  .edit-key {
+    width: 100%;
+  }
 }
 
 .btn-add-field {
@@ -1609,6 +1671,7 @@ body.embedded footer {
   bottom: 1.5rem;
   transform: translateX(-50%);
   z-index: 50;
+  width: max-content; /* left: 50% would otherwise cap it at half the screen (#88) */
   max-width: min(90vw, 32rem);
   padding: 0.5rem 0.9rem;
   border: 1px solid var(--border);
@@ -1617,6 +1680,37 @@ body.embedded footer {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
   color: var(--text);
   font-size: 0.85rem;
+}
+
+.curtain {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: var(--bg);
+}
+
+.curtain::backdrop {
+  background: var(--bg);
+}
+
+.curtain-lift {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.toast-countdown {
+  white-space: nowrap;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Announced but not drawn: gives the open column a name for table navigation. */
@@ -1821,6 +1915,8 @@ body.embedded footer {
       </header>
       <div class="edit-body">
         <button type="button" class="icon-picker-btn" id="edit-icon-btn" title="Choose icon"></button>
+        <div id="edit-fields" class="edit-fields"></div>
+        <button type="button" class="btn btn-secondary btn-add-field" data-action="add-field">+ Add field</button>
         <div class="field">
           <label for="edit-tags">Tags <span class="optional">(comma or semicolon separated)</span></label>
           <input type="text" id="edit-tags" autocomplete="off" placeholder="Work, Personal">
@@ -1832,8 +1928,6 @@ body.embedded footer {
           </label>
           <input type="datetime-local" id="edit-expiry-time" disabled>
         </div>
-        <div id="edit-fields" class="edit-fields"></div>
-        <button type="button" class="btn btn-secondary btn-add-field" data-action="add-field">+ Add field</button>
 
         <div id="edit-attachments-section" class="attachments-section">
           <div class="attachments-header">
@@ -1863,8 +1957,12 @@ body.embedded footer {
         <input type="number" id="clipboard-timeout" min="5" max="300" value="30">
       </div>
       <div class="field">
-        <label for="auto-lock-timeout">Auto-lock when tab hidden (seconds)</label>
-        <input type="number" id="auto-lock-timeout" min="10" max="3600" value="30">
+        <label for="curtain-timeout">Hide the screen after idle (seconds) <span class="optional">(only if sooner than the lock)</span></label>
+        <input type="number" id="curtain-timeout" min="15" max="3600" value="60">
+      </div>
+      <div class="field">
+        <label for="auto-lock-timeout">Lock after idle (seconds)</label>
+        <input type="number" id="auto-lock-timeout" min="30" max="3600" value="300">
       </div>
       <hr class="dialog-divider">
       <div class="field">
@@ -1993,7 +2091,8 @@ body.embedded footer {
     </div>
   </dialog>
 
-  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <!-- The countdown is hidden from assistive tech so a screen reader hears the copy once, not every tick (#88). -->
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden><span id="toast-message"></span> <span id="toast-countdown" class="toast-countdown" aria-hidden="true"></span></div>
 
   <!-- ============================================================
        Dialog: New Group
@@ -2045,13 +2144,20 @@ body.embedded footer {
     </div>
   </dialog>
 
+  <!-- ============================================================
+       Curtain: a modal dialog so it covers any dialog already open (#84)
+       ============================================================ -->
+  <dialog id="dlg-curtain" class="curtain" aria-label="Hidden while idle">
+    <button type="button" class="curtain-lift">Hidden while idle. Click to show.</button>
+  </dialog>
+
   <p class="footer-links">
   <a href="https://github.com/sponsors/keepass-web" target="_blank" rel="noopener noreferrer">&hearts; Sponsor</a>
   &middot; <a href="https://github.com/keepass-web/source-application/blob/main/LICENSE">MIT Licensed</a>
   &middot; <a href="https://github.com/keepass-web/.github/blob/main/profile/FAQ.md">FAQ</a>
   &middot; <a href="https://github.com/keepass-web/source-application">Source</a>
 </p>
-<footer><a href="https://github.com/keepass-web/source-application/tree/v0.11.0">v0.11.0</a> committed on <time id="commit-date" datetime="2026-09-25T13:36:15-04:00">2026-09-25T13:36:15-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+<footer><a href="https://github.com/keepass-web/source-application/tree/v0.11.1">v0.11.1</a> committed on <time id="commit-date" datetime="2026-10-08T10:44:28-04:00">2026-10-08T10:44:28-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
 
 
   <script>
@@ -5503,13 +5609,33 @@ const STANDARD_FIELD_NAMES = ['Title', 'UserName', 'Password', 'URL', 'Notes'];
 function isCustomField(key) {
     return !STANDARD_FIELD_NAMES.includes(key);
 }
+/** The web address a URL field can open in a new tab, or null (#86). Only http
+and https, so a database can never make the app run a javascript: URL or hand
+a value to another scheme's handler; a bare host is read as https, the way it
+was most likely typed. */
+function openableUrl(raw) {
+    const value = raw.trim();
+    if (!value)
+        return null;
+    try {
+        const url = new URL(/^[a-z][a-z\d+.-]*:/i.test(value) ? value : `https://${value}`);
+        return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null;
+    }
+    catch {
+        return null;
+    }
+}
 /** The settings dialog's minimum accepted clipboard-clear timeout, in seconds. */
 function isValidClipboardTimeout(seconds) {
     return !Number.isNaN(seconds) && seconds >= 5;
 }
-/** The settings dialog's minimum accepted auto-lock delay, in seconds. */
+/** The settings dialog's minimum accepted curtain delay, in seconds (#84). */
+function isValidCurtainTimeout(seconds) {
+    return !Number.isNaN(seconds) && seconds >= 15;
+}
+/** The settings dialog's minimum accepted auto-lock delay, in seconds (#84). */
 function isValidAutoLockTimeout(seconds) {
-    return !Number.isNaN(seconds) && seconds >= 10;
+    return !Number.isNaN(seconds) && seconds >= 30;
 }
 /** Character classes offered by the password generator. */
 const GENERATOR_CHARSETS = {
@@ -5585,7 +5711,8 @@ const app = {
     currentEntry: null,
     searchQuery: '',
     clipboardTimeout: 30,
-    autoLockTimeout: 30,
+    curtainTimeout: 60,
+    autoLockTimeout: 300,
     dirty: false,
     sortField: 'title',
     sortDir: 'asc',
@@ -5671,11 +5798,24 @@ function wireClose(dlg) {
 /** kdbx XML helpers and this file's own pure logic (entryField, etc. — see
 logic.ts) are globals from bundle-iife's concatenation; see globals.d.ts. */
 // Clipboard
-let clipboardTimer = null;
-/* The most recent auto-clear (#67). Every copy waits for it before writing, so
-a clear can never resolve on top of a newer value and wipe it; a settled one
-costs nothing to await, which is why this is never null. */
-let clipboardClear = Promise.resolve();
+let clipboardTimer;
+let clipboardDeadline = 0; // Date.now() at which the copied value is cleared
+/* Every clipboard write, copy or clear, takes its turn here and has its outcome
+applied before the next one starts, so a late result can never undo a newer
+one (#67, #88). */
+let clipboardQueue = Promise.resolve();
+function writeClipboard(text, done, refused) {
+    clipboardQueue = clipboardQueue.then(async () => {
+        try {
+            await navigator.clipboard.writeText(text);
+        }
+        catch (err) {
+            refused(err);
+            return;
+        }
+        done();
+    });
+}
 const FIELD_LABELS = { UserName: 'Username' };
 // KeePass's own field keys are not what the rest of the app calls them (#67).
 function fieldLabel(key) {
@@ -5684,32 +5824,58 @@ function fieldLabel(key) {
 /* Names the field, never the value (#67): the toast is a reminder that a secret
 is on the clipboard, so it must not put that secret on screen as well. */
 function showClipboardToast(label) {
-    const toast = byId('toast');
-    toast.textContent = `${label} copied to clipboard`;
-    toast.hidden = false;
+    byId('toast-message').textContent = `${label} copied to clipboard`;
+    byId('toast-countdown').setAttribute('aria-hidden', 'true');
+    byId('toast').hidden = false;
 }
-async function copyToClipboard(text, label = 'Value') {
-    try {
-        await clipboardClear;
-        await navigator.clipboard.writeText(text);
-        if (clipboardTimer)
-            clearTimeout(clipboardTimer);
+/* One timer drives both the countdown and the wipe (#67, #88), waking on each
+whole second left so the toast is gone exactly when the clipboard is. */
+function tickClipboard() {
+    const left = clipboardDeadline - Date.now();
+    if (left > 0) {
+        byId('toast-countdown').textContent = `clears in ${Math.ceil(left / 1000)}s`;
+        clipboardTimer = setTimeout(tickClipboard, left % 1000 || 1000);
+        return;
+    }
+    clearClipboard();
+}
+/* Chromium refuses a clipboard write from an unfocused page, and Firefox and
+Safari refuse one outside a click or keypress, so the timed clear can fail; it
+then retries at the next of those rather than leaving the value behind (#88). */
+const CLEAR_RETRY_EVENTS = ['focus', 'pointerdown', 'keydown'];
+function armClearRetry(armed) {
+    for (const type of CLEAR_RETRY_EVENTS) {
+        if (armed)
+            window.addEventListener(type, clearClipboard, true);
+        else
+            window.removeEventListener(type, clearClipboard, true);
+    }
+}
+function clearClipboard() {
+    writeClipboard('', () => {
+        armClearRetry(false);
+        byId('toast').hidden = true;
+    }, () => {
+        const countdown = byId('toast-countdown');
+        countdown.setAttribute('aria-hidden', 'false'); // a one-off status, unlike the ticks, so it is announced (#88)
+        countdown.textContent = 'clears when you next click or type';
+        armClearRetry(true);
+    });
+}
+function clearClipboardNow() {
+    if (byId('toast').hidden)
+        return; // nothing of ours is on the clipboard
+    clearTimeout(clipboardTimer);
+    clearClipboard();
+}
+function copyToClipboard(text, label = 'Value') {
+    writeClipboard(text, () => {
+        clearTimeout(clipboardTimer);
+        armClearRetry(false); // the new value restarts the clock
         showClipboardToast(label);
-        /* One timer drives both the wipe and the toast (#67), so the toast is gone
-        exactly when the clipboard is, rather than on a schedule of its own. */
-        clipboardTimer = setTimeout(() => {
-            clipboardTimer = null;
-            clipboardClear = navigator.clipboard
-                .writeText('')
-                .then(() => {
-                byId('toast').hidden = true;
-            })
-                .catch(() => { }); // the clear failed, so the value is still there and the toast stays
-        }, app.clipboardTimeout * 1000);
-    }
-    catch (err) {
-        console.error('Clipboard write failed', err);
-    }
+        clipboardDeadline = Date.now() + app.clipboardTimeout * 1000;
+        tickClipboard();
+    }, (err) => console.error('Clipboard write failed', err));
 }
 // Screen: Upload
 function showUpload() {
@@ -5793,6 +5959,7 @@ function showUnlock(preserveDirty = false) {
             app.searchQuery = '';
             setDirty(preserveDirty && app.dirty);
             showEntryList();
+            armIdleWatch();
         }
         catch (err) {
             errorEl.textContent =
@@ -5854,6 +6021,7 @@ function showCreateDatabase() {
             app.searchQuery = '';
             setDirty(true);
             showEntryList();
+            armIdleWatch();
         }
         catch (err) {
             errorEl.textContent = err instanceof Error ? err.message : 'Could not create database.';
@@ -6161,7 +6329,12 @@ function buildEntryRow(entry, group) {
     metaEl.appendChild(document.createTextNode(username || url || ''));
     div.appendChild(titleEl);
     div.appendChild(metaEl);
-    div.addEventListener('click', () => {
+    const href = openableUrl(url);
+    if (href)
+        div.appendChild(openUrlButton('open-hint', href));
+    div.addEventListener('click', (event) => {
+        if (event.target.closest('.open-hint'))
+            return; // opens the site, not the entry (#86)
         app.currentEntry = entry;
         showEntryDetail();
     });
@@ -6198,8 +6371,8 @@ browser already decides what counts as a click, so a scroll that starts on a
 cell copies nothing and a secondary button never reaches here at all. */
 function wireCellCopy(cell, value, label) {
     cell.addEventListener('click', (event) => {
-        // Anywhere but the copy button, which runs its own handler (#76).
-        if (event.target.closest('.copy-hint'))
+        // Anywhere but the cell's own buttons, which run their own handlers (#76, #86).
+        if (event.target.closest('.copy-hint, .open-hint'))
             return;
         if (value)
             copyToClipboard(value, label);
@@ -6212,19 +6385,28 @@ function copyHint(value, label) {
         copyToClipboard(value, label);
     });
 }
-/* The text ellipsizes inside its own box so the copy control keeps its place at
-the cell's right edge (#76); appended straight after the text it rode past the
-edge and out of sight the moment a value was longer than its column. */
-function buildEntryCell(display, value, label) {
+/* noopener and noreferrer, so the site neither learns where it was opened from
+nor gets a handle back into this page (#86). */
+function openUrlButton(className, href) {
+    return makeIconButton(className, 'Open URL in a new tab', '↗', () => {
+        window.open(href, '_blank', 'noopener,noreferrer');
+    });
+}
+/* The copy control leads, so it is plainly the value's own however short the
+value is, and a long one can never push it out of the cell (#76, #87). The text
+ellipsizes in its own box, so an open control after it stays in sight too. */
+function buildEntryCell(display, value, label, action) {
     const td = document.createElement('td');
     const inner = document.createElement('div');
     inner.className = 'entry-cell';
+    if (value)
+        inner.appendChild(copyHint(value, label));
     const text = document.createElement('span');
     text.className = 'entry-cell-text';
     text.textContent = display;
     inner.appendChild(text);
-    if (value)
-        inner.appendChild(copyHint(value, label));
+    if (action)
+        inner.appendChild(action);
     td.appendChild(inner);
     wireCellCopy(td, value, label);
     return td;
@@ -6282,6 +6464,16 @@ function addColumnHandle(th, label) {
     });
     th.appendChild(handle);
 }
+// Only as wide as its glyph, named for a screen reader, and not the user's to resize.
+function narrowColumnHeader(className, label) {
+    const th = document.createElement('th');
+    th.className = className;
+    const name = document.createElement('span');
+    name.className = 'visually-hidden';
+    name.textContent = label;
+    th.appendChild(name);
+    return th;
+}
 function buildColumnHeader(id, label) {
     const th = document.createElement('th');
     th.textContent = label;
@@ -6307,28 +6499,29 @@ function buildEntryTable(rows) {
     const visibleColumns = ENTRY_COLUMNS.filter((column) => app.columnVisibility[column.key]);
     const thead = document.createElement('thead');
     const headRow = document.createElement('tr');
+    headRow.appendChild(narrowColumnHeader('entry-table-icon', 'Icon'));
     headRow.appendChild(buildColumnHeader('title', 'Title'));
     for (const column of visibleColumns) {
         headRow.appendChild(buildColumnHeader(column.key, column.label));
     }
-    // Only wide enough for the row control, and not the user's to resize.
-    const openTh = document.createElement('th');
-    openTh.className = 'entry-table-open';
-    const openLabel = document.createElement('span');
-    openLabel.className = 'visually-hidden';
-    openLabel.textContent = 'Open';
-    openTh.appendChild(openLabel);
-    headRow.appendChild(openTh);
+    headRow.appendChild(narrowColumnHeader('entry-table-open', 'Open'));
     thead.appendChild(headRow);
     table.appendChild(thead);
     const tbody = document.createElement('tbody');
     for (const { entry } of rows) {
         const tr = document.createElement('tr');
-        const titleTd = buildEntryCell(`${iconEmoji(elementIconId(entry))} ${entryTitle(entry)}`, entryTitle(entry), 'Title');
+        // The icon is the entry's, not the title's, so it keeps out of the copied text's cell (#87).
+        const iconTd = document.createElement('td');
+        iconTd.className = 'entry-table-icon';
+        iconTd.textContent = iconEmoji(elementIconId(entry));
+        tr.appendChild(iconTd);
+        const titleTd = buildEntryCell(entryTitle(entry), entryTitle(entry), 'Title');
         titleTd.className = 'entry-table-title';
         tr.appendChild(titleTd);
         for (const column of visibleColumns) {
-            const td = buildEntryCell(entryColumnDisplayValue(entry, column.key), entryColumnValue(entry, column.key), column.label);
+            const value = entryColumnValue(entry, column.key);
+            const href = column.key === 'url' ? openableUrl(value) : null;
+            const td = buildEntryCell(entryColumnDisplayValue(entry, column.key), value, column.label, href ? openUrlButton('open-hint', href) : undefined);
             if (column.key === 'password')
                 td.classList.add('entry-table-protected');
             tr.appendChild(td);
@@ -6368,39 +6561,78 @@ function updateViewToggleUI() {
     qs('#column-picker-menu').hidden = true;
     qs('#panel-menu').classList.remove('panel-menu-open');
 }
-let autoLockTimer = null;
-function cancelAutoLock() {
-    if (autoLockTimer === null)
-        return;
-    clearTimeout(autoLockTimer);
-    autoLockTimer = null;
+/* An unattended screen gets two responses (#84). After a short idle the curtain
+hides the page from anyone glancing at it and lifts with a click; after a long
+one the database locks, re-encrypting the current state with unsaved edits
+included, so it can fire without asking anything of someone who has walked
+away (#64). */
+let lastActivity = 0;
+let idleTimer;
+let locking = false; // re-encrypting, with the page about to give way to the unlock screen (#84)
+function curtain() {
+    return byId('dlg-curtain');
 }
-/* A tab nobody is looking at is an unattended screen: the database sits there
-decrypted in memory for as long as it stays that way. Locking re-encrypts the
-current state, unsaved edits included, so this can fire on its own without
-asking anything of someone who has already walked away (#64). */
-function handleVisibilityChange() {
-    cancelAutoLock();
-    if (document.visibilityState !== 'hidden' || app.db === null)
+function noteActivity() {
+    if (!curtain().open)
+        lastActivity = Date.now(); // behind the curtain, only lifting it counts (#84)
+}
+// Wakes at the next deadline and measures from the latest input, so input costs nothing (#84).
+function checkIdle() {
+    if (locking)
         return;
-    autoLockTimer = setTimeout(() => {
-        autoLockTimer = null;
+    const idle = Date.now() - lastActivity;
+    const lockAt = app.autoLockTimeout * 1000;
+    if (idle >= lockAt) {
         void lockDatabase();
-    }, app.autoLockTimeout * 1000);
+        return;
+    }
+    const curtainAt = app.curtainTimeout < app.autoLockTimeout ? app.curtainTimeout * 1000 : lockAt;
+    if (idle >= curtainAt && !curtain().open)
+        curtain().showModal();
+    idleTimer = setTimeout(checkIdle, (idle < curtainAt ? curtainAt : lockAt) - idle);
+}
+function rescheduleIdleCheck() {
+    clearTimeout(idleTimer);
+    checkIdle();
+}
+function armIdleWatch() {
+    lastActivity = Date.now();
+    rescheduleIdleCheck();
+}
+function liftCurtain() {
+    if (locking)
+        return; // the lock lifts it, once there is nothing left to show (#84)
+    curtain().close();
+    armIdleWatch();
+}
+// A background tab's timers can run late, so coming back checks at once (#84).
+function handleVisibilityChange() {
+    if (document.visibilityState === 'visible' && app.db !== null)
+        rescheduleIdleCheck();
 }
 /** Re-encrypts the current in-memory state (including anything not yet
 saved) rather than reloading the original file, so locking never loses an
 edit on its own — only choosing to discard at the prompt above does that. */
 async function lockDatabase() {
-    cancelAutoLock();
-    const bytes = await must(app.db).save();
-    app.file = bytes.buffer;
-    const wasDirty = app.dirty;
-    Object.assign(app, { db: null, currentGroup: null, currentEntry: null, searchQuery: '' });
-    showUnlock(wasDirty);
+    if (locking)
+        return;
+    locking = true;
+    clearTimeout(idleTimer);
+    clearClipboardNow(); // a copied secret must not outlast the lock (#88)
+    try {
+        const bytes = await must(app.db).save();
+        app.file = bytes.buffer;
+        const wasDirty = app.dirty;
+        Object.assign(app, { db: null, currentGroup: null, currentEntry: null, searchQuery: '' });
+        showUnlock(wasDirty);
+        curtain().close(); // only now, so the re-encrypting page never shows through (#84)
+    }
+    finally {
+        locking = false;
+    }
 }
 function closeDatabase() {
-    cancelAutoLock();
+    clearTimeout(idleTimer);
     Object.assign(app, {
         db: null,
         file: null,
@@ -6411,11 +6643,19 @@ function closeDatabase() {
     });
     setDirty(false);
     if (isHosted()) {
-        postToHost(closeMessage());
+        closeToHost();
     }
     else {
+        clearClipboardNow(); // a copied secret must not outlast the database (#88)
         showUpload();
     }
+}
+/* A copied secret must not outlast the database, and the host tears this frame
+down on kw-close along with any clipboard write still in flight, so the close
+waits for the clear to land (#88). */
+function closeToHost() {
+    clearClipboardNow();
+    void clipboardQueue.then(() => postToHost(closeMessage()));
 }
 function wireEntryListEvents() {
     qs('#search-input').addEventListener('input', (e) => {
@@ -6452,7 +6692,7 @@ function wireEntryListEvents() {
         }, openExportDialog);
     });
     qs('[data-action="add-entry"]').addEventListener('click', () => {
-        const newEntry = createEntry({ title: 'New Entry' });
+        const newEntry = createEntry({});
         appendChild(must(app.currentGroup), newEntry);
         app.currentEntry = newEntry;
         setDirty(true);
@@ -6638,10 +6878,14 @@ function buildDetailField(key, value, isProtected) {
         });
         actions.appendChild(revealBtn);
     }
+    const href = key === 'URL' ? openableUrl(value) : null;
+    if (href)
+        actions.appendChild(openUrlButton('icon-btn', href));
+    // Leads the value, as copy does everywhere, so it is plainly that value's (#87).
     const copyBtn = makeIconButton('icon-btn', 'Copy', '📋', () => {
         copyToClipboard(value, fieldLabel(key));
     });
-    actions.appendChild(copyBtn);
+    valueWrap.appendChild(copyBtn);
     valueWrap.appendChild(valueSpan);
     valueWrap.appendChild(actions);
     row.appendChild(label);
@@ -6750,6 +6994,8 @@ function showEntryEdit(isNew) {
         const isProtected = getAttribute(valueEl, 'Protected') === 'True';
         fieldsEl.appendChild(buildEditField(key, value, isProtected, isCustomField(key)));
     }
+    if (isNew)
+        must(fieldsEl.querySelector('.edit-value')).focus(); // Title, ready to type (#89)
     qs('[data-action="add-field"]').addEventListener('click', () => {
         fieldsEl.appendChild(buildEditField('', '', false, true));
     });
@@ -6818,20 +7064,29 @@ function buildEditField(key, value, isProtected, removable) {
     keyInput.value = key;
     keyInput.placeholder = 'Field name';
     keyInput.readOnly = !removable;
-    const valueInput = document.createElement('input');
+    // A single-line input would flatten multi-line notes into one line on save (#89).
+    const valueInput = document.createElement(key === 'Notes' && !isProtected ? 'textarea' : 'input');
     valueInput.className = 'edit-value';
-    valueInput.type = isProtected ? 'password' : 'text';
     valueInput.value = value;
     valueInput.placeholder = 'Value';
+    // Kept apart from the row's own spacing so they sit close together (#89); copy
+    // leads the value, as it does everywhere, and the rest follow it (#87).
+    const lead = document.createElement('span');
+    lead.className = 'edit-actions';
+    const actions = document.createElement('span');
+    actions.className = 'edit-actions';
     row.appendChild(keyInput);
+    row.appendChild(lead);
     row.appendChild(valueInput);
+    row.appendChild(actions);
     if (isProtected) {
+        valueInput.setAttribute('type', 'password');
         const toggle = makeIconButton('icon-btn', 'Show / hide', '👁', () => {
-            valueInput.type = valueInput.type === 'password' ? 'text' : 'password';
+            valueInput.setAttribute('type', valueInput.type === 'password' ? 'text' : 'password');
             toggle.textContent = valueInput.type === 'password' ? '👁' : '🙈';
         });
         keepFieldFocus(toggle);
-        row.appendChild(toggle);
+        actions.appendChild(toggle);
     }
     const copyBtn = makeIconButton('icon-btn', 'Copy', '📋', () => {
         // Copies whatever is currently typed, not the value the field opened
@@ -6839,7 +7094,7 @@ function buildEditField(key, value, isProtected, removable) {
         copyToClipboard(valueInput.value, fieldLabel(keyInput.value) || 'Value');
     });
     keepFieldFocus(copyBtn);
-    row.appendChild(copyBtn);
+    lead.appendChild(copyBtn);
     if (key === 'Password') {
         const generateBtn = makeIconButton('icon-btn', 'Generate password', '🎲', () => {
             openPasswordGenerator((password) => {
@@ -6847,12 +7102,12 @@ function buildEditField(key, value, isProtected, removable) {
             });
         });
         keepFieldFocus(generateBtn);
-        row.appendChild(generateBtn);
+        actions.appendChild(generateBtn);
     }
     if (removable) {
         const removeBtn = makeIconButton('icon-btn', 'Remove field', '✕', () => row.remove());
         removeBtn.style.color = 'var(--danger)';
-        row.appendChild(removeBtn);
+        actions.appendChild(removeBtn);
     }
     return row;
 }
@@ -6886,6 +7141,8 @@ function openSettings() {
     const dlg = byId('dlg-settings');
     const timeoutInput = byId('clipboard-timeout');
     timeoutInput.value = String(app.clipboardTimeout);
+    const curtainInput = byId('curtain-timeout');
+    curtainInput.value = String(app.curtainTimeout);
     const autoLockInput = byId('auto-lock-timeout');
     autoLockInput.value = String(app.autoLockTimeout);
     const newPasswordInput = byId('settings-new-password');
@@ -6913,9 +7170,13 @@ function openSettings() {
         const v = Number.parseInt(timeoutInput.value, 10);
         if (isValidClipboardTimeout(v))
             app.clipboardTimeout = v;
+        const curtainDelay = Number.parseInt(curtainInput.value, 10);
+        if (isValidCurtainTimeout(curtainDelay))
+            app.curtainTimeout = curtainDelay;
         const autoLock = Number.parseInt(autoLockInput.value, 10);
         if (isValidAutoLockTimeout(autoLock))
             app.autoLockTimeout = autoLock;
+        armIdleWatch(); // the new delays count from now (#84)
         if (newPasswordInput.value || confirmInput.value) {
             if (newPasswordInput.value !== confirmInput.value) {
                 errorEl.textContent = 'Passwords do not match.';
@@ -7549,7 +7810,7 @@ function handleHostMessage(event) {
     }
     else if (isCloseRequestMessage(event.data)) {
         postToHost(closeAckMessage());
-        confirmUnsavedChanges(DISCARD_PROMPT, () => postToHost(closeMessage()), CLOSE_PROMPT);
+        confirmUnsavedChanges(DISCARD_PROMPT, closeToHost, CLOSE_PROMPT);
     }
 }
 // ============================================================
@@ -7589,6 +7850,15 @@ window.addEventListener('beforeunload', (e) => {
     e.returnValue = true;
 });
 document.addEventListener('visibilitychange', handleVisibilityChange);
+for (const type of ['keydown', 'pointerdown', 'pointermove', 'wheel', 'scroll']) {
+    window.addEventListener(type, noteActivity, { capture: true, passive: true });
+}
+must(curtain().querySelector('button')).addEventListener('click', liftCurtain);
+// Escape lifts it as a click does, rather than closing it past the idle watch (#84).
+curtain().addEventListener('cancel', (e) => {
+    e.preventDefault();
+    liftCurtain();
+});
 /* Only taken when there is something to search; on the upload, unlock and edit
 screens the browser's own find is still the right answer (#78). */
 document.addEventListener('keydown', (e) => {
@@ -7642,7 +7912,9 @@ if (typeof toCsv !== 'undefined') globalThis.toCsv = toCsv;
 if (typeof toXml !== 'undefined') globalThis.toXml = toXml;
 if (typeof applyEntryEdits !== 'undefined') globalThis.applyEntryEdits = applyEntryEdits;
 if (typeof isCustomField !== 'undefined') globalThis.isCustomField = isCustomField;
+if (typeof openableUrl !== 'undefined') globalThis.openableUrl = openableUrl;
 if (typeof isValidClipboardTimeout !== 'undefined') globalThis.isValidClipboardTimeout = isValidClipboardTimeout;
+if (typeof isValidCurtainTimeout !== 'undefined') globalThis.isValidCurtainTimeout = isValidCurtainTimeout;
 if (typeof isValidAutoLockTimeout !== 'undefined') globalThis.isValidAutoLockTimeout = isValidAutoLockTimeout;
 if (typeof generatePassword !== 'undefined') globalThis.generatePassword = generatePassword;
 if (typeof elementIconId !== 'undefined') globalThis.elementIconId = elementIconId;

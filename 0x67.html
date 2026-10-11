@@ -2157,7 +2157,7 @@ body.embedded footer {
   &middot; <a href="https://github.com/keepass-web/.github/blob/main/profile/FAQ.md">FAQ</a>
   &middot; <a href="https://github.com/keepass-web/source-application">Source</a>
 </p>
-<footer><a href="https://github.com/keepass-web/source-application/tree/v0.11.1">v0.11.1</a> committed on <time id="commit-date" datetime="2026-10-08T10:44:28-04:00">2026-10-08T10:44:28-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+<footer><a href="https://github.com/keepass-web/source-application/tree/v0.11.2">v0.11.2</a> committed on <time id="commit-date" datetime="2026-10-11T11:23:05-04:00">2026-10-11T11:23:05-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
 
 
   <script>
@@ -4893,6 +4893,66 @@ function createDatabaseDocument(databaseName, build) {
 }
 
 
+/* === kdbx/src/times.js === */
+/** KDBX 4.x stores XML DateTimes as Base64 of a little-endian Int64 count of
+seconds since 0001-01-01T00:00:00Z; 3.1 stores ISO 8601 text. The model works
+in ISO only, so 4.x documents convert on load and back on save (#95). */
+
+
+// Every DateTime element in the KDBX 4.1 XML schema, so no other Base64 value is touched (#95).
+const KX_TIME_ELEMENTS = new Set([
+    'CreationTime',
+    'LastModificationTime',
+    'LastAccessTime',
+    'ExpiryTime',
+    'LocationChanged',
+    'DeletionTime',
+    'DatabaseNameChanged',
+    'DatabaseDescriptionChanged',
+    'DefaultUserNameChanged',
+    'MasterKeyChanged',
+    'RecycleBinChanged',
+    'EntryTemplatesGroupChanged',
+    'SettingsChanged',
+]);
+const KX_SECONDS_TO_UNIX_EPOCH = 62135596800n;
+function kx_convertTimes(element, convert) {
+    for (const child of element.children) {
+        if (child.type !== 'element')
+            continue;
+        if (!KX_TIME_ELEMENTS.has(child.name)) {
+            kx_convertTimes(child, convert);
+            continue;
+        }
+        const converted = convert(getText(child));
+        if (converted !== undefined)
+            setText(child, converted);
+    }
+}
+// Text that isn't 8-byte Base64, such as ISO from a lenient writer, stays as is (#95).
+function kx_binaryToIso(text) {
+    if (!/^[A-Za-z0-9+/]{11}=$/.test(text))
+        return undefined;
+    const seconds = new ByteReader(fromBase64(text)).readI64() - KX_SECONDS_TO_UNIX_EPOCH;
+    const date = new Date(Number(seconds) * 1000);
+    return Number.isNaN(date.getTime()) ? undefined : date.toISOString().replace(/\.\d{3}Z$/, 'Z');
+}
+// The ISO shape check keeps Date.parse's lenient fallback from encoding non-dates (#95).
+function kx_isoToBinary(text) {
+    const ms = /^\d{4}-\d\d-\d\dT/.test(text) ? Date.parse(text) : Number.NaN;
+    if (Number.isNaN(ms))
+        return undefined;
+    const seconds = BigInt(Math.floor(ms / 1000)) + KX_SECONDS_TO_UNIX_EPOCH;
+    return toBase64(new ByteWriter(8).writeI64(seconds).toBytes());
+}
+function binaryTimesToIso(root) {
+    kx_convertTimes(root, kx_binaryToIso);
+}
+function isoTimesToBinary(root) {
+    kx_convertTimes(root, kx_isoToBinary);
+}
+
+
 /* === kdbx/src/meta-binaries.js === */
 /** KDBX 3.1 binary attachments: stored inline in `Meta/Binaries` as Base64
 (optionally gzipped), referenced by ID (4.x instead uses the inner header,
@@ -4990,6 +5050,7 @@ function writeMetaBinaries(root, binaries) {
 
 
 
+
 const KX_DEFAULT_ARGON2 = {
     memoryBytes: 16n * 1024n * 1024n,
     iterations: 3n,
@@ -5035,6 +5096,13 @@ async function kx_transformKey(header, compositeKey) {
         throw new Error('KDBX 3.1 header is missing transform parameters');
     }
     return aesKdf(compositeKey, header.transformSeed, header.transformRounds);
+}
+// Readers reject a <Meta><HeaderHash> that no longer matches the header (#95).
+function kx_refreshHeaderHash(root, headerSha) {
+    const meta = getChild(root, 'Meta');
+    const hashEl = meta && getChild(meta, 'HeaderHash');
+    if (hashEl)
+        setText(hashEl, toBase64(headerSha));
 }
 // An in-memory KDBX database.
 class Kdbx {
@@ -5145,6 +5213,7 @@ class Kdbx {
         }
         const { inner, xml } = readInnerHeader(payload);
         const root = parseXml(utf8Decode(xml));
+        binaryTimesToIso(root);
         const cipher = await createProtectedStreamCipher(inner.innerRandomStreamId, inner.innerRandomStreamKey);
         applyInboundProtection(root, cipher);
         return new Kdbx({
@@ -5201,6 +5270,8 @@ class Kdbx {
             throw new Error('KDBX 4 database is missing KDF parameters');
         }
         header.kdfParameters.set(KdfParam.AesSeed, kx_bytes(getRandomBytes(32)));
+        const rawHeader = writeOuterHeader(header);
+        const headerSha = await sha256(rawHeader);
         // Fresh inner random stream key (64 bytes for ChaCha20, 32 for Salsa20).
         this.#innerStreamKey = getRandomBytes(this.#innerStreamId === InnerStreamCipher.ChaCha20 ? 64 : 32);
         const innerHeader = {
@@ -5210,6 +5281,8 @@ class Kdbx {
         };
         const cipher = await createProtectedStreamCipher(this.#innerStreamId, this.#innerStreamKey);
         const clonedRoot = cloneElement(this.root);
+        isoTimesToBinary(clonedRoot);
+        kx_refreshHeaderHash(clonedRoot, headerSha);
         applyOutboundProtection(clonedRoot, cipher);
         const xmlBytes = utf8Encode(serializeXml(clonedRoot));
         let payload = concatBytes(writeInnerHeader(innerHeader), xmlBytes);
@@ -5221,8 +5294,6 @@ class Kdbx {
         const cipherKey = await deriveCipherKey(header.masterSeed, transformedKey);
         const encrypted = await kx_encryptPayload(header.cipherId, cipherKey, header.encryptionIv, payload);
         const hmacBaseKey = await deriveHmacBaseKey(header.masterSeed, transformedKey);
-        const rawHeader = writeOuterHeader(header);
-        const headerSha = await sha256(rawHeader);
         const headerHmacKey = await deriveHeaderHmacKey(hmacBaseKey);
         const headerHmac = await hmacSha256(headerHmacKey, rawHeader);
         const blockStream = await writeHmacBlockStream(encrypted, hmacBaseKey);
@@ -5239,9 +5310,14 @@ class Kdbx {
         header.innerRandomStreamId = InnerStreamCipher.Salsa20;
         this.#innerStreamId = InnerStreamCipher.Salsa20;
         this.#innerStreamKey = header.protectedStreamKey;
+        if (header.transformRounds === undefined) {
+            throw new Error('KDBX 3.1 database is missing transform rounds');
+        }
+        const rawHeader = writeOuterHeader(header);
         const cipher = await createProtectedStreamCipher(InnerStreamCipher.Salsa20, header.protectedStreamKey);
         const clonedRoot = cloneElement(this.root);
         writeMetaBinaries(clonedRoot, this.binaries);
+        kx_refreshHeaderHash(clonedRoot, await sha256(rawHeader));
         applyOutboundProtection(clonedRoot, cipher);
         let xmlBytes = utf8Encode(serializeXml(clonedRoot));
         if (header.compression === Compression.GZip) {
@@ -5249,14 +5325,10 @@ class Kdbx {
         }
         const hashedStream = await writeHashedBlockStream(xmlBytes);
         const plaintext = concatBytes(header.streamStartBytes, hashedStream);
-        if (header.transformRounds === undefined) {
-            throw new Error('KDBX 3.1 database is missing transform rounds');
-        }
         const compositeKey = await this.#credentials.getCompositeKey();
         const transformedKey = await aesKdf(compositeKey, header.transformSeed, header.transformRounds);
         const cipherKey = await deriveCipherKey(header.masterSeed, transformedKey);
         const encrypted = await aesCbcEncrypt(cipherKey, header.encryptionIv, plaintext);
-        const rawHeader = writeOuterHeader(header);
         return concatBytes(rawHeader, encrypted);
     }
     // Create a new, empty database with the given credentials.

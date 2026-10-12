@@ -359,7 +359,7 @@ a:hover {
   &middot; <a href="https://github.com/keepass-web/.github/blob/main/profile/FAQ.md">FAQ</a>
   &middot; <a href="https://github.com/keepass-web/source-application">Source</a>
 </p>
-<footer><a href="https://github.com/keepass-web/source-application/tree/v0.11.2">v0.11.2</a> committed on <time id="commit-date" datetime="2026-10-11T11:23:05-04:00">2026-10-11T11:23:05-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+<footer><a href="https://github.com/keepass-web/source-application/tree/v0.12.0">v0.12.0</a> committed on <time id="commit-date" datetime="2026-10-11T20:31:52-04:00">2026-10-11T20:31:52-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
 
 
   <script>
@@ -415,9 +415,13 @@ function identifyFormat(header) {
 keepass-web implementation and whatever host embeds it in an iframe.
 Centralizes shapes/guards/builders so both ends provably agree on the wire
 format: kw-ready, kw-open, kw-create, kw-save, kw-saved, kw-title, kw-find,
-kw-close-request, kw-close-ack, kw-close (#1), kw-reconnect, kw-reconnected (#85). */
+kw-close-request, kw-close-ack, kw-close (#1), kw-reconnect, kw-reconnected (#85),
+kw-check, kw-checked (#74). */
 function hasType(data, type) {
     return (data !== null && typeof data === 'object' && data.type === type);
+}
+function isOptionalString(value) {
+    return value === undefined || typeof value === 'string';
 }
 function isFileMessage(data, type) {
     if (!hasType(data, type))
@@ -430,23 +434,41 @@ function isReadyMessage(data) {
     return hasType(data, 'kw-ready');
 }
 function isOpenMessage(data) {
-    return isFileMessage(data, 'kw-open');
+    return (isFileMessage(data, 'kw-open') && isOptionalString(data.version));
 }
 function isCreateMessage(data) {
     return hasType(data, 'kw-create');
 }
 function isSaveMessage(data) {
-    return isFileMessage(data, 'kw-save');
+    if (!isFileMessage(data, 'kw-save'))
+        return false;
+    const rec = data;
+    return typeof rec.id === 'number' && isOptionalString(rec.base);
 }
 function isSavedMessage(data) {
     if (!hasType(data, 'kw-saved'))
         return false;
     const rec = data;
-    if (typeof rec.ok !== 'boolean')
+    if (typeof rec.id !== 'number' || typeof rec.ok !== 'boolean')
         return false;
-    if (rec.error !== undefined && typeof rec.error !== 'string')
+    if (!isOptionalString(rec.error) || !isOptionalString(rec.version))
         return false;
-    return rec.reason === undefined || rec.reason === 'auth-expired';
+    return rec.reason === undefined || rec.reason === 'auth-expired' || rec.reason === 'conflict';
+}
+function isCheckMessage(data) {
+    return hasType(data, 'kw-check') && isOptionalString(data.base);
+}
+function isCheckedMessage(data) {
+    if (!hasType(data, 'kw-checked'))
+        return false;
+    const rec = data;
+    if (rec.status === 'newer') {
+        return (rec.bytes instanceof ArrayBuffer &&
+            typeof rec.version === 'string' &&
+            rec.version !== '' &&
+            isOptionalString(rec.savedAt));
+    }
+    return rec.status === 'unchanged' || rec.status === 'gone' || rec.status === 'unknown';
 }
 function isReconnectMessage(data) {
     return hasType(data, 'kw-reconnect');
@@ -481,22 +503,34 @@ function isCloseMessage(data) {
 function readyMessage() {
     return { type: 'kw-ready' };
 }
-function openMessage(filename, bytes) {
-    return { type: 'kw-open', filename, bytes };
+function openMessage(filename, bytes, version) {
+    return version === undefined
+        ? { type: 'kw-open', filename, bytes }
+        : { type: 'kw-open', filename, bytes, version };
 }
 function createMessage() {
     return { type: 'kw-create' };
 }
-function saveMessage(filename, bytes) {
-    return { type: 'kw-save', filename, bytes };
+function saveMessage(id, filename, bytes, base) {
+    return base === undefined
+        ? { type: 'kw-save', id, filename, bytes }
+        : { type: 'kw-save', id, filename, bytes, base };
 }
-function savedMessage(ok, error, reason) {
-    const message = { type: 'kw-saved', ok };
-    if (error !== undefined)
-        message.error = error;
-    if (reason !== undefined)
-        message.reason = reason;
+function savedMessage(id, ok, details = {}) {
+    const message = { type: 'kw-saved', id, ok };
+    if (details.error !== undefined)
+        message.error = details.error;
+    if (details.reason !== undefined)
+        message.reason = details.reason;
+    if (details.version !== undefined)
+        message.version = details.version;
     return message;
+}
+function checkMessage(base) {
+    return base === undefined ? { type: 'kw-check' } : { type: 'kw-check', base };
+}
+function checkedMessage(status, newer) {
+    return { type: 'kw-checked', status, ...newer };
 }
 function reconnectMessage() {
     return { type: 'kw-reconnect' };
@@ -745,7 +779,11 @@ function handleFrameMessage(event) {
     }
     else if (isSaveMessage(event.data)) {
         qs('#host-filename').textContent = event.data.filename;
-        downloadAndAck(event.data.filename, event.data.bytes, source);
+        downloadAndAck(event.data, source);
+    }
+    else if (isCheckMessage(event.data)) {
+        // The file was read once and nothing here can see it again, so whether it changed is unknown (#74).
+        source.postMessage(checkedMessage('unknown'), PEER.target);
     }
     else if (isTitleMessage(event.data)) {
         appUnlocked = !event.data.locked;
@@ -757,7 +795,7 @@ function handleFrameMessage(event) {
 }
 /** Local "save" is a download — nowhere else to write to. Always succeeds
 unless the browser itself refuses it (no error path, unlike Drive). */
-function downloadAndAck(filename, bytes, source) {
+function downloadAndAck({ id, filename, bytes }, source) {
     const blob = new Blob([bytes]);
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -767,7 +805,7 @@ function downloadAndAck(filename, bytes, source) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    source.postMessage(savedMessage(true), PEER.target);
+    source.postMessage(savedMessage(id, true), PEER.target);
 }
 // Boot
 showChooser();
@@ -782,6 +820,8 @@ if (typeof isCloseMessage !== 'undefined') globalThis.isCloseMessage = isCloseMe
 if (typeof openMessage !== 'undefined') globalThis.openMessage = openMessage;
 if (typeof createMessage !== 'undefined') globalThis.createMessage = createMessage;
 if (typeof savedMessage !== 'undefined') globalThis.savedMessage = savedMessage;
+if (typeof isCheckMessage !== 'undefined') globalThis.isCheckMessage = isCheckMessage;
+if (typeof checkedMessage !== 'undefined') globalThis.checkedMessage = checkedMessage;
 if (typeof closeRequestMessage !== 'undefined') globalThis.closeRequestMessage = closeRequestMessage;
 if (typeof must !== 'undefined') globalThis.must = must;
 if (typeof applyTabState !== 'undefined') globalThis.applyTabState = applyTabState;

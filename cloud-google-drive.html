@@ -348,7 +348,7 @@ body {
   &middot; <a href="https://github.com/keepass-web/.github/blob/main/profile/FAQ.md">FAQ</a>
   &middot; <a href="https://github.com/keepass-web/source-application">Source</a>
 </p>
-<footer><a href="https://github.com/keepass-web/source-application/tree/v0.11.2">v0.11.2</a> committed on <time id="commit-date" datetime="2026-10-11T11:23:05-04:00">2026-10-11T11:23:05-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+<footer><a href="https://github.com/keepass-web/source-application/tree/v0.12.0">v0.12.0</a> committed on <time id="commit-date" datetime="2026-10-11T20:31:52-04:00">2026-10-11T20:31:52-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
 
 
   <script>
@@ -404,9 +404,13 @@ function identifyFormat(header) {
 keepass-web implementation and whatever host embeds it in an iframe.
 Centralizes shapes/guards/builders so both ends provably agree on the wire
 format: kw-ready, kw-open, kw-create, kw-save, kw-saved, kw-title, kw-find,
-kw-close-request, kw-close-ack, kw-close (#1), kw-reconnect, kw-reconnected (#85). */
+kw-close-request, kw-close-ack, kw-close (#1), kw-reconnect, kw-reconnected (#85),
+kw-check, kw-checked (#74). */
 function hasType(data, type) {
     return (data !== null && typeof data === 'object' && data.type === type);
+}
+function isOptionalString(value) {
+    return value === undefined || typeof value === 'string';
 }
 function isFileMessage(data, type) {
     if (!hasType(data, type))
@@ -419,23 +423,41 @@ function isReadyMessage(data) {
     return hasType(data, 'kw-ready');
 }
 function isOpenMessage(data) {
-    return isFileMessage(data, 'kw-open');
+    return (isFileMessage(data, 'kw-open') && isOptionalString(data.version));
 }
 function isCreateMessage(data) {
     return hasType(data, 'kw-create');
 }
 function isSaveMessage(data) {
-    return isFileMessage(data, 'kw-save');
+    if (!isFileMessage(data, 'kw-save'))
+        return false;
+    const rec = data;
+    return typeof rec.id === 'number' && isOptionalString(rec.base);
 }
 function isSavedMessage(data) {
     if (!hasType(data, 'kw-saved'))
         return false;
     const rec = data;
-    if (typeof rec.ok !== 'boolean')
+    if (typeof rec.id !== 'number' || typeof rec.ok !== 'boolean')
         return false;
-    if (rec.error !== undefined && typeof rec.error !== 'string')
+    if (!isOptionalString(rec.error) || !isOptionalString(rec.version))
         return false;
-    return rec.reason === undefined || rec.reason === 'auth-expired';
+    return rec.reason === undefined || rec.reason === 'auth-expired' || rec.reason === 'conflict';
+}
+function isCheckMessage(data) {
+    return hasType(data, 'kw-check') && isOptionalString(data.base);
+}
+function isCheckedMessage(data) {
+    if (!hasType(data, 'kw-checked'))
+        return false;
+    const rec = data;
+    if (rec.status === 'newer') {
+        return (rec.bytes instanceof ArrayBuffer &&
+            typeof rec.version === 'string' &&
+            rec.version !== '' &&
+            isOptionalString(rec.savedAt));
+    }
+    return rec.status === 'unchanged' || rec.status === 'gone' || rec.status === 'unknown';
 }
 function isReconnectMessage(data) {
     return hasType(data, 'kw-reconnect');
@@ -470,22 +492,34 @@ function isCloseMessage(data) {
 function readyMessage() {
     return { type: 'kw-ready' };
 }
-function openMessage(filename, bytes) {
-    return { type: 'kw-open', filename, bytes };
+function openMessage(filename, bytes, version) {
+    return version === undefined
+        ? { type: 'kw-open', filename, bytes }
+        : { type: 'kw-open', filename, bytes, version };
 }
 function createMessage() {
     return { type: 'kw-create' };
 }
-function saveMessage(filename, bytes) {
-    return { type: 'kw-save', filename, bytes };
+function saveMessage(id, filename, bytes, base) {
+    return base === undefined
+        ? { type: 'kw-save', id, filename, bytes }
+        : { type: 'kw-save', id, filename, bytes, base };
 }
-function savedMessage(ok, error, reason) {
-    const message = { type: 'kw-saved', ok };
-    if (error !== undefined)
-        message.error = error;
-    if (reason !== undefined)
-        message.reason = reason;
+function savedMessage(id, ok, details = {}) {
+    const message = { type: 'kw-saved', id, ok };
+    if (details.error !== undefined)
+        message.error = details.error;
+    if (details.reason !== undefined)
+        message.reason = details.reason;
+    if (details.version !== undefined)
+        message.version = details.version;
     return message;
+}
+function checkMessage(base) {
+    return base === undefined ? { type: 'kw-check' } : { type: 'kw-check', base };
+}
+function checkedMessage(status, newer) {
+    return { type: 'kw-checked', status, ...newer };
 }
 function reconnectMessage() {
     return { type: 'kw-reconnect' };
@@ -577,13 +611,36 @@ function must(value) {
 function buildDriveDownloadUrl(apiBase, id) {
     return `${apiBase}/files/${encodeURIComponent(id)}?alt=media`;
 }
-/** Build the media-update URL that overwrites a file's content in place. */
-function buildDriveUpdateUrl(uploadBase, id) {
-    return `${uploadBase}/files/${encodeURIComponent(id)}?uploadType=media`;
+// Build the URL for the fields a version check reads: head revision, its content hash, save time, trashed (#74).
+function buildDriveMetadataUrl(apiBase, id) {
+    return `${apiBase}/files/${encodeURIComponent(id)}?fields=headRevisionId,sha256Checksum,modifiedTime,trashed`;
 }
-// Build the multipart-upload URL that creates a brand-new file.
+/** Build the media-update URL that overwrites a file's content in place,
+answering with the revision it stored so the next save can build on it (#74). */
+function buildDriveUpdateUrl(uploadBase, id) {
+    return `${uploadBase}/files/${encodeURIComponent(id)}?uploadType=media&fields=headRevisionId`;
+}
+// Build the multipart-upload URL that creates a brand-new file, answering with its id and revision.
 function buildDriveCreateUrl(uploadBase) {
-    return `${uploadBase}/files?uploadType=multipart`;
+    return `${uploadBase}/files?uploadType=multipart&fields=id,headRevisionId`;
+}
+// The revision fields of a Drive response, or undefined when it names no head revision.
+function readDriveRevision(body) {
+    const fields = body;
+    const version = fields?.headRevisionId;
+    if (typeof version !== 'string' || version === '')
+        return undefined;
+    const revision = { version, trashed: fields.trashed === true };
+    if (typeof fields.sha256Checksum === 'string')
+        revision.sha256 = fields.sha256Checksum;
+    if (typeof fields.modifiedTime === 'string')
+        revision.savedAt = fields.modifiedTime;
+    return revision;
+}
+// Lowercase hex SHA-256, the form Drive reports a file's content hash in.
+async function sha256Hex(bytes) {
+    const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+    return Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 /** Build a multipart/related body for that create call: a JSON metadata part
 naming the file (root of My Drive — drive.file grants no folder browsing to
@@ -676,6 +733,9 @@ let accessToken = null;
 // The Drive file a save writes back to — null until create's first save
 // makes one, or open picks an existing one.
 let currentFile = null;
+/* Saves run one at a time, in the order sent, so an older save cannot land after
+a newer one, and a create sets currentFile before the next save picks create or update (#91). */
+let saveQueue = Promise.resolve();
 let pendingAction = null;
 let pickerApiLoaded = false;
 let tokenClient = null;
@@ -754,9 +814,38 @@ async function driveFetch(url, init) {
             return { outcome: 'ok', response };
         lastStatus = response.status;
         if (outcome !== 'retry')
-            return { outcome, error: `HTTP ${lastStatus}` };
+            return { outcome, error: `HTTP ${lastStatus}`, status: lastStatus };
     }
-    return { outcome: 'fail', error: `HTTP ${lastStatus}` };
+    return { outcome: 'fail', error: `HTTP ${lastStatus}`, status: lastStatus };
+}
+// The file's stored version, or why it can't be read; a 404 means the file is gone (#74).
+async function fetchRevision(id) {
+    const result = await driveFetch(buildDriveMetadataUrl(DRIVE_API, id), {});
+    if (result.outcome !== 'ok') {
+        return result.status === 404 ? { outcome: 'gone', error: result.error } : result;
+    }
+    let revision;
+    try {
+        revision = readDriveRevision(await result.response.json());
+    }
+    catch {
+        revision = undefined;
+    }
+    return revision ? { outcome: 'ok', revision } : { outcome: 'fail', error: 'unexpected response' };
+}
+/** The revision a write stored, for the app's next save to build on. When Drive's
+answer doesn't name it, the head revision counts only if it holds exactly these
+bytes: another writer's revision as a base would let the next save overwrite it (#74). */
+async function storedVersion(named, id, bytes) {
+    if (named)
+        return { version: named.version };
+    const head = await fetchRevision(id);
+    if (head.outcome !== 'ok' || head.revision.sha256 !== (await sha256Hex(bytes)))
+        return {};
+    return { version: head.revision.version };
+}
+function failedSave(id, outcome, error) {
+    return savedMessage(id, false, outcome === 'auth-expired' ? { error, reason: 'auth-expired' } : { error });
 }
 function openFailureText(name, outcome, error) {
     if (outcome === 'unreachable')
@@ -926,10 +1015,8 @@ function handlePickerResult(data) {
     };
     void openPickedFile(file);
 }
-async function openPickedFile(file) {
-    setPickStatus(`Opening ${file.name}…`);
-    const result = await driveFetch(buildDriveDownloadUrl(DRIVE_API, file.id), {});
-    if (result.outcome === 'auth-expired') {
+function reportOpenFailure(name, outcome, error) {
+    if (outcome === 'auth-expired') {
         /* Nothing is unsaved on this screen, so the honest answer is the sign-in it
         would take anyway rather than telling the user to find it (#85). */
         accessToken = null;
@@ -937,8 +1024,19 @@ async function openPickedFile(file) {
         showSignInError('Your Google session expired. Sign in again to open your database.');
         return;
     }
+    setPickStatus(openFailureText(name, outcome === 'unreachable' ? 'unreachable' : 'fail', error));
+}
+async function openPickedFile(file) {
+    setPickStatus(`Opening ${file.name}…`);
+    // Read first, so bytes fetched after it are never older than the version recorded (#74).
+    const revision = await fetchRevision(file.id);
+    if (revision.outcome !== 'ok') {
+        reportOpenFailure(file.name, revision.outcome, revision.error);
+        return;
+    }
+    const result = await driveFetch(buildDriveDownloadUrl(DRIVE_API, file.id), {});
     if (result.outcome !== 'ok') {
-        setPickStatus(openFailureText(file.name, result.outcome, result.error));
+        reportOpenFailure(file.name, result.outcome, result.error);
         return;
     }
     let bytes;
@@ -959,14 +1057,14 @@ async function openPickedFile(file) {
         setPickStatus(`${file.name} is ${identified.label}, which isn't supported yet.`);
         return;
     }
-    showHost(file, bytes, identified.implementation);
+    showHost(file, bytes, identified.implementation, revision.revision.version);
 }
 // ============================================================
 // Screen: Embedded app (0x67 in an iframe)
 // ============================================================
-function showHost(file, bytes, implementation) {
+function showHost(file, bytes, implementation, version) {
     currentFile = file;
-    pendingAction = { kind: 'open', filename: file.name, bytes };
+    pendingAction = { kind: 'open', filename: file.name, bytes, version };
     embedApp(file.name, implementation);
 }
 // No file was picked — nothing to hand over, so the header shows a
@@ -1034,20 +1132,22 @@ function handleFrameMessage(event) {
     if (isReadyMessage(event.data)) {
         appReady = true;
         const action = must(pendingAction);
-        source.postMessage(action.kind === 'open' ? openMessage(action.filename, action.bytes) : createMessage(), PEER.target);
+        source.postMessage(action.kind === 'open'
+            ? openMessage(action.filename, action.bytes, action.version)
+            : createMessage(), PEER.target);
     }
     else if (isSaveMessage(event.data)) {
-        qs('#host-filename').textContent = event.data.filename;
-        if (currentFile) {
-            void saveToDrive(event.data.bytes, source);
-        }
-        else {
-            void createFileOnDrive(event.data.filename, event.data.bytes, source);
-        }
+        const save = event.data;
+        qs('#host-filename').textContent = save.filename;
+        saveQueue = saveQueue.then(() => currentFile ? saveToDrive(save, source) : createFileOnDrive(save, source));
     }
     else if (isTitleMessage(event.data)) {
         appUnlocked = !event.data.locked;
         applyTabState(document, BASE_TITLE, event.data.filename, event.data.locked);
+    }
+    else if (isCheckMessage(event.data)) {
+        const check = event.data;
+        saveQueue = saveQueue.then(() => answerCheck(check, source));
     }
     else if (isReconnectMessage(event.data)) {
         void reconnect(source);
@@ -1056,23 +1156,107 @@ function handleFrameMessage(event) {
         tearDownIframe();
     }
 }
-async function saveToDrive(bytes, source) {
+function conflictSave(id, error) {
+    return savedMessage(id, false, { error, reason: 'conflict' });
+}
+/** Writes only over the version the app built on. A save that names none, finds
+a newer one, or finds the file trashed or missing comes back as a conflict for
+the app to merge and save again, so a lost version never means a blind write (#74). */
+async function saveToDrive({ id, bytes, base }, source) {
     const file = must(currentFile);
+    if (base === undefined) {
+        source.postMessage(conflictSave(id, 'the version it builds on is unknown'), PEER.target);
+        return;
+    }
+    const revision = await fetchRevision(file.id);
+    if (revision.outcome === 'gone' || (revision.outcome === 'ok' && revision.revision.trashed)) {
+        source.postMessage(conflictSave(id, 'it was removed or replaced'), PEER.target);
+        return;
+    }
+    if (revision.outcome !== 'ok') {
+        source.postMessage(failedSave(id, revision.outcome, revision.error), PEER.target);
+        return;
+    }
+    if (revision.revision.version !== base) {
+        source.postMessage(conflictSave(id, 'it was saved elsewhere since'), PEER.target);
+        return;
+    }
     const result = await driveFetch(buildDriveUpdateUrl(UPLOAD_API, file.id), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/octet-stream' },
         body: bytes,
     });
     if (result.outcome === 'ok') {
-        source.postMessage(savedMessage(true), PEER.target);
+        let named;
+        try {
+            named = readDriveRevision(await result.response.json());
+        }
+        catch {
+            named = undefined;
+        }
+        const details = await storedVersion(named, file.id, bytes);
+        source.postMessage(savedMessage(id, true, details), PEER.target);
         return;
     }
-    source.postMessage(savedMessage(false, result.error, result.outcome === 'auth-expired' ? 'auth-expired' : undefined), PEER.target);
+    source.postMessage(failedSave(id, result.outcome, result.error), PEER.target);
+}
+/** Tell the app whether Drive holds a newer version than the one it builds on,
+with its bytes; to an app that names none, whatever is stored is newer. The check
+follows the user's own unlock, often after the hourly token has lapsed, so it
+renews silently once before giving up (#74). */
+async function answerCheck({ base }, source) {
+    const file = currentFile;
+    if (file === null) {
+        source.postMessage(checkedMessage('unknown'), PEER.target);
+        return;
+    }
+    let revision = await fetchRevision(file.id);
+    if (revision.outcome === 'auth-expired' && (await renewSilently())) {
+        revision = await fetchRevision(file.id);
+    }
+    if (revision.outcome === 'gone' || (revision.outcome === 'ok' && revision.revision.trashed)) {
+        source.postMessage(checkedMessage('gone'), PEER.target);
+        return;
+    }
+    if (revision.outcome !== 'ok') {
+        source.postMessage(checkedMessage('unknown'), PEER.target);
+        return;
+    }
+    if (revision.revision.version === base) {
+        source.postMessage(checkedMessage('unchanged'), PEER.target);
+        return;
+    }
+    const download = await driveFetch(buildDriveDownloadUrl(DRIVE_API, file.id), {});
+    let bytes = null;
+    if (download.outcome === 'ok') {
+        try {
+            bytes = await download.response.arrayBuffer();
+        }
+        catch {
+            bytes = null;
+        }
+    }
+    if (bytes === null) {
+        source.postMessage(checkedMessage('unknown'), PEER.target);
+        return;
+    }
+    const { version, savedAt } = revision.revision;
+    const newer = savedAt === undefined ? { bytes, version } : { bytes, version, savedAt };
+    source.postMessage(checkedMessage('newer', newer), PEER.target);
+}
+async function renewSilently() {
+    try {
+        await getAccessToken(true);
+        return true;
+    }
+    catch {
+        return false;
+    }
 }
 /** First save of a create-originated session: no Drive file exists yet, so
 this creates one instead of the PATCH saveToDrive uses, then remembers it so
 every later save in this session updates that same file. */
-async function createFileOnDrive(filename, bytes, source) {
+async function createFileOnDrive({ id, filename, bytes }, source) {
     const { body, boundary } = buildMultipartBody(filename, bytes);
     const result = await driveFetch(buildDriveCreateUrl(UPLOAD_API), {
         method: 'POST',
@@ -1080,7 +1264,7 @@ async function createFileOnDrive(filename, bytes, source) {
         body,
     });
     if (result.outcome !== 'ok') {
-        source.postMessage(savedMessage(false, result.error, result.outcome === 'auth-expired' ? 'auth-expired' : undefined), PEER.target);
+        source.postMessage(failedSave(id, result.outcome, result.error), PEER.target);
         return;
     }
     let created = {};
@@ -1094,11 +1278,12 @@ async function createFileOnDrive(filename, bytes, source) {
     same one; reporting success would clear the edits against a file this session
     can no longer reach (#85). */
     if (typeof created.id !== 'string' || created.id === '') {
-        source.postMessage(savedMessage(false, 'unexpected response'), PEER.target);
+        source.postMessage(savedMessage(id, false, { error: 'unexpected response' }), PEER.target);
         return;
     }
     currentFile = { id: created.id, name: filename };
-    source.postMessage(savedMessage(true), PEER.target);
+    const details = await storedVersion(readDriveRevision(created), created.id, bytes);
+    source.postMessage(savedMessage(id, true, details), PEER.target);
 }
 /** Renew the Google credential without leaving the host screen, so a save that
 failed on an expired session can be retried with the edits still in the app (#85). */
@@ -1132,7 +1317,10 @@ showSignIn();
 if (typeof identifyFormat !== 'undefined') globalThis.identifyFormat = identifyFormat;
 if (typeof must !== 'undefined') globalThis.must = must;
 if (typeof buildDriveDownloadUrl !== 'undefined') globalThis.buildDriveDownloadUrl = buildDriveDownloadUrl;
+if (typeof buildDriveMetadataUrl !== 'undefined') globalThis.buildDriveMetadataUrl = buildDriveMetadataUrl;
 if (typeof buildDriveUpdateUrl !== 'undefined') globalThis.buildDriveUpdateUrl = buildDriveUpdateUrl;
+if (typeof readDriveRevision !== 'undefined') globalThis.readDriveRevision = readDriveRevision;
+if (typeof sha256Hex !== 'undefined') globalThis.sha256Hex = sha256Hex;
 if (typeof buildDriveCreateUrl !== 'undefined') globalThis.buildDriveCreateUrl = buildDriveCreateUrl;
 if (typeof buildMultipartBody !== 'undefined') globalThis.buildMultipartBody = buildMultipartBody;
 if (typeof isReadyMessage !== 'undefined') globalThis.isReadyMessage = isReadyMessage;
@@ -1152,6 +1340,8 @@ if (typeof MAX_DRIVE_ATTEMPTS !== 'undefined') globalThis.MAX_DRIVE_ATTEMPTS = M
 if (typeof backoffDelayMs !== 'undefined') globalThis.backoffDelayMs = backoffDelayMs;
 if (typeof isReconnectMessage !== 'undefined') globalThis.isReconnectMessage = isReconnectMessage;
 if (typeof reconnectedMessage !== 'undefined') globalThis.reconnectedMessage = reconnectedMessage;
+if (typeof isCheckMessage !== 'undefined') globalThis.isCheckMessage = isCheckMessage;
+if (typeof checkedMessage !== 'undefined') globalThis.checkedMessage = checkedMessage;
 })();
 </script>
 </body>

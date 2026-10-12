@@ -2024,6 +2024,7 @@ body.embedded footer {
       <button type="button" class="btn btn-primary" data-action="download">Download</button>
       <button type="button" class="btn btn-primary" data-action="save-host" hidden>Save</button>
       <button type="button" class="btn btn-primary" data-action="reconnect" hidden>Reconnect</button>
+      <button type="button" class="btn btn-primary" data-action="merge" hidden>Merge</button>
     </div>
   </dialog>
 
@@ -2088,6 +2089,24 @@ body.embedded footer {
       <button type="button" class="btn btn-primary" data-action="confirm-save">Save</button>
       <button type="button" class="btn btn-secondary" data-action="download" hidden>Download</button>
       <button type="button" class="btn btn-primary" data-action="reconnect" hidden>Reconnect</button>
+      <button type="button" class="btn btn-primary" data-action="merge" hidden>Merge</button>
+    </div>
+  </dialog>
+
+  <!-- ============================================================
+       Dialog: Notice (what came in from a version saved elsewhere, #74)
+       ============================================================ -->
+  <dialog id="dlg-notice" class="kw-dialog">
+    <div class="dialog-header">
+      <h2 id="notice-title">Saved elsewhere</h2>
+      <button type="button" class="close-btn" data-action="close">✕</button>
+    </div>
+    <div class="dialog-body">
+      <p id="notice-message"></p>
+      <ul id="notice-list" hidden></ul>
+    </div>
+    <div class="dialog-footer">
+      <button type="button" class="btn btn-primary" data-action="close">OK</button>
     </div>
   </dialog>
 
@@ -2157,7 +2176,7 @@ body.embedded footer {
   &middot; <a href="https://github.com/keepass-web/.github/blob/main/profile/FAQ.md">FAQ</a>
   &middot; <a href="https://github.com/keepass-web/source-application">Source</a>
 </p>
-<footer><a href="https://github.com/keepass-web/source-application/tree/v0.11.2">v0.11.2</a> committed on <time id="commit-date" datetime="2026-10-11T11:23:05-04:00">2026-10-11T11:23:05-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+<footer><a href="https://github.com/keepass-web/source-application/tree/v0.12.0">v0.12.0</a> committed on <time id="commit-date" datetime="2026-10-11T20:31:52-04:00">2026-10-11T20:31:52-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
 
 
   <script>
@@ -2169,9 +2188,13 @@ body.embedded footer {
 keepass-web implementation and whatever host embeds it in an iframe.
 Centralizes shapes/guards/builders so both ends provably agree on the wire
 format: kw-ready, kw-open, kw-create, kw-save, kw-saved, kw-title, kw-find,
-kw-close-request, kw-close-ack, kw-close (#1), kw-reconnect, kw-reconnected (#85). */
+kw-close-request, kw-close-ack, kw-close (#1), kw-reconnect, kw-reconnected (#85),
+kw-check, kw-checked (#74). */
 function hasType(data, type) {
     return (data !== null && typeof data === 'object' && data.type === type);
+}
+function isOptionalString(value) {
+    return value === undefined || typeof value === 'string';
 }
 function isFileMessage(data, type) {
     if (!hasType(data, type))
@@ -2184,23 +2207,41 @@ function isReadyMessage(data) {
     return hasType(data, 'kw-ready');
 }
 function isOpenMessage(data) {
-    return isFileMessage(data, 'kw-open');
+    return (isFileMessage(data, 'kw-open') && isOptionalString(data.version));
 }
 function isCreateMessage(data) {
     return hasType(data, 'kw-create');
 }
 function isSaveMessage(data) {
-    return isFileMessage(data, 'kw-save');
+    if (!isFileMessage(data, 'kw-save'))
+        return false;
+    const rec = data;
+    return typeof rec.id === 'number' && isOptionalString(rec.base);
 }
 function isSavedMessage(data) {
     if (!hasType(data, 'kw-saved'))
         return false;
     const rec = data;
-    if (typeof rec.ok !== 'boolean')
+    if (typeof rec.id !== 'number' || typeof rec.ok !== 'boolean')
         return false;
-    if (rec.error !== undefined && typeof rec.error !== 'string')
+    if (!isOptionalString(rec.error) || !isOptionalString(rec.version))
         return false;
-    return rec.reason === undefined || rec.reason === 'auth-expired';
+    return rec.reason === undefined || rec.reason === 'auth-expired' || rec.reason === 'conflict';
+}
+function isCheckMessage(data) {
+    return hasType(data, 'kw-check') && isOptionalString(data.base);
+}
+function isCheckedMessage(data) {
+    if (!hasType(data, 'kw-checked'))
+        return false;
+    const rec = data;
+    if (rec.status === 'newer') {
+        return (rec.bytes instanceof ArrayBuffer &&
+            typeof rec.version === 'string' &&
+            rec.version !== '' &&
+            isOptionalString(rec.savedAt));
+    }
+    return rec.status === 'unchanged' || rec.status === 'gone' || rec.status === 'unknown';
 }
 function isReconnectMessage(data) {
     return hasType(data, 'kw-reconnect');
@@ -2235,22 +2276,34 @@ function isCloseMessage(data) {
 function readyMessage() {
     return { type: 'kw-ready' };
 }
-function openMessage(filename, bytes) {
-    return { type: 'kw-open', filename, bytes };
+function openMessage(filename, bytes, version) {
+    return version === undefined
+        ? { type: 'kw-open', filename, bytes }
+        : { type: 'kw-open', filename, bytes, version };
 }
 function createMessage() {
     return { type: 'kw-create' };
 }
-function saveMessage(filename, bytes) {
-    return { type: 'kw-save', filename, bytes };
+function saveMessage(id, filename, bytes, base) {
+    return base === undefined
+        ? { type: 'kw-save', id, filename, bytes }
+        : { type: 'kw-save', id, filename, bytes, base };
 }
-function savedMessage(ok, error, reason) {
-    const message = { type: 'kw-saved', ok };
-    if (error !== undefined)
-        message.error = error;
-    if (reason !== undefined)
-        message.reason = reason;
+function savedMessage(id, ok, details = {}) {
+    const message = { type: 'kw-saved', id, ok };
+    if (details.error !== undefined)
+        message.error = details.error;
+    if (details.reason !== undefined)
+        message.reason = details.reason;
+    if (details.version !== undefined)
+        message.version = details.version;
     return message;
+}
+function checkMessage(base) {
+    return base === undefined ? { type: 'kw-check' } : { type: 'kw-check', base };
+}
+function checkedMessage(status, newer) {
+    return { type: 'kw-checked', status, ...newer };
 }
 function reconnectMessage() {
     return { type: 'kw-reconnect' };
@@ -4533,6 +4586,16 @@ function getAttribute(element, name) {
     }
     return undefined;
 }
+// Set the text of `parent`'s named child, adding the child if it is absent.
+function setChildText(parent, name, text) {
+    const child = getChild(parent, name);
+    if (child) {
+        setText(child, text);
+    }
+    else {
+        appendChild(parent, createElement(name, text));
+    }
+}
 // Set (or replace) a named attribute.
 function setAttribute(element, name, value) {
     for (const pair of element.attributes) {
@@ -4690,12 +4753,55 @@ function setEntryExpiry(entry, expires, expiryTimeIso) {
             setText(expiryTimeEl, expiryTimeIso);
     }
 }
-// Bump an entry's LastModificationTime to now, matching real KeePass.
-function touchLastModified(entry) {
-    const times = getChild(entry, 'Times');
-    const modEl = times && getChild(times, 'LastModificationTime');
-    if (modEl)
-        setText(modEl, kx_nowIso());
+// Set one of an entry's or group's Times, adding it if the file left it out; no-op without Times.
+function kx_setTime(element, name, iso) {
+    const times = getChild(element, 'Times');
+    if (times)
+        setChildText(times, name, iso);
+}
+// Set one of Meta's *Changed times to now, adding it if the file left it out; no-op without Meta.
+function touchMetaTime(document, name) {
+    const meta = getChild(document, 'Meta');
+    if (meta)
+        setChildText(meta, name, kx_nowIso());
+}
+// Bump an entry's or group's LastModificationTime to now; merges keep the newer copy by it (#108).
+function touchLastModified(element) {
+    kx_setTime(element, 'LastModificationTime', kx_nowIso());
+}
+// Move an entry or group between groups; merges place it by the newer LocationChanged (#108).
+function moveToGroup(element, from, to) {
+    from.children = from.children.filter((child) => child !== element);
+    appendChild(to, element);
+    kx_setTime(element, 'LocationChanged', kx_nowIso());
+}
+/** Remove an entry or group for good, recording it and every group and entry
+under it in DeletedObjects so a merge elsewhere doesn't bring them back (#108). */
+function deletePermanently(document, element, from) {
+    const rootElement = getChild(document, 'Root');
+    if (!rootElement) {
+        throw new Error('database is missing a Root element');
+    }
+    let deleted = getChild(rootElement, 'DeletedObjects');
+    if (!deleted) {
+        deleted = createElement('DeletedObjects');
+        appendChild(rootElement, deleted);
+    }
+    from.children = from.children.filter((child) => child !== element);
+    const deletionTime = kx_nowIso();
+    const record = (object) => {
+        const uuidEl = getChild(object, 'UUID');
+        if (uuidEl) {
+            const deletedObject = createElement('DeletedObject');
+            appendChild(deletedObject, createElement('UUID', getText(uuidEl)));
+            appendChild(deletedObject, createElement('DeletionTime', deletionTime));
+            appendChild(deleted, deletedObject);
+        }
+        for (const child of [...getChildren(object, 'Entry'), ...getChildren(object, 'Group')]) {
+            record(child);
+        }
+    };
+    record(element);
 }
 // Visit every Entry under group, including History revisions (for finding Refs database-wide).
 function walkAllEntries(group, visit) {
@@ -4783,9 +4889,13 @@ function pushHistorySnapshot(document, entry) {
     }
 }
 /** Restore `entry` to a past version: snapshots current state first, then
-replaces its fields. `snapshot` must come from `getEntryHistory(entry)`. */
+replaces its fields. `snapshot` must come from `getEntryHistory(entry)`. For
+merges, the restore is the newest edit and keeps the current LocationChanged,
+since the entry has not moved (#108). */
 function restoreHistoryEntry(document, entry, snapshot) {
     const restoredFields = cloneElement(snapshot);
+    const currentTimes = getChild(entry, 'Times');
+    const locationChanged = currentTimes && getChild(currentTimes, 'LocationChanged');
     pushHistorySnapshot(document, entry);
     const uuidEl = getChild(entry, 'UUID');
     const historyEl = getChild(entry, 'History');
@@ -4800,6 +4910,9 @@ function restoreHistoryEntry(document, entry, snapshot) {
     if (historyEl)
         newChildren.push(historyEl);
     entry.children = newChildren;
+    if (locationChanged)
+        kx_setTime(entry, 'LocationChanged', getText(locationChanged));
+    touchLastModified(entry);
 }
 // Permanently remove one past version from an entry's History.
 function deleteHistoryEntry(entry, snapshot) {
@@ -4845,7 +4958,8 @@ function kx_findRecycleBin(document) {
         return undefined;
     return kx_findGroupByUuid(rootGroup, getText(uuidEl));
 }
-// Find (or lazily create) the recycle bin group, recording its UUID in Meta/RecycleBinUUID.
+/** Find (or lazily create) the recycle bin group, recording its UUID in
+Meta/RecycleBinUUID; merges keep the bin with the newer RecycleBinChanged (#108). */
 function findOrCreateRecycleBin(document) {
     const existing = kx_findRecycleBin(document);
     if (existing)
@@ -4860,13 +4974,8 @@ function findOrCreateRecycleBin(document) {
     appendChild(rootGroup, bin);
     // createGroup() always appends a UUID child first, so this is always present.
     const binUuid = getText(getChild(bin, 'UUID'));
-    const uuidEl = getChild(meta, 'RecycleBinUUID');
-    if (uuidEl) {
-        setText(uuidEl, binUuid);
-    }
-    else {
-        appendChild(meta, createElement('RecycleBinUUID', binUuid));
-    }
+    setChildText(meta, 'RecycleBinUUID', binUuid);
+    setChildText(meta, 'RecycleBinChanged', kx_nowIso());
     return bin;
 }
 // True if `group` is the database's recycle bin, or nested inside it.
@@ -4881,6 +4990,7 @@ function createDatabaseDocument(databaseName, build) {
     appendChild(meta, createElement('Generator', KX_GENERATOR));
     appendChild(meta, createElement('DatabaseName', databaseName));
     appendChild(meta, createElement('DatabaseNameChanged', kx_nowIso()));
+    appendChild(meta, createElement('MasterKeyChanged', kx_nowIso()));
     appendChild(meta, createElement('RecycleBinEnabled', 'True'));
     appendChild(meta, createElement('HistoryMaxItems', '10'));
     appendChild(root, meta);
@@ -5034,8 +5144,362 @@ function writeMetaBinaries(root, binaries) {
 }
 
 
+/* === kdbx/src/merge.js === */
+/** Merges another copy of a database into this one by KeePass's synchronization
+rules, so the result matches what KeePass and KeePassXC make of the same two
+files (#74). See SPEC.md, "Merging". */
+
+// Times a merge ignores when deciding whether two copies of an entry differ, as KeePass does.
+const KX_UNCOMPARED_TIMES = new Set(['LastAccessTime', 'UsageCount', 'LocationChanged']);
+// Database settings that travel together, each pair decided by its own *Changed time.
+const KX_META_SETTINGS = [
+    [['DatabaseName'], 'DatabaseNameChanged'],
+    [['DatabaseDescription'], 'DatabaseDescriptionChanged'],
+    [['DefaultUserName'], 'DefaultUserNameChanged'],
+    [['RecycleBinEnabled', 'RecycleBinUUID'], 'RecycleBinChanged'],
+    [['EntryTemplatesGroup'], 'EntryTemplatesGroupChanged'],
+];
+function kx_elements(element) {
+    return element.children.filter((child) => child.type === 'element');
+}
+function kx_uuidOf(element) {
+    const uuidEl = getChild(element, 'UUID');
+    return uuidEl ? getText(uuidEl) : '';
+}
+// A named time under `parent`, in whole seconds (the files' own resolution); 0 when absent.
+function kx_secondsIn(parent, name) {
+    const field = parent && getChild(parent, name);
+    const ms = field ? Date.parse(getText(field)) : Number.NaN;
+    return Number.isNaN(ms) ? 0 : Math.floor(ms / 1000);
+}
+function kx_seconds(element, name) {
+    return kx_secondsIn(getChild(element, 'Times'), name);
+}
+function kx_title(entry) {
+    for (const string of getChildren(entry, 'String')) {
+        const keyEl = getChild(string, 'Key');
+        const valueEl = getChild(string, 'Value');
+        if (keyEl && valueEl && getText(keyEl) === 'Title')
+            return getText(valueEl);
+    }
+    return '';
+}
+function kx_track(index, element, parent) {
+    const uuid = kx_uuidOf(element);
+    if (uuid)
+        index.set(uuid, { element, parent });
+}
+// Every live group and entry under `group` by UUID, with its parent; History versions aren't live.
+function kx_index(group, parent, index) {
+    kx_track(index, group, parent);
+    for (const entry of getChildren(group, 'Entry')) {
+        kx_track(index, entry, group);
+    }
+    for (const sub of getChildren(group, 'Group')) {
+        kx_index(sub, group, index);
+    }
+    return index;
+}
+// Element content in an order-free form, so copies that differ only in layout compare equal.
+function kx_canonical(element) {
+    const attributes = element.attributes.map(([name, value]) => `${name}=${JSON.stringify(value)}`);
+    const children = kx_elements(element);
+    const body = children.length > 0
+        ? children.map(kx_canonical).sort().join('')
+        : JSON.stringify(getText(element));
+    return `<${element.name} ${attributes.sort().join(' ')}>${body}</${element.name}>`;
+}
+/* An entry's content as KeePass compares it when merging: without its History,
+access count or location, and with an empty field the same as a missing one. */
+function kx_entryContent(entry) {
+    const children = kx_elements(entry).flatMap((child) => {
+        if (child.name === 'History')
+            return [];
+        if (child.name === 'String') {
+            const valueEl = getChild(child, 'Value');
+            return valueEl && getText(valueEl) !== '' ? [child] : [];
+        }
+        if (child.name === 'Times') {
+            const kept = kx_elements(child).filter((time) => !KX_UNCOMPARED_TIMES.has(time.name));
+            return [{ ...child, children: kept }];
+        }
+        return [child];
+    });
+    return kx_canonical({ ...entry, children });
+}
+function kx_snapshot(entry) {
+    const copy = cloneElement(entry);
+    copy.children = copy.children.filter((child) => !(child.type === 'element' && child.name === 'History'));
+    return copy;
+}
+// One version per modification time, this copy's winning a tie, oldest first, trimmed to the limit.
+function kx_mergeHistory(local, other, maxItems) {
+    const byTime = new Map();
+    for (const version of [...other, ...local]) {
+        byTime.set(kx_seconds(version, 'LastModificationTime'), version);
+    }
+    const merged = [...byTime.entries()].sort((a, b) => a[0] - b[0]).map(([, version]) => version);
+    return maxItems >= 0 ? merged.slice(Math.max(0, merged.length - maxItems)) : merged;
+}
+function kx_setHistory(entry, versions) {
+    let historyEl = getChild(entry, 'History');
+    if (!historyEl) {
+        if (versions.length === 0)
+            return;
+        historyEl = createElement('History');
+        appendChild(entry, historyEl);
+    }
+    historyEl.children = versions;
+}
+/* Take the other copy's fields. `keep` names this copy's children that merge
+separately, and its LocationChanged stays, since placement merges separately too. */
+function kx_adoptFields(local, other, keep) {
+    const uuidEl = getChild(local, 'UUID'); // only objects matched by UUID get here
+    const localTimes = getChild(local, 'Times');
+    const location = localTimes && getChild(localTimes, 'LocationChanged');
+    const kept = kx_elements(local).filter((child) => child !== uuidEl && keep.has(child.name));
+    const taken = kx_elements(other)
+        .filter((child) => child.name !== 'UUID' && !keep.has(child.name))
+        .map(cloneElement);
+    local.children = [uuidEl, ...taken, ...kept];
+    const times = getChild(local, 'Times');
+    if (location && times)
+        setChildText(times, 'LocationChanged', getText(location));
+}
+// Point the other copy's attachment references into this database's pool.
+function kx_adoptBinaries(element, adoptBinary) {
+    for (const child of kx_elements(element)) {
+        const valueEl = child.name === 'Binary' ? getChild(child, 'Value') : undefined;
+        const ref = valueEl && getAttribute(valueEl, 'Ref');
+        if (valueEl && ref !== undefined) {
+            setAttribute(valueEl, 'Ref', String(adoptBinary(Number.parseInt(ref, 10))));
+        }
+        kx_adoptBinaries(child, adoptBinary);
+    }
+}
+// Whether `candidate` is `element` or sits inside it, so a group is never moved into itself.
+function kx_isInside(element, candidate, index) {
+    for (let at = candidate; at; at = index.get(kx_uuidOf(at))?.parent ?? null) {
+        if (at === element)
+            return true;
+    }
+    return false;
+}
+function kx_detach(placed) {
+    const { element, parent } = placed;
+    if (parent)
+        parent.children = parent.children.filter((child) => child !== element);
+}
+/* Union of keyed items (custom icons, custom data) under a Meta child, an item
+the other copy changed later replacing this copy's. */
+function kx_mergeItems(localMeta, otherMeta, listName, keyName) {
+    const otherList = getChild(otherMeta, listName);
+    if (!otherList)
+        return;
+    let localList = getChild(localMeta, listName);
+    if (!localList) {
+        localList = createElement(listName);
+        appendChild(localMeta, localList);
+    }
+    const keyOf = (item) => {
+        const keyEl = getChild(item, keyName);
+        return keyEl ? getText(keyEl) : '';
+    };
+    for (const item of kx_elements(otherList)) {
+        const existing = kx_elements(localList).find((local) => keyOf(local) === keyOf(item));
+        if (!existing) {
+            appendChild(localList, cloneElement(item));
+        }
+        else if (kx_secondsIn(item, 'LastModificationTime') > kx_secondsIn(existing, 'LastModificationTime')) {
+            localList.children = localList.children.map((child) => child === existing ? cloneElement(item) : child);
+        }
+    }
+}
+function kx_mergeMeta(localMeta, otherMeta) {
+    for (const [fields, changed] of KX_META_SETTINGS) {
+        if (kx_secondsIn(otherMeta, changed) <= kx_secondsIn(localMeta, changed))
+            continue;
+        for (const field of [...fields, changed]) {
+            const otherField = getChild(otherMeta, field);
+            if (otherField)
+                setChildText(localMeta, field, getText(otherField));
+        }
+    }
+    kx_mergeItems(localMeta, otherMeta, 'CustomIcons', 'UUID');
+    kx_mergeItems(localMeta, otherMeta, 'CustomData', 'Key');
+}
+function kx_deletedObjects(document) {
+    const rootElement = getChild(document, 'Root');
+    const list = rootElement && getChild(rootElement, 'DeletedObjects');
+    return list ? getChildren(list, 'DeletedObject') : [];
+}
+function kx_rootGroup(document) {
+    const rootElement = getChild(document, 'Root');
+    const group = rootElement && getChild(rootElement, 'Group');
+    if (!group) {
+        throw new Error('database has no root group');
+    }
+    return group;
+}
+/** Merge `other` into `local`, both whole `<KeePassFile>` documents of the same
+database. `other` is consumed: its attachment references are rewritten through
+`adoptBinary`, which maps one of its pool indexes to one in `local`'s pool. */
+function mergeDocuments(local, other, adoptBinary) {
+    const localRoot = kx_rootGroup(local);
+    const otherRoot = kx_rootGroup(other);
+    const index = kx_index(localRoot, null, new Map());
+    const added = new Set();
+    // Each of the other copy's groups by its counterpart here, so children land under the right parent.
+    const counterpart = new Map();
+    const summary = { changed: 0, conflicts: [] };
+    const localMeta = getChild(local, 'Meta');
+    const maxItemsEl = localMeta && getChild(localMeta, 'HistoryMaxItems');
+    const maxItems = maxItemsEl ? Number.parseInt(getText(maxItemsEl), 10) : 10;
+    kx_adoptBinaries(otherRoot, adoptBinary);
+    // An object both copies hold goes where the copy that moved it last put it.
+    const place = (placed, otherObject, otherParent) => {
+        const otherTimes = getChild(otherObject, 'Times');
+        const otherLocation = otherTimes && getChild(otherTimes, 'LocationChanged');
+        const localTimes = getChild(placed.element, 'Times');
+        if (!otherLocation ||
+            !localTimes ||
+            kx_seconds(otherObject, 'LocationChanged') <= kx_seconds(placed.element, 'LocationChanged')) {
+            return;
+        }
+        const destination = otherParent ? counterpart.get(otherParent) : undefined;
+        if (destination &&
+            placed.parent &&
+            destination !== placed.parent &&
+            !kx_isInside(placed.element, destination, index)) {
+            kx_detach(placed);
+            appendChild(destination, placed.element);
+            placed.parent = destination;
+            summary.changed += 1;
+        }
+        setChildText(localTimes, 'LocationChanged', getText(otherLocation));
+    };
+    const mergeGroup = (otherGroup, otherParent) => {
+        const placed = index.get(kx_uuidOf(otherGroup));
+        let group;
+        if (placed) {
+            group = placed.element;
+            const otherIsNewer = kx_seconds(otherGroup, 'LastModificationTime') > kx_seconds(group, 'LastModificationTime');
+            if (otherIsNewer) {
+                kx_adoptFields(group, otherGroup, new Set(['Entry', 'Group']));
+                summary.changed += 1;
+            }
+            place(placed, otherGroup, otherParent);
+        }
+        else {
+            group = cloneElement(otherGroup);
+            group.children = group.children.filter((child) => !(child.type === 'element' && (child.name === 'Entry' || child.name === 'Group')));
+            // A root that isn't this database's own lands inside it, as KeePass places it.
+            const parent = otherParent ? counterpart.get(otherParent) : localRoot;
+            appendChild(parent, group);
+            kx_track(index, group, parent);
+            added.add(group);
+        }
+        counterpart.set(otherGroup, group);
+        for (const otherEntry of getChildren(otherGroup, 'Entry')) {
+            mergeEntry(otherEntry, otherGroup);
+        }
+        for (const sub of getChildren(otherGroup, 'Group')) {
+            mergeGroup(sub, otherGroup);
+        }
+    };
+    const mergeEntry = (otherEntry, otherParent) => {
+        const placed = index.get(kx_uuidOf(otherEntry));
+        if (!placed) {
+            const entry = cloneElement(otherEntry);
+            const parent = counterpart.get(otherParent);
+            appendChild(parent, entry);
+            kx_track(index, entry, parent);
+            added.add(entry);
+            return;
+        }
+        const entry = placed.element;
+        let localHistory = getEntryHistory(entry);
+        let otherHistory = getEntryHistory(otherEntry);
+        if (kx_entryContent(entry) !== kx_entryContent(otherEntry)) {
+            /* The newer copy stays current and the older goes into History. KeePass
+            drops the other copy when both changed within the same second; keeping it
+            here means neither is lost. */
+            const localTime = kx_seconds(entry, 'LastModificationTime');
+            const otherTime = kx_seconds(otherEntry, 'LastModificationTime');
+            const otherIsNewer = otherTime > localTime;
+            const olderTime = otherIsNewer ? localTime : otherTime;
+            const newerHistory = otherIsNewer ? otherHistory : localHistory;
+            const seen = newerHistory.some((v) => kx_seconds(v, 'LastModificationTime') === olderTime);
+            if (otherIsNewer) {
+                localHistory = [...localHistory, kx_snapshot(entry)];
+                kx_adoptFields(entry, otherEntry, new Set(['History']));
+                summary.changed += 1;
+            }
+            else {
+                otherHistory = [...otherHistory, kx_snapshot(otherEntry)];
+            }
+            if (!seen)
+                summary.conflicts.push(kx_title(entry));
+        }
+        kx_setHistory(entry, kx_mergeHistory(localHistory, otherHistory, maxItems));
+        place(placed, otherEntry, otherParent);
+    };
+    mergeGroup(otherRoot, null);
+    // Deletions from either copy, the later of two records for the same object winning.
+    const records = new Map();
+    for (const record of [...kx_deletedObjects(local), ...kx_deletedObjects(other)]) {
+        const uuid = kx_uuidOf(record);
+        const known = records.get(uuid);
+        if (!known || kx_secondsIn(record, 'DeletionTime') > kx_secondsIn(known, 'DeletionTime')) {
+            records.set(uuid, record);
+        }
+    }
+    // An object edited after its deletion survives it, and a group survives while it holds anything.
+    const remove = (placed) => {
+        kx_detach(placed);
+        if (!added.delete(placed.element))
+            summary.changed += 1;
+    };
+    for (const [uuid, record] of records) {
+        const placed = index.get(uuid);
+        if (placed?.element.name === 'Entry' &&
+            kx_seconds(placed.element, 'LastModificationTime') < kx_secondsIn(record, 'DeletionTime')) {
+            remove(placed);
+            index.delete(uuid);
+        }
+    }
+    const removeEmptyGroups = (group) => {
+        for (const sub of getChildren(group, 'Group')) {
+            removeEmptyGroups(sub);
+            const record = records.get(kx_uuidOf(sub));
+            const empty = getChildren(sub, 'Entry').length === 0 && getChildren(sub, 'Group').length === 0;
+            if (record &&
+                empty &&
+                kx_seconds(sub, 'LastModificationTime') < kx_secondsIn(record, 'DeletionTime')) {
+                remove({ element: sub, parent: group });
+            }
+        }
+    };
+    removeEmptyGroups(localRoot);
+    const rootElement = getChild(local, 'Root');
+    let deletedObjects = getChild(rootElement, 'DeletedObjects');
+    if (records.size > 0 && !deletedObjects) {
+        deletedObjects = createElement('DeletedObjects');
+        appendChild(rootElement, deletedObjects);
+    }
+    if (deletedObjects)
+        deletedObjects.children = [...records.values()];
+    const otherMeta = getChild(other, 'Meta');
+    if (localMeta && otherMeta)
+        kx_mergeMeta(localMeta, otherMeta);
+    summary.changed += added.size;
+    return summary;
+}
+
+
 /* === kdbx/src/kdbx.js === */
 // High-level KDBX database: load/save/create for KDBX 3.1/4.x, per the spec's structure.
+
 
 
 
@@ -5104,6 +5568,15 @@ function kx_refreshHeaderHash(root, headerSha) {
     if (hashEl)
         setText(hashEl, toBase64(headerSha));
 }
+// KeePass refuses a file whose non-empty <Meta><HeaderHash> disagrees with its header (#103).
+function kx_checkHeaderHash(root, headerSha) {
+    const meta = getChild(root, 'Meta');
+    const hashEl = meta && getChild(meta, 'HeaderHash');
+    const stored = hashEl ? getText(hashEl).trim() : '';
+    if (stored !== '' && stored !== toBase64(headerSha)) {
+        throw new Error('header hash mismatch (corrupt file)');
+    }
+}
 // An in-memory KDBX database.
 class Kdbx {
     // The outer header. Random fields (seeds, IVs, salts) are regenerated on save.
@@ -5133,9 +5606,20 @@ class Kdbx {
         }
         return group;
     }
-    // Replace the credentials used when the database is next saved.
+    /** Replace the credentials used when the database is next saved, recording the
+    change in MasterKeyChanged, which other clients' key-age reminders read (#108). */
     setCredentials(credentials) {
         this.#credentials = credentials;
+        touchMetaTime(this.root, 'MasterKeyChanged');
+    }
+    /** Merge another copy of this database, which must open with this one's
+    credentials, into this one by KeePass's synchronization rules (#74). */
+    async mergeIn(data) {
+        const other = await Kdbx.load(data, this.#credentials);
+        return mergeDocuments(this.root, other.root, (ref) => {
+            const binary = other.getBinaryData(ref);
+            return binary === undefined ? -1 : this.addBinary(binary); // a stale reference stays stale
+        });
     }
     // Add a binary attachment, reusing an identical one if present; returns its pool index.
     addBinary(data) {
@@ -5192,13 +5676,14 @@ class Kdbx {
         if (header.version.major >= 4) {
             return Kdbx.#load4(data, offset, header, rawHeader, transformedKey, cipherKey, credentials);
         }
-        return Kdbx.#load3(data, offset, header, cipherKey, credentials);
+        return Kdbx.#load3(data, offset, header, rawHeader, cipherKey, credentials);
     }
     static async #load4(data, offset, header, rawHeader, transformedKey, cipherKey, credentials) {
         const storedHeaderSha = data.subarray(offset, offset + 32);
         const storedHeaderHmac = data.subarray(offset + 32, offset + 64);
         const blockStream = data.subarray(offset + 64);
-        if (!bytesEqual(await sha256(rawHeader), storedHeaderSha)) {
+        const headerSha = await sha256(rawHeader);
+        if (!bytesEqual(headerSha, storedHeaderSha)) {
             throw new Error('header SHA-256 mismatch (corrupt file)');
         }
         const hmacBaseKey = await deriveHmacBaseKey(header.masterSeed, transformedKey);
@@ -5213,6 +5698,7 @@ class Kdbx {
         }
         const { inner, xml } = readInnerHeader(payload);
         const root = parseXml(utf8Decode(xml));
+        kx_checkHeaderHash(root, headerSha);
         binaryTimesToIso(root);
         const cipher = await createProtectedStreamCipher(inner.innerRandomStreamId, inner.innerRandomStreamKey);
         applyInboundProtection(root, cipher);
@@ -5225,7 +5711,7 @@ class Kdbx {
             innerStreamKey: inner.innerRandomStreamKey,
         });
     }
-    static async #load3(data, offset, header, cipherKey, credentials) {
+    static async #load3(data, offset, header, rawHeader, cipherKey, credentials) {
         const ciphertext = data.subarray(offset);
         const plaintext = await aesCbcDecrypt(cipherKey, header.encryptionIv, ciphertext);
         if (!header.streamStartBytes) {
@@ -5239,6 +5725,7 @@ class Kdbx {
             payload = await gunzip(payload);
         }
         const root = parseXml(utf8Decode(payload));
+        kx_checkHeaderHash(root, await sha256(rawHeader));
         const { binaries, idToIndex } = await readMetaBinaries(root);
         remapEntryBinaryRefs(root, idToIndex);
         removeMetaBinariesElement(root);
@@ -5701,13 +6188,16 @@ function openableUrl(raw) {
 function isValidClipboardTimeout(seconds) {
     return !Number.isNaN(seconds) && seconds >= 5;
 }
-/** The settings dialog's minimum accepted curtain delay, in seconds (#84). */
+/* The longest idle delay the settings accept, in seconds. An unlock is when a
+returning tab checks for a version saved elsewhere, so the lock must always come (#74). */
+const MAX_IDLE_DELAY = 3600;
+/** The settings dialog's accepted curtain delay, in seconds (#84). */
 function isValidCurtainTimeout(seconds) {
-    return !Number.isNaN(seconds) && seconds >= 15;
+    return !Number.isNaN(seconds) && seconds >= 15 && seconds <= MAX_IDLE_DELAY;
 }
-/** The settings dialog's minimum accepted auto-lock delay, in seconds (#84). */
+/** The settings dialog's accepted auto-lock delay, in seconds (#84). */
 function isValidAutoLockTimeout(seconds) {
-    return !Number.isNaN(seconds) && seconds >= 30;
+    return !Number.isNaN(seconds) && seconds >= 30 && seconds <= MAX_IDLE_DELAY;
 }
 /** Character classes offered by the password generator. */
 const GENERATOR_CHARSETS = {
@@ -5786,6 +6276,7 @@ const app = {
     curtainTimeout: 60,
     autoLockTimeout: 300,
     dirty: false,
+    baseVersion: null,
     sortField: 'title',
     sortDir: 'asc',
     // Tile view reads better on narrow phones; this only sets the initial default.
@@ -5983,11 +6474,12 @@ async function handleFile(file) {
     showUnlock();
 }
 // Screen: Unlock
-/** `preserveDirty` is true only when arriving here from lockDatabase(), whose
+/** `relocking` is true only when arriving here from lockDatabase(), whose
 edits were never actually persisted anywhere — everywhere else, unlocking
 starts a database whose only state is what's on disk/the host, so nothing is
-unsaved yet. */
-function showUnlock(preserveDirty = false) {
+unsaved yet. Time away is also when a newer version may have been saved
+elsewhere, so a relock asks the host first (#74). */
+function showUnlock(relocking = false) {
     document.body.classList.remove('app-mode');
     setRoot(cloneTemplate('tpl-unlock'));
     publishTitle();
@@ -6026,12 +6518,17 @@ function showUnlock(preserveDirty = false) {
             if (keyfileData)
                 input.keyFile = keyfileData;
             const creds = new Credentials(input);
-            app.db = await Kdbx.load(new Uint8Array(must(app.file)), creds);
-            app.currentGroup = app.db.getRootGroup();
+            const latest = relocking && isHosted() ? await requestCheck() : null;
+            const notice = latest?.status === 'newer'
+                ? await openNewer(creds, latest)
+                : await openHeld(creds, latest?.status === 'gone');
+            app.currentGroup = must(app.db).getRootGroup();
             app.searchQuery = '';
-            setDirty(preserveDirty && app.dirty);
+            setDirty(relocking && app.dirty);
             showEntryList();
             armIdleWatch();
+            if (notice)
+                showNotice(notice);
         }
         catch (err) {
             errorEl.textContent =
@@ -6300,8 +6797,7 @@ function moveGroupTo(group, destination) {
     const rootGroup = must(app.db).getRootGroup();
     const parent = findGroupParent(rootGroup, group);
     if (parent && parent !== destination) {
-        parent.children = parent.children.filter((c) => c !== group);
-        appendChild(destination, group);
+        moveToGroup(group, parent, destination);
         setDirty(true);
     }
     renderGroupTree();
@@ -6322,7 +6818,7 @@ function deleteGroupAction(group) {
         openConfirmDelete('Delete group?', `This group and its ${entryCount} ${entryWord} will be permanently deleted. This cannot be undone.`, () => {
             const parent = findGroupParent(rootGroup, group);
             if (parent)
-                parent.children = parent.children.filter((c) => c !== group);
+                deletePermanently(db.root, group, parent);
             resetSelectionIfAffected(rootGroup, group);
             setDirty(true);
             renderGroupTree();
@@ -6694,9 +7190,8 @@ async function lockDatabase() {
     try {
         const bytes = await must(app.db).save();
         app.file = bytes.buffer;
-        const wasDirty = app.dirty;
         Object.assign(app, { db: null, currentGroup: null, currentEntry: null, searchQuery: '' });
-        showUnlock(wasDirty);
+        showUnlock(true);
         curtain().close(); // only now, so the re-encrypting page never shows through (#84)
     }
     finally {
@@ -6709,6 +7204,7 @@ function closeDatabase() {
         db: null,
         file: null,
         filename: '',
+        baseVersion: null,
         currentGroup: null,
         currentEntry: null,
         searchQuery: '',
@@ -6874,8 +7370,7 @@ function showEntryDetail() {
         openMoveToDialog('Move entry to…', () => true, (destination) => {
             const parent = findEntryParent(db.getRootGroup(), entry);
             if (parent && parent !== destination) {
-                parent.children = parent.children.filter((c) => c !== entry);
-                appendChild(destination, entry);
+                moveToGroup(entry, parent, destination);
                 setDirty(true);
             }
             app.currentEntry = null;
@@ -6898,8 +7393,7 @@ function showEntryDetail() {
         const bin = findOrCreateRecycleBin(db.root);
         const parent = findEntryParent(db.getRootGroup(), entry);
         if (parent && parent !== bin) {
-            parent.children = parent.children.filter((c) => c !== entry);
-            appendChild(bin, entry);
+            moveToGroup(entry, parent, bin);
             setDirty(true);
         }
         app.currentEntry = null;
@@ -6909,8 +7403,7 @@ function showEntryDetail() {
         const rootGroup = db.getRootGroup();
         const parent = findEntryParent(rootGroup, entry);
         if (parent && parent !== rootGroup) {
-            parent.children = parent.children.filter((c) => c !== entry);
-            appendChild(rootGroup, entry);
+            moveToGroup(entry, parent, rootGroup);
             setDirty(true);
         }
         app.currentEntry = null;
@@ -6920,7 +7413,7 @@ function showEntryDetail() {
         openConfirmDelete('Delete entry?', 'This cannot be undone.', () => {
             const parent = findEntryParent(db.getRootGroup(), entry);
             if (parent) {
-                parent.children = parent.children.filter((c) => c !== entry);
+                deletePermanently(db.root, entry, parent);
                 setDirty(true);
             }
             app.currentEntry = null;
@@ -7310,10 +7803,56 @@ function setSaveStatus(status, text, kind) {
 }
 const EXPIRED_MESSAGE = 'Your session with the storage provider expired. Reconnect to save, or download a copy.';
 const LOCKED_OUT_MESSAGE = 'The database locked while this dialog was open. Unlock it to save.';
+const CONFLICT_MESSAGE = 'The stored file changed since it was opened here, and saving would overwrite that. Merge the change in, then save again, or download a copy.';
+// Why a merge found nothing to merge, for each answer that isn't a newer version (#74).
+const NOT_MERGED = {
+    unchanged: 'Nothing newer is stored now, so save again.',
+    gone: 'The file was removed or replaced in storage. Download a copy to keep your changes.',
+    unknown: 'Could not fetch the version saved elsewhere. Try again, or download a copy.',
+};
 function showExpired(session) {
     setSaveStatus(session.status, EXPIRED_MESSAGE, 'error');
     session.apply('expired');
     session.reconnectBtn.focus(); // the control that had focus was just hidden
+}
+function showConflict(session) {
+    setSaveStatus(session.status, CONFLICT_MESSAGE, 'error');
+    session.apply('conflict');
+    session.mergeBtn.focus();
+}
+/** Merge in the version saved elsewhere that refused this save, by KeePass's
+rules (packages/kdbx), leaving the result unsaved to review and save again (#74). */
+async function runMerge(session, dlg) {
+    setSaveStatus(session.status, 'Bringing in the version saved elsewhere…');
+    session.apply('merging');
+    const latest = await requestCheck();
+    const db = app.db;
+    if (db === null) {
+        setSaveStatus(session.status, LOCKED_OUT_MESSAGE, 'error');
+        session.apply('locked-out');
+        return;
+    }
+    if (latest.status !== 'newer') {
+        setSaveStatus(session.status, NOT_MERGED[latest.status], 'error');
+        session.apply(latest.status === 'unchanged' ? 'normal' : 'conflict');
+        return;
+    }
+    let summary;
+    try {
+        summary = await db.mergeIn(new Uint8Array(latest.bytes));
+    }
+    catch {
+        setSaveStatus(session.status, "The version saved elsewhere couldn't be opened or read with this database's credentials. Download a copy to keep your changes.", 'error');
+        session.apply('conflict');
+        return;
+    }
+    app.baseVersion = latest.version;
+    setDirty(true);
+    dlg.close();
+    // What was on screen may have changed or gone, so the merged database is shown from the top.
+    Object.assign(app, { currentGroup: db.getRootGroup(), currentEntry: null, searchQuery: '' });
+    showEntryList();
+    showNotice(mergeNotice(summary, latest.savedAt));
 }
 /** Renew the credential, then let the dialog's own save run again. Both
 dialogs route through here so neither can answer an expired session its own
@@ -7338,7 +7877,7 @@ async function runReconnect(session) {
 /* Auto-lock runs off its own timer and does not care that a dialog is open, so
 the database can be gone before either control is used; locking re-encrypted
 the edits, leaving nothing here to save or copy (#85). */
-async function runDownload(session) {
+async function runDownload(session, conflicted = false) {
     if (app.db === null) {
         setSaveStatus(session.status, LOCKED_OUT_MESSAGE, 'error');
         session.apply('locked-out');
@@ -7350,12 +7889,13 @@ async function runDownload(session) {
     catch {
         // A throw here would leave the held dialog with no status and no way out (#85).
         setSaveStatus(session.status, 'Could not prepare a copy to download.', 'error');
-        session.apply('expired');
+        session.apply(conflicted ? 'conflict' : 'expired');
         return;
     }
     // A copy on disk means the edits are no longer stranded, so the dialog lets go.
-    setSaveStatus(session.status, 'Copy downloaded. Reconnect to save back to the provider.');
-    session.apply('recovered');
+    const next = conflicted ? 'Merge' : 'Reconnect';
+    setSaveStatus(session.status, `Copy downloaded. ${next} to save back to the provider.`);
+    session.apply(conflicted ? 'conflict-copied' : 'recovered');
 }
 function openSaveDialog() {
     const dlg = byId('dlg-save');
@@ -7368,16 +7908,22 @@ function openSaveDialog() {
     const downloadBtn = must(dlg.querySelector('[data-action="download"]'));
     const hostBtn = must(dlg.querySelector('[data-action="save-host"]'));
     const reconnectBtn = must(dlg.querySelector('[data-action="reconnect"]'));
+    const mergeBtn = must(dlg.querySelector('[data-action="merge"]'));
     const laterBtn = must(dlg.querySelector('[data-role="save-later"]'));
     const dismissBtns = Array.from(dlg.querySelectorAll('[data-action="close"]'));
     function apply(state) {
         const expired = state === 'expired';
         // A copy being out does not make the provider current, so recovery stays offered.
         const offeringRecovery = expired || state === 'recovered';
-        /* Nothing may dismiss: while expired the edits exist nowhere but this tab,
-        and a save in flight owns the one slot its reply lands in, so dismissing and
-        starting another would leave the first to settle the second's wait (#85). */
-        const held = expired || state === 'retrying' || state === 'saving';
+        const conflicted = state === 'conflict' || state === 'merging' || state === 'conflict-copied';
+        /* Nothing may dismiss: while expired or in conflict the edits exist nowhere
+        but this tab, and a save in flight reports here, including an expired
+        session that only this dialog can recover (#85, #74). */
+        const held = expired ||
+            state === 'retrying' ||
+            state === 'saving' ||
+            state === 'conflict' ||
+            state === 'merging';
         // Still asking its original question, rather than reporting an outcome.
         const asking = state === 'normal' || state === 'saving' || state === 'recovered';
         for (const btn of dismissBtns) {
@@ -7396,12 +7942,16 @@ function openSaveDialog() {
         reconnectBtn.hidden = !offeringRecovery;
         reconnectBtn.disabled = false;
         reconnectBtn.onclick = () => void runReconnect(session);
-        downloadBtn.hidden = offeringRecovery ? false : !(asking && !isHosted());
-        downloadBtn.disabled = false;
-        downloadBtn.textContent = offeringRecovery ? 'Download a copy' : 'Download';
-        downloadBtn.className = offeringRecovery ? 'btn btn-secondary' : 'btn btn-primary';
-        downloadBtn.onclick = offeringRecovery
-            ? () => void runDownload(session)
+        mergeBtn.hidden = !conflicted;
+        mergeBtn.disabled = state === 'merging';
+        mergeBtn.onclick = () => void runMerge(session, dlg);
+        const copying = offeringRecovery || conflicted;
+        downloadBtn.hidden = copying ? false : !(asking && !isHosted());
+        downloadBtn.disabled = state === 'merging';
+        downloadBtn.textContent = copying ? 'Download a copy' : 'Download';
+        downloadBtn.className = copying ? 'btn btn-secondary' : 'btn btn-primary';
+        downloadBtn.onclick = copying
+            ? () => void runDownload(session, conflicted)
             : () => void downloadAndClose();
     }
     async function downloadAndClose() {
@@ -7421,6 +7971,10 @@ function openSaveDialog() {
             showExpired(session);
             return;
         }
+        if (result.reason === 'conflict') {
+            showConflict(session);
+            return;
+        }
         setSaveStatus(status, result.error ? `Save failed: ${result.error}` : 'Save failed.', 'error');
         apply('normal');
     }
@@ -7428,6 +7982,7 @@ function openSaveDialog() {
         status,
         reconnectBtn,
         downloadBtn,
+        mergeBtn,
         apply,
         retrySave: () => saveToHost(true),
     };
@@ -7475,19 +8030,25 @@ async function performSave() {
         setDirty(false);
         return { ok: true };
     }
+    lastSaveId += 1;
+    const id = lastSaveId;
     // Copy into a fresh, exactly-sized ArrayBuffer for the structured clone.
-    postToHost(saveMessage(app.filename, new Uint8Array(bytes).buffer));
+    const base = app.baseVersion ?? undefined; // the host refuses to replace any other version (#74)
+    postToHost(saveMessage(id, app.filename, new Uint8Array(bytes).buffer, base));
     const result = await new Promise((resolve) => {
         const settle = (value) => {
             window.clearTimeout(timer);
-            pendingSave = null;
+            pendingSaves.delete(id);
             resolve(value);
         };
         const timer = window.setTimeout(() => settle({ ok: false, error: 'the provider did not answer' }), SAVE_TIMEOUT_MS);
-        pendingSave = settle;
+        pendingSaves.set(id, settle);
     });
-    if (result.ok)
+    if (result.ok) {
+        if (result.version !== undefined)
+            app.baseVersion = result.version;
         setDirty(false);
+    }
     return result;
 }
 // ============================================================
@@ -7572,6 +8133,7 @@ function confirmUnsavedChanges(prompt, proceed, cleanPrompt) {
     status.className = 'save-status';
     const downloadBtn = must(dlg.querySelector('[data-action="download"]'));
     const reconnectBtn = must(dlg.querySelector('[data-action="reconnect"]'));
+    const mergeBtn = must(dlg.querySelector('[data-action="merge"]'));
     const cancelBtn = must(dlg.querySelector('[data-action="cancel-discard"]'));
     const discardBtn = must(dlg.querySelector('[data-action="confirm-discard"]'));
     const saveBtn = must(dlg.querySelector('[data-action="confirm-save"]'));
@@ -7582,10 +8144,15 @@ function confirmUnsavedChanges(prompt, proceed, cleanPrompt) {
     function apply(state) {
         const expired = state === 'expired';
         const offeringRecovery = expired || state === 'recovered';
+        const conflicted = state === 'conflict' || state === 'merging' || state === 'conflict-copied';
         /* The same hold as the save dialog, with a second reason of its own: this
         prompt runs proceed() on success, so a cancel landing mid-save would close a
         database the user just backed out of (#85). */
-        const held = expired || state === 'retrying' || state === 'saving';
+        const held = expired ||
+            state === 'retrying' ||
+            state === 'saving' ||
+            state === 'conflict' ||
+            state === 'merging';
         const asking = state === 'normal' || state === 'saving' || state === 'recovered';
         cancelBtn.hidden = held;
         cancelBtn.onclick = () => dlg.close();
@@ -7611,11 +8178,15 @@ function confirmUnsavedChanges(prompt, proceed, cleanPrompt) {
         reconnectBtn.hidden = !offeringRecovery;
         reconnectBtn.disabled = false;
         reconnectBtn.onclick = () => void runReconnect(session);
-        downloadBtn.hidden = !offeringRecovery;
-        downloadBtn.disabled = false;
+        // A merge leaves edits to review, so it ends this prompt rather than proceeding (#74).
+        mergeBtn.hidden = !conflicted;
+        mergeBtn.disabled = state === 'merging';
+        mergeBtn.onclick = () => void runMerge(session, dlg);
+        downloadBtn.hidden = !(offeringRecovery || conflicted);
+        downloadBtn.disabled = state === 'merging';
         downloadBtn.textContent = 'Download a copy';
         downloadBtn.className = 'btn btn-secondary';
-        downloadBtn.onclick = () => void runDownload(session);
+        downloadBtn.onclick = () => void runDownload(session, conflicted);
     }
     async function saveThenProceed(held = false) {
         setSaveStatus(status, 'Saving…');
@@ -7630,6 +8201,10 @@ function confirmUnsavedChanges(prompt, proceed, cleanPrompt) {
             showExpired(session);
             return;
         }
+        if (result.reason === 'conflict') {
+            showConflict(session);
+            return;
+        }
         setSaveStatus(status, result.error ? `Save failed: ${result.error}` : 'Save failed.', 'error');
         apply('normal');
     }
@@ -7637,12 +8212,111 @@ function confirmUnsavedChanges(prompt, proceed, cleanPrompt) {
         status,
         reconnectBtn,
         downloadBtn,
+        mergeBtn,
         apply,
         retrySave: () => saveThenProceed(true),
     };
     apply('normal');
     dlg.showModal();
     saveBtn.focus();
+}
+function showNotice(notice) {
+    const dlg = byId('dlg-notice');
+    byId('notice-title').textContent = notice.title;
+    byId('notice-message').textContent = notice.message;
+    const list = byId('notice-list');
+    list.innerHTML = '';
+    for (const item of notice.items ?? []) {
+        const li = document.createElement('li');
+        li.textContent = item;
+        list.appendChild(li);
+    }
+    list.hidden = list.children.length === 0;
+    for (const btn of dlg.querySelectorAll('[data-action="close"]')) {
+        btn.onclick = () => dlg.close();
+    }
+    dlg.showModal();
+}
+function savedWhen(savedAt) {
+    return savedAt === undefined ? '' : ` at ${formatDateTime(savedAt)}`;
+}
+function mergeNotice(summary, savedAt) {
+    const saved = `This database was also saved elsewhere${savedWhen(savedAt)}`;
+    const changes = summary.changed === 1 ? '1 change from there is' : `${summary.changed} changes from there are`;
+    const notice = {
+        title: 'Merged with the version saved elsewhere',
+        message: summary.changed === 0
+            ? `${saved}, with nothing your copy here lacked. Save when ready.`
+            : `${saved}. ${changes} now merged with your unsaved changes here; review them, then save.`,
+    };
+    if (summary.conflicts.length > 0) {
+        notice.message +=
+            ' These entries changed in both places, and each keeps the other version in its History:';
+        notice.items = summary.conflicts.map((title) => title || '(untitled)');
+    }
+    return notice;
+}
+async function openHeld(creds, gone) {
+    app.db = await Kdbx.load(new Uint8Array(must(app.file)), creds);
+    if (!gone)
+        return null;
+    return {
+        title: 'This file is gone from storage',
+        message: 'It was removed or replaced since it was opened here, so saving back will fail. Download a copy to keep this database.',
+    };
+}
+async function opens(bytes, creds) {
+    try {
+        await Kdbx.load(bytes, creds);
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+/** Open the version saved elsewhere while this tab was locked. With nothing
+unsaved here it replaces this copy; with unsaved edits the two are merged by
+KeePass's rules and the result left unsaved to review. Throws what the unlock
+screen should say when these credentials can't do either. */
+async function openNewer(creds, newer) {
+    const bytes = new Uint8Array(newer.bytes);
+    const when = savedWhen(newer.savedAt);
+    if (!app.dirty) {
+        try {
+            app.db = await Kdbx.load(bytes, creds);
+        }
+        catch {
+            throw new Error(`The version saved elsewhere${when} doesn't open with these credentials.`);
+        }
+        app.file = newer.bytes;
+        app.baseVersion = newer.version;
+        return {
+            title: 'Opened the newer version',
+            message: `This database was saved elsewhere${when}, so that version is open now.`,
+        };
+    }
+    let db;
+    try {
+        db = await Kdbx.load(new Uint8Array(must(app.file)), creds);
+    }
+    catch (err) {
+        if (await opens(bytes, creds)) {
+            throw new Error(`These credentials open the version saved elsewhere${when}, but your unsaved changes here are locked with the previous ones. Enter those to merge the two.`);
+        }
+        throw err;
+    }
+    app.db = db;
+    try {
+        const summary = await db.mergeIn(bytes);
+        app.baseVersion = newer.version;
+        return mergeNotice(summary, newer.savedAt);
+    }
+    catch {
+        return {
+            title: 'Could not merge',
+            message: `The version saved elsewhere${when} couldn't be opened or read with these credentials, so your unsaved changes here aren't merged into it, and saving here will be refused. Download a copy to keep them.`,
+        };
+    }
 }
 // ============================================================
 // Dialog: Confirm Delete
@@ -7718,6 +8392,7 @@ function openGroupDialog(mode, onDone) {
             // createGroup() always appends Name/IconID children, so both are always present.
             setText(getChild(mode.group, 'Name'), name);
             setText(getChild(mode.group, 'IconID'), String(selectedIconId));
+            touchLastModified(mode.group);
         }
         else {
             const newGroup = createGroup(name);
@@ -7789,11 +8464,13 @@ function openMoveToDialog(title, isValidTarget, onPick) {
 // packages/embed-protocol, rather than hand-checked here, so the app and host
 // side of the protocol can't drift out of sync with each other:
 //   app  → host : kw-ready          app booted, send a vault or a create instruction
-//   host → app  : kw-open           open this vault (filename, bytes: ArrayBuffer)
+//   host → app  : kw-open           open this vault (filename, bytes: ArrayBuffer, version?)
 //   host → app  : kw-create         start a brand-new, empty vault
 //   host → app  : kw-find           host saw the find keystroke; take it
-//   app  → host : kw-save           user saved; please persist (filename, bytes: ArrayBuffer)
-//   host → app  : kw-saved          result of that persist (ok, error?, reason?)
+//   app  → host : kw-save           user saved; please persist (id, filename, bytes, base?)
+//   host → app  : kw-saved          result of the persist with that id (id, ok, error?, reason?, version?)
+//   app  → host : kw-check          is a newer version than this one stored? (base?)
+//   host → app  : kw-checked        unchanged, newer (bytes, version, savedAt?), gone, or unknown
 //   app  → host : kw-reconnect      the host credential expired; please renew it
 //   host → app  : kw-reconnected    result of that renewal (ok, error?)
 //   host → app  : kw-close-request  host wants to remove this iframe; may I?
@@ -7807,9 +8484,27 @@ const PEER = peerOrigin(window.location.protocol, window.location.origin);
 const HOST_REPLY_GRACE_MS = 1000;
 // This page's own title, kept so a closed database can hand the tab back (#65).
 const BASE_TITLE = document.title;
-/** Resolves the in-flight performSave()'s promise once a `kw-saved` reply
-arrives, or null when no save is outstanding. */
-let pendingSave = null;
+let pendingCheck = null;
+/** Ask the host whether a newer version than the one these edits build on is
+stored. A host that never answers counts as unknown, on the reconnect's budget
+since the host may need to renew its credential first (#74). */
+function requestCheck() {
+    pendingCheck?.({ status: 'unknown' }); // a newer check supersedes one still waiting
+    postToHost(app.baseVersion === null ? checkMessage() : checkMessage(app.baseVersion));
+    return new Promise((resolve) => {
+        const settle = (result) => {
+            window.clearTimeout(timer);
+            pendingCheck = null;
+            resolve(result);
+        };
+        const timer = window.setTimeout(() => settle({ status: 'unknown' }), RECONNECT_TIMEOUT_MS);
+        pendingCheck = settle;
+    });
+}
+/* Saves can overlap, so each waits under its own id and a kw-saved reply settles
+only the save it names; a reply that outlived its wait finds nothing (#91). */
+const pendingSaves = new Map();
+let lastSaveId = 0;
 let pendingReconnect = null;
 /* Long enough for a real consent flow, since the expired dialog removes every
 other way out and a host that never answers would seal it shut (#85). */
@@ -7853,22 +8548,29 @@ function handleHostMessage(event) {
         hostState = 'hosted';
         app.filename = event.data.filename;
         app.file = event.data.bytes;
+        app.baseVersion = event.data.version ?? null;
         showUnlock();
     }
     else if (isCreateMessage(event.data)) {
         hostState = 'hosted';
+        app.baseVersion = null;
         showCreateDatabase();
     }
     else if (isSavedMessage(event.data)) {
-        const resolve = pendingSave;
-        pendingSave = null;
-        const { ok, error, reason } = event.data;
+        const { id, ok, error, reason, version } = event.data;
         const result = { ok };
         if (error !== undefined)
             result.error = error;
         if (reason !== undefined)
             result.reason = reason;
-        resolve?.(result);
+        if (version !== undefined)
+            result.version = version;
+        pendingSaves.get(id)?.(result);
+    }
+    else if (isCheckedMessage(event.data)) {
+        const resolve = pendingCheck;
+        pendingCheck = null;
+        resolve?.(event.data);
     }
     else if (isReconnectedMessage(event.data)) {
         const resolve = pendingReconnect;
@@ -7962,6 +8664,8 @@ if (typeof setEntryTags !== 'undefined') globalThis.setEntryTags = setEntryTags;
 if (typeof getEntryTimes !== 'undefined') globalThis.getEntryTimes = getEntryTimes;
 if (typeof setEntryExpiry !== 'undefined') globalThis.setEntryExpiry = setEntryExpiry;
 if (typeof touchLastModified !== 'undefined') globalThis.touchLastModified = touchLastModified;
+if (typeof moveToGroup !== 'undefined') globalThis.moveToGroup = moveToGroup;
+if (typeof deletePermanently !== 'undefined') globalThis.deletePermanently = deletePermanently;
 if (typeof getEntryAttachments !== 'undefined') globalThis.getEntryAttachments = getEntryAttachments;
 if (typeof addEntryAttachment !== 'undefined') globalThis.addEntryAttachment = addEntryAttachment;
 if (typeof renameEntryAttachment !== 'undefined') globalThis.renameEntryAttachment = renameEntryAttachment;
@@ -7998,6 +8702,8 @@ if (typeof defaultExpiryLocalInputValue !== 'undefined') globalThis.defaultExpir
 if (typeof isOpenMessage !== 'undefined') globalThis.isOpenMessage = isOpenMessage;
 if (typeof isCreateMessage !== 'undefined') globalThis.isCreateMessage = isCreateMessage;
 if (typeof isSavedMessage !== 'undefined') globalThis.isSavedMessage = isSavedMessage;
+if (typeof isCheckedMessage !== 'undefined') globalThis.isCheckedMessage = isCheckedMessage;
+if (typeof checkMessage !== 'undefined') globalThis.checkMessage = checkMessage;
 if (typeof isCloseRequestMessage !== 'undefined') globalThis.isCloseRequestMessage = isCloseRequestMessage;
 if (typeof readyMessage !== 'undefined') globalThis.readyMessage = readyMessage;
 if (typeof saveMessage !== 'undefined') globalThis.saveMessage = saveMessage;

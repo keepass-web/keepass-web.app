@@ -1358,10 +1358,14 @@ body:not(.app-mode) .screen-edit {
 }
 
 textarea.edit-value {
-  min-height: 6em;
   resize: vertical;
   /* What browsers give the single-line inputs beside it (#89). */
   font-family: system-ui, sans-serif;
+}
+
+/* A protected value with line breaks, which a password input would drop (#126). */
+textarea.edit-value.concealed {
+  -webkit-text-security: disc;
 }
 
 .edit-field:has(textarea) {
@@ -1386,6 +1390,12 @@ textarea.edit-value {
   .edit-key {
     width: 100%;
   }
+}
+
+/* Each names a field or attachment, and a long unbroken name must still wrap at phone width (#125, #120). */
+#edit-error,
+#edit-attachments-error {
+  overflow-wrap: anywhere;
 }
 
 .btn-add-field {
@@ -1788,7 +1798,7 @@ body.embedded footer {
     <symbol id="icon-identity" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="11" r="2"/><path d="M5 16a3 3 0 0 1 6 0m3-6h4m-4 4h4"/></symbol>
     <symbol id="icon-document-ready" viewBox="0 0 24 24"><path d="M5 2h9l5 5v15H5zm9 0v5h5m-10.5 7.5 2.5 2.5 4.5-4.5"/></symbol>
     <symbol id="icon-camera" viewBox="0 0 24 24"><path d="M3 8a2 2 0 0 1 2-2h2l2-2h6l2 2h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="13" r="4"/></symbol>
-    <symbol id="icon-wireless" viewBox="0 0 24 24"><path d="M4 12h.01M8 8.5a5 5 0 0 1 0 7M12 5a10 10 0 0 1 0 14M16 2a14 14 0 0 1 0 20"/></symbol>
+    <symbol id="icon-wireless" viewBox="0 0 24 24"><path d="M12 19h.01M8.5 15.5a5 5 0 0 1 7 0M5 12a10 10 0 0 1 14 0M2 8.5a14 14 0 0 1 20 0"/></symbol>
     <symbol id="icon-keys" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><path d="M8.1 8.1 20 20M15.9 8.1 4 20m13-3 2-2M7 17l-2-2"/></symbol>
     <symbol id="icon-energy" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></symbol>
     <symbol id="icon-scanner" viewBox="0 0 24 24"><path d="M3 14h18v6H3zm0 0 16-7M7 17h6"/></symbol>
@@ -2035,6 +2045,7 @@ body.embedded footer {
       <div class="edit-body">
         <button type="button" class="icon-picker-btn" id="edit-icon-btn" title="Choose icon"></button>
         <div id="edit-fields" class="edit-fields"></div>
+        <div id="edit-error" class="error-msg" hidden></div>
         <button type="button" class="btn btn-secondary btn-add-field" data-action="add-field">+ Add field</button>
         <div class="field">
           <label for="edit-tags">Tags <span class="optional">(comma or semicolon separated)</span></label>
@@ -2057,6 +2068,7 @@ body.embedded footer {
             </label>
           </div>
           <div id="edit-attachments" class="attachment-list"></div>
+          <div id="edit-attachments-error" class="error-msg" hidden></div>
         </div>
       </div>
     </div>
@@ -2116,12 +2128,12 @@ body.embedded footer {
     </div>
     <div class="dialog-body">
       <p class="warning-text">
-        This creates an unencrypted file with every entry's title, username, password, URL, notes, and tags. Anyone who can read the downloaded file can read your passwords in plain text.
+        This creates an unencrypted file. Anyone who can read the downloaded file can read your passwords in plain text. CSV holds every entry's group, title, username, password, URL, notes, and tags; KeePass XML holds the whole database, attachments and history included, and KeePass and KeePassXC can import it. Values are exported exactly as stored, so a spreadsheet that opens the CSV may run one starting with =, +, - or @ as a formula.
       </p>
     </div>
     <div class="dialog-footer">
       <button type="button" class="btn btn-secondary" data-action="export-csv">Export as CSV</button>
-      <button type="button" class="btn btn-secondary" data-action="export-xml">Export as XML</button>
+      <button type="button" class="btn btn-secondary" data-action="export-xml">Export as KeePass XML</button>
     </div>
   </dialog>
 
@@ -2295,7 +2307,7 @@ body.embedded footer {
   &middot; <a href="https://github.com/keepass-web/.github/blob/main/profile/FAQ.md" target="_blank" rel="noopener noreferrer">FAQ</a>
   &middot; <a href="https://github.com/keepass-web/source-application" target="_blank" rel="noopener noreferrer">Source</a>
 </p>
-<footer><a href="https://github.com/keepass-web/source-application/tree/v0.13.0" target="_blank" rel="noopener noreferrer">v0.13.0</a> committed on <time id="commit-date" datetime="2026-10-12T16:55:51-04:00">2026-10-12T16:55:51-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+<footer><a href="https://github.com/keepass-web/source-application/tree/v0.14.0" target="_blank" rel="noopener noreferrer">v0.14.0</a> committed on <time id="commit-date" datetime="2026-10-21T11:36:51-04:00">2026-10-21T11:36:51-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
 
 
   <script>
@@ -3706,11 +3718,17 @@ function kx_canonicalize(children) {
 function parseXml(source) {
     return new KX_XmlParser(source).parse();
 }
+// Outside XML 1.0's Char production, lone surrogates too; strict readers stop at one, so KeePass drops them (#129).
+const KX_NON_XML_CHAR = /[^\t\n\r\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/gu;
 function kx_escapeText(value) {
-    return value.replace(/[&<>]/g, (ch) => (ch === '&' ? '&amp;' : ch === '<' ? '&lt;' : '&gt;'));
+    return value
+        .replace(KX_NON_XML_CHAR, '')
+        .replace(/[&<>]/g, (ch) => (ch === '&' ? '&amp;' : ch === '<' ? '&lt;' : '&gt;'));
 }
 function kx_escapeAttribute(value) {
-    return value.replace(/[&<"]/g, (ch) => (ch === '&' ? '&amp;' : ch === '<' ? '&lt;' : '&quot;'));
+    return value
+        .replace(KX_NON_XML_CHAR, '')
+        .replace(/[&<"]/g, (ch) => (ch === '&' ? '&amp;' : ch === '<' ? '&lt;' : '&quot;'));
 }
 function kx_serializeAttributes(attributes) {
     let out = '';
@@ -4152,19 +4170,14 @@ async function keyFileComponent(bytes) {
     if (bytes.length === 32) {
         return bytes.slice();
     }
-    const text = kx_tryDecodeAscii(bytes);
-    if (text !== undefined && KX_HEX_64.test(text.trim())) {
-        return fromHex(text.trim());
-    }
-    return sha256(bytes);
-}
-function kx_tryDecodeAscii(bytes) {
-    for (const byte of bytes) {
-        if (byte > 0x7e || (byte < 0x20 && byte !== 0x09 && byte !== 0x0a && byte !== 0x0d)) {
-            return undefined;
+    // Hex only at exactly 64 characters, as KeePass and KeePassXC read it (#128).
+    if (bytes.length === 64) {
+        const text = new TextDecoder('ascii').decode(bytes);
+        if (KX_HEX_64.test(text)) {
+            return fromHex(text);
         }
     }
-    return new TextDecoder('ascii').decode(bytes);
+    return sha256(bytes);
 }
 /** Parse a KeePass XML key file. v2.x hex-encodes the key with a `Data
 Hash` corruption check; v1.x is unchecked Base64. `undefined` if not XML. */
@@ -4765,6 +4778,13 @@ function applyOutboundProtection(root, cipher) {
         setText(element, toBase64(ciphertext));
     });
 }
+// Plain XML has no inner stream, so KeePass marks a protected value ProtectInMemory there instead (#137).
+function markProtectedInMemory(root) {
+    kx_walkProtected(root, (element) => {
+        element.attributes = element.attributes.filter(([name]) => name !== KX_PROTECTED_ATTRIBUTE);
+        setAttribute(element, 'ProtectInMemory', 'True');
+    });
+}
 // --- Builders ---------------------------------------------------------------
 function kx_nowIso() {
     return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
@@ -4817,13 +4837,13 @@ function createEntry(input) {
     }
     return entry;
 }
-// An entry's `;`-joined tags from <Tags>; [] if absent, matching real KeePass.
+// An entry's tags from <Tags>; [] if absent, matching real KeePass.
 function getEntryTags(entry) {
     const tagsEl = getChild(entry, 'Tags');
     if (!tagsEl)
         return [];
     return getText(tagsEl)
-        .split(';')
+        .split(/[,;\t]/) // KeePassXC writes commas and KeePass semicolons (#130)
         .map((tag) => tag.trim())
         .filter((tag) => tag.length > 0);
 }
@@ -4884,15 +4904,25 @@ function touchMetaTime(document, name) {
     if (meta)
         setChildText(meta, name, kx_nowIso());
 }
+// Name this app as the writer, so a file names whoever saved it last, as KeePass does (#136).
+function setGenerator(document) {
+    const meta = getChild(document, 'Meta');
+    if (meta)
+        setChildText(meta, 'Generator', KX_GENERATOR);
+}
 // Bump an entry's or group's LastModificationTime to now; merges keep the newer copy by it (#108).
 function touchLastModified(element) {
     kx_setTime(element, 'LastModificationTime', kx_nowIso());
 }
-// Move an entry or group between groups; merges place it by the newer LocationChanged (#108).
+/** Move an entry or group between groups; merges place it by the newer LocationChanged
+(#108), and a restore puts it back in the group it left, as KeePass and KeePassXC do (#133). */
 function moveToGroup(element, from, to) {
     from.children = from.children.filter((child) => child !== element);
     appendChild(to, element);
     kx_setTime(element, 'LocationChanged', kx_nowIso());
+    const fromUuid = getChild(from, 'UUID');
+    if (fromUuid)
+        setChildText(element, 'PreviousParentGroup', getText(fromUuid));
 }
 /** Remove an entry or group for good, recording it and every group and entry
 under it in DeletedObjects so a merge elsewhere doesn't bring them back (#108). */
@@ -4977,14 +5007,69 @@ function removeEntryAttachment(entry, name) {
     });
 }
 const KX_DEFAULT_HISTORY_MAX_ITEMS = 10;
+const KX_DEFAULT_HISTORY_MAX_SIZE = 6 * 1024 * 1024; // KeePass's and KeePassXC's default, in bytes
 // An entry's past versions from <History>, oldest first; [] if none.
 function getEntryHistory(entry) {
     const historyEl = getChild(entry, 'History');
     return historyEl ? getChildren(historyEl, 'Entry') : [];
 }
-/** Snapshot `entry`'s current state onto its History, trimmed to
-`HistoryMaxItems` (default 10). Call before applying an edit, not after. */
-function pushHistorySnapshot(document, entry) {
+// A whole number from Meta, `fallback` when the file leaves it out, or Infinity when it sets no limit.
+function kx_historyLimit(document, name, fallback) {
+    const meta = getChild(document, 'Meta');
+    const limitEl = meta && getChild(meta, name);
+    const limit = limitEl ? Number.parseInt(getText(limitEl), 10) : fallback;
+    return Number.isFinite(limit) && limit >= 0 ? limit : Number.POSITIVE_INFINITY;
+}
+/** A History version's size as KeePassXC counts it toward HistoryMaxSize (#135): the
+UTF-8 bytes of its fields, attachment names and data, tags, auto-type and custom data. */
+function kx_historyVersionSize(version, binaries) {
+    const bytes = (text) => utf8Encode(text).length;
+    const childBytes = (element, name) => {
+        const child = getChild(element, name);
+        return child ? bytes(getText(child)) : 0;
+    };
+    let size = 0;
+    for (const string of getChildren(version, 'String')) {
+        size += childBytes(string, 'Key') + childBytes(string, 'Value');
+    }
+    for (const { name, ref } of getEntryAttachments(version)) {
+        size += bytes(name) + (binaries[ref]?.data.length ?? 0);
+    }
+    for (const tag of getEntryTags(version))
+        size += bytes(tag);
+    const autoType = getChild(version, 'AutoType');
+    for (const association of autoType ? getChildren(autoType, 'Association') : []) {
+        size += childBytes(association, 'Window') + childBytes(association, 'KeystrokeSequence');
+    }
+    const customData = getChild(version, 'CustomData');
+    for (const item of customData ? getChildren(customData, 'Item') : []) {
+        size += childBytes(item, 'Key') + childBytes(item, 'Value');
+    }
+    return size;
+}
+/** Trim an entry's History as KeePassXC does whenever it grows: newest first, a version
+goes, with all older ones, once it passes HistoryMaxItems or takes the total past
+HistoryMaxSize (#135). */
+function trimHistory(document, entry, binaries) {
+    const historyEl = getChild(entry, 'History');
+    if (!historyEl)
+        return;
+    const maxItems = kx_historyLimit(document, 'HistoryMaxItems', KX_DEFAULT_HISTORY_MAX_ITEMS);
+    const maxSize = kx_historyLimit(document, 'HistoryMaxSize', KX_DEFAULT_HISTORY_MAX_SIZE);
+    const kept = new Set();
+    let size = 0;
+    for (const version of getChildren(historyEl, 'Entry').reverse()) {
+        if (kept.size >= maxItems)
+            break;
+        size += kx_historyVersionSize(version, binaries);
+        if (size > maxSize)
+            break;
+        kept.add(version);
+    }
+    historyEl.children = historyEl.children.filter((child) => !(child.type === 'element' && child.name === 'Entry' && !kept.has(child)));
+}
+// Snapshot `entry`'s current state onto its History, then trim it. Call before applying an edit, not after.
+function pushHistorySnapshot(document, entry, binaries) {
     const snapshot = cloneElement(entry);
     snapshot.children = snapshot.children.filter((child) => !(child.type === 'element' && child.name === 'History'));
     let historyEl = getChild(entry, 'History');
@@ -4993,29 +5078,17 @@ function pushHistorySnapshot(document, entry) {
         appendChild(entry, historyEl);
     }
     appendChild(historyEl, snapshot);
-    const meta = getChild(document, 'Meta');
-    const maxItemsEl = meta && getChild(meta, 'HistoryMaxItems');
-    const maxItems = maxItemsEl
-        ? Number.parseInt(getText(maxItemsEl), 10)
-        : KX_DEFAULT_HISTORY_MAX_ITEMS;
-    if (!Number.isFinite(maxItems) || maxItems < 0)
-        return;
-    const entries = getChildren(historyEl, 'Entry');
-    const excess = entries.length - maxItems;
-    if (excess > 0) {
-        const dropped = new Set(entries.slice(0, excess));
-        historyEl.children = historyEl.children.filter((child) => !(child.type === 'element' && dropped.has(child)));
-    }
+    trimHistory(document, entry, binaries);
 }
 /** Restore `entry` to a past version: snapshots current state first, then
 replaces its fields. `snapshot` must come from `getEntryHistory(entry)`. For
 merges, the restore is the newest edit and keeps the current LocationChanged,
 since the entry has not moved (#108). */
-function restoreHistoryEntry(document, entry, snapshot) {
+function restoreHistoryEntry(document, entry, snapshot, binaries) {
     const restoredFields = cloneElement(snapshot);
     const currentTimes = getChild(entry, 'Times');
     const locationChanged = currentTimes && getChild(currentTimes, 'LocationChanged');
-    pushHistorySnapshot(document, entry);
+    pushHistorySnapshot(document, entry, binaries);
     const uuidEl = getChild(entry, 'UUID');
     const historyEl = getChild(entry, 'History');
     const newChildren = [];
@@ -5091,6 +5164,9 @@ function findOrCreateRecycleBin(document) {
     }
     const bin = createGroup(KX_RECYCLE_BIN_NAME);
     setChildText(bin, 'IconID', '43'); // TrashBin, as KeePass and KeePassXC give their own bin (#121)
+    // Left out of search and auto-type, as KeePass and KeePassXC make their own bins (#132).
+    appendChild(bin, createElement('EnableAutoType', 'false'));
+    appendChild(bin, createElement('EnableSearching', 'false'));
     appendChild(rootGroup, bin);
     // createGroup() always appends a UUID child first, so this is always present.
     const binUuid = getText(getChild(bin, 'UUID'));
@@ -5098,10 +5174,26 @@ function findOrCreateRecycleBin(document) {
     setChildText(meta, 'RecycleBinChanged', kx_nowIso());
     return bin;
 }
+// Off only when the database says so, making deletes permanent; on by default, as in KeePass (#132).
+function isRecycleBinEnabled(document) {
+    const meta = getChild(document, 'Meta');
+    const enabledEl = meta && getChild(meta, 'RecycleBinEnabled');
+    return !enabledEl || getText(enabledEl).trim().toLowerCase() !== 'false';
+}
 // True if `group` is the database's recycle bin, or nested inside it.
 function isInRecycleBin(document, group) {
     const bin = kx_findRecycleBin(document);
     return bin !== undefined && kx_containsGroup(bin, group);
+}
+// The group an entry or group was last moved out of, if it still exists outside the recycle bin (#133).
+function findPreviousParentGroup(document, element) {
+    const uuidEl = getChild(element, 'PreviousParentGroup');
+    const rootElement = getChild(document, 'Root');
+    const rootGroup = rootElement && getChild(rootElement, 'Group');
+    if (!uuidEl || !rootGroup)
+        return undefined;
+    const group = kx_findGroupByUuid(rootGroup, getText(uuidEl));
+    return group && !isInRecycleBin(document, group) ? group : undefined;
 }
 // Build a complete <KeePassFile> document with Meta and a root group, optionally via build().
 function createDatabaseDocument(databaseName, build) {
@@ -5112,7 +5204,8 @@ function createDatabaseDocument(databaseName, build) {
     appendChild(meta, createElement('DatabaseNameChanged', kx_nowIso()));
     appendChild(meta, createElement('MasterKeyChanged', kx_nowIso()));
     appendChild(meta, createElement('RecycleBinEnabled', 'True'));
-    appendChild(meta, createElement('HistoryMaxItems', '10'));
+    appendChild(meta, createElement('HistoryMaxItems', String(KX_DEFAULT_HISTORY_MAX_ITEMS)));
+    appendChild(meta, createElement('HistoryMaxSize', String(KX_DEFAULT_HISTORY_MAX_SIZE)));
     appendChild(root, meta);
     const rootElement = createElement('Root');
     const rootGroup = createGroup(databaseName);
@@ -5352,14 +5445,13 @@ function kx_snapshot(entry) {
     copy.children = copy.children.filter((child) => !(child.type === 'element' && child.name === 'History'));
     return copy;
 }
-// One version per modification time, this copy's winning a tie, oldest first, trimmed to the limit.
-function kx_mergeHistory(local, other, maxItems) {
+// One version per modification time, this copy's winning a tie, oldest first.
+function kx_mergeHistory(local, other) {
     const byTime = new Map();
     for (const version of [...other, ...local]) {
         byTime.set(kx_seconds(version, 'LastModificationTime'), version);
     }
-    const merged = [...byTime.entries()].sort((a, b) => a[0] - b[0]).map(([, version]) => version);
-    return maxItems >= 0 ? merged.slice(Math.max(0, merged.length - maxItems)) : merged;
+    return [...byTime.entries()].sort((a, b) => a[0] - b[0]).map(([, version]) => version);
 }
 function kx_setHistory(entry, versions) {
     let historyEl = getChild(entry, 'History');
@@ -5463,8 +5555,9 @@ function kx_rootGroup(document) {
 }
 /** Merge `other` into `local`, both whole `<KeePassFile>` documents of the same
 database. `other` is consumed: its attachment references are rewritten through
-`adoptBinary`, which maps one of its pool indexes to one in `local`'s pool. */
-function mergeDocuments(local, other, adoptBinary) {
+`adoptBinary`, which maps one of its pool indexes to one in `local`'s pool, and
+`binaries` is that pool, which sizes combined Histories against HistoryMaxSize. */
+function mergeDocuments(local, other, adoptBinary, binaries) {
     const localRoot = kx_rootGroup(local);
     const otherRoot = kx_rootGroup(other);
     const index = kx_index(localRoot, null, new Map());
@@ -5472,9 +5565,6 @@ function mergeDocuments(local, other, adoptBinary) {
     // Each of the other copy's groups by its counterpart here, so children land under the right parent.
     const counterpart = new Map();
     const summary = { changed: 0, conflicts: [] };
-    const localMeta = getChild(local, 'Meta');
-    const maxItemsEl = localMeta && getChild(localMeta, 'HistoryMaxItems');
-    const maxItems = maxItemsEl ? Number.parseInt(getText(maxItemsEl), 10) : 10;
     kx_adoptBinaries(otherRoot, adoptBinary);
     // An object both copies hold goes where the copy that moved it last put it.
     const place = (placed, otherObject, otherParent) => {
@@ -5561,7 +5651,8 @@ function mergeDocuments(local, other, adoptBinary) {
             if (!seen)
                 summary.conflicts.push(kx_title(entry));
         }
-        kx_setHistory(entry, kx_mergeHistory(localHistory, otherHistory, maxItems));
+        kx_setHistory(entry, kx_mergeHistory(localHistory, otherHistory));
+        trimHistory(local, entry, binaries); // by size as well as count, as an edit trims it (#166)
         place(placed, otherEntry, otherParent);
     };
     mergeGroup(otherRoot, null);
@@ -5609,6 +5700,7 @@ function mergeDocuments(local, other, adoptBinary) {
     }
     if (deletedObjects)
         deletedObjects.children = [...records.values()];
+    const localMeta = getChild(local, 'Meta');
     const otherMeta = getChild(other, 'Meta');
     if (localMeta && otherMeta)
         kx_mergeMeta(localMeta, otherMeta);
@@ -5688,6 +5780,19 @@ function kx_refreshHeaderHash(root, headerSha) {
     if (hashEl)
         setText(hashEl, toBase64(headerSha));
 }
+// True if any entry or group, History included, records the group it was last moved out of.
+function kx_hasPreviousParentGroup(element) {
+    return element.children.some((child) => child.type === 'element' &&
+        (child.name === 'PreviousParentGroup' || kx_hasPreviousParentGroup(child)));
+}
+// Drop every previous-group record, which a file older than KDBX 4.1 doesn't carry (#133).
+function kx_removePreviousParentGroups(element) {
+    element.children = element.children.filter((child) => !(child.type === 'element' && child.name === 'PreviousParentGroup'));
+    for (const child of element.children) {
+        if (child.type === 'element')
+            kx_removePreviousParentGroups(child);
+    }
+}
 // KeePass refuses a file whose non-empty <Meta><HeaderHash> disagrees with its header (#103).
 function kx_checkHeaderHash(root, headerSha) {
     const meta = getChild(root, 'Meta');
@@ -5739,7 +5844,7 @@ class Kdbx {
         return mergeDocuments(this.root, other.root, (ref) => {
             const binary = other.getBinaryData(ref);
             return binary === undefined ? -1 : this.addBinary(binary); // a stale reference stays stale
-        });
+        }, this.binaries);
     }
     // Add a binary attachment, reusing an identical one if present; returns its pool index.
     addBinary(data) {
@@ -5868,6 +5973,19 @@ class Kdbx {
     async save() {
         return this.header.version.major >= 4 ? this.#save4() : this.#save3();
     }
+    /** The whole database as unencrypted KeePass XML, which KeePass and KeePassXC
+    export and import, so it moves into either without loss (#137). Attachments go
+    in Meta, as KDBX 3.1 keeps them, and protected values in the clear. */
+    exportXml() {
+        const root = cloneElement(this.root);
+        writeMetaBinaries(root, this.binaries);
+        markProtectedInMemory(root);
+        for (const meta of getChildren(root, 'Meta')) {
+            // It vouches for an encrypted file's header, and plain XML has none.
+            meta.children = meta.children.filter((child) => !(child.type === 'element' && child.name === 'HeaderHash'));
+        }
+        return serializeXml(root);
+    }
     async #save4() {
         this.#pruneUnreferencedBinaries();
         const header = this.header;
@@ -5877,6 +5995,10 @@ class Kdbx {
             throw new Error('KDBX 4 database is missing KDF parameters');
         }
         header.kdfParameters.set(KdfParam.AesSeed, kx_bytes(getRandomBytes(32)));
+        // KeePass and KeePassXC write a previous-group record only into KDBX 4.1 (#133).
+        if (kx_hasPreviousParentGroup(this.root)) {
+            header.version.minor = Math.max(header.version.minor, 1);
+        }
         const rawHeader = writeOuterHeader(header);
         const headerSha = await sha256(rawHeader);
         // Fresh inner random stream key (64 bytes for ChaCha20, 32 for Salsa20).
@@ -5889,6 +6011,7 @@ class Kdbx {
         const cipher = await createProtectedStreamCipher(this.#innerStreamId, this.#innerStreamKey);
         const clonedRoot = cloneElement(this.root);
         isoTimesToBinary(clonedRoot);
+        setGenerator(clonedRoot);
         kx_refreshHeaderHash(clonedRoot, headerSha);
         applyOutboundProtection(clonedRoot, cipher);
         const xmlBytes = utf8Encode(serializeXml(clonedRoot));
@@ -5924,6 +6047,8 @@ class Kdbx {
         const cipher = await createProtectedStreamCipher(InnerStreamCipher.Salsa20, header.protectedStreamKey);
         const clonedRoot = cloneElement(this.root);
         writeMetaBinaries(clonedRoot, this.binaries);
+        kx_removePreviousParentGroups(clonedRoot);
+        setGenerator(clonedRoot);
         kx_refreshHeaderHash(clonedRoot, await sha256(rawHeader));
         applyOutboundProtection(clonedRoot, cipher);
         let xmlBytes = utf8Encode(serializeXml(clonedRoot));
@@ -6208,13 +6333,34 @@ function groupPathTo(rootGroup, target, path = []) {
     }
     return null;
 }
-// Keep only entries with a String field or tag matching the query, case-insensitively.
+/** Every entry search looks through: none in the recycle bin or in a group with
+searching off, which a group without its own setting inherits, as in KeePass and KeePassXC (#131). */
+function collectSearchableEntries(document, group, inherited = true, results = []) {
+    if (isInRecycleBin(document, group))
+        return results;
+    const setting = getChild(group, 'EnableSearching');
+    const value = setting ? getText(setting).trim().toLowerCase() : '';
+    const searchable = value === 'true' || (value !== 'false' && inherited);
+    if (searchable) {
+        for (const entry of getChildren(group, 'Entry'))
+            results.push({ entry, group });
+    }
+    for (const sub of getChildren(group, 'Group')) {
+        collectSearchableEntries(document, sub, searchable, results);
+    }
+    return results;
+}
+/** Keep only entries with a field or tag matching the query, case-insensitively;
+a password or other protected value never matches, as in KeePass and KeePassXC (#131). */
 function filterEntriesByQuery(entries, query) {
     const q = query.toLowerCase();
     return entries.filter(({ entry }) => {
         for (const string of getChildren(entry, 'String')) {
+            const k = getChild(string, 'Key');
             const v = getChild(string, 'Value');
-            if (v && getText(v).toLowerCase().includes(q))
+            if (!k || !v || getText(k) === 'Password' || getAttribute(v, 'Protected') === 'True')
+                continue;
+            if (getText(v).toLowerCase().includes(q))
                 return true;
         }
         return getEntryTags(entry).some((tag) => tag.toLowerCase().includes(q));
@@ -6258,58 +6404,25 @@ function entryColumnValue(entry, column) {
             return getEntryTimes(entry).created;
     }
 }
-function exportFields(entry, group) {
-    return [
-        ['Group', groupName(group)],
-        ['Title', entryTitle(entry)],
-        ['UserName', entryField(entry, 'UserName')],
-        ['Password', entryField(entry, 'Password')],
-        ['URL', entryField(entry, 'URL')],
-        ['Notes', entryField(entry, 'Notes')],
-        ['Tags', getEntryTags(entry).join(';')],
-    ];
-}
-/** A leading =, +, -, @, tab, or CR makes spreadsheets treat a CSV field
-as a formula (CWE-1236); entry data is attacker-controlled here. */
-const CSV_FORMULA_TRIGGER = /^[=+\-@\t\r]/;
-/** Quote a CSV field only when needed (RFC 4180), doubling internal quotes.
-A leading formula-trigger char is also neutralized with a leading
-apostrophe — the standard "force text" mitigation spreadsheets honor. */
+// Quote a CSV field only when needed (RFC 4180), doubling internal quotes.
 function csvField(value) {
-    const safe = CSV_FORMULA_TRIGGER.test(value) ? `'${value}` : value;
-    if (/[",\r\n]/.test(safe)) {
-        return `"${safe.replace(/"/g, '""')}"`;
-    }
-    return safe;
+    return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
 }
-// Serialize entries as plaintext CSV — see the caller for the required "unencrypted" warning.
-function toCsv(entries) {
-    const header = ['Group', 'Title', 'UserName', 'Password', 'URL', 'Notes', 'Tags'];
-    const lines = [header.join(',')];
-    for (const { entry, group } of entries) {
-        lines.push(exportFields(entry, group)
-            .map(([, value]) => csvField(value))
-            .join(','));
-    }
+/** Every entry as plaintext CSV, see the caller for the required "unencrypted"
+warning. Values are exactly as stored, so another client imports them unchanged,
+and Group is the path from the root joined by "/", as KeePassXC writes it (#137). */
+function toCsv(rootGroup) {
+    const lines = ['Group,Title,UserName,Password,URL,Notes,Tags'];
+    const walk = (group, path) => {
+        for (const entry of getChildren(group, 'Entry')) {
+            const fields = ['Title', 'UserName', 'Password', 'URL', 'Notes'].map((key) => entryField(entry, key));
+            lines.push([path, ...fields, getEntryTags(entry).join(';')].map(csvField).join(','));
+        }
+        for (const sub of getChildren(group, 'Group'))
+            walk(sub, `${path}/${groupName(sub)}`);
+    };
+    walk(rootGroup, groupName(rootGroup));
     return lines.join('\r\n');
-}
-function xmlEscape(value) {
-    return value
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&apos;');
-}
-// Serialize entries as plaintext XML, same caveat as toCsv; not a KDBX document.
-function toXml(entries) {
-    const rows = entries.map(({ entry, group }) => {
-        const body = exportFields(entry, group)
-            .map(([tag, value]) => `    <${tag}>${xmlEscape(value)}</${tag}>`)
-            .join('\n');
-        return `  <Entry>\n${body}\n  </Entry>`;
-    });
-    return `<?xml version="1.0" encoding="UTF-8"?>\n<Entries>\n${rows.join('\n')}\n</Entries>\n`;
 }
 /**
  * Replace an entry's String fields with the given key/value pairs, in order,
@@ -6329,10 +6442,34 @@ function applyEntryEdits(entry, fields) {
         appendChild(entry, stringEl);
     }
 }
+/** The first name given twice, or null. KeePassXC refuses to open a file holding an
+entry with two fields of one name (#125), and KeePass and KeePassXC keep only one of
+two attachments of one name (#120). */
+function duplicateName(names) {
+    const seen = new Set();
+    for (const name of names) {
+        if (!name)
+            continue; // a blank-named field row is dropped on save, so it clashes with nothing
+        if (seen.has(name))
+            return name;
+        seen.add(name);
+    }
+    return null;
+}
 /** The standard entry fields every entry gets; anything else is a custom field. */
 const STANDARD_FIELD_NAMES = ['Title', 'UserName', 'Password', 'URL', 'Notes'];
 function isCustomField(key) {
     return !STANDARD_FIELD_NAMES.includes(key);
+}
+/** The credentials to try, in order, for what the unlock form holds. An empty
+password box beside a key file can mean the key file alone or an empty password
+with it, so both are tried, the key file alone first, as KeePassXC does (#127). */
+function unlockAttempts(password, keyFile) {
+    if (!keyFile)
+        return [{ password }];
+    if (password)
+        return [{ password, keyFile }];
+    return [{ keyFile }, { password: '', keyFile }];
 }
 /** The web address a URL field can open in a new tab, or null (#86). Only http
 and https, so a database can never make the app run a javascript: URL or hand
@@ -6698,14 +6835,11 @@ function showUnlock(relocking = false) {
         btn.textContent = 'Unlocking…';
         errorEl.hidden = true;
         try {
-            const input = { password: passwordInput.value };
-            if (keyfileData)
-                input.keyFile = keyfileData;
-            const creds = new Credentials(input);
+            const attempts = unlockAttempts(passwordInput.value, keyfileData).map((input) => new Credentials(input));
             const latest = relocking && isHosted() ? await requestCheck() : null;
             const notice = latest?.status === 'newer'
-                ? await openNewer(creds, latest)
-                : await openHeld(creds, latest?.status === 'gone');
+                ? await openNewer(attempts, latest)
+                : await openHeld(attempts, latest?.status === 'gone');
             app.currentGroup = must(app.db).getRootGroup();
             app.searchQuery = '';
             setDirty(relocking && app.dirty);
@@ -6966,10 +7100,10 @@ function isTrashedGroup(group) {
     const parent = findGroupParent(db.getRootGroup(), group);
     return parent !== null && isInRecycleBin(db.root, parent);
 }
-/* Restores to the root group (#63); KDBX records no previous location, so this
-matches where a trashed entry is restored to. */
+// Back to the group it came from, or the root group once that is gone, as an entry's restore does (#63, #133).
 function undeleteGroup(group) {
-    moveGroupTo(group, must(app.db).getRootGroup());
+    const db = must(app.db);
+    moveGroupTo(group, findPreviousParentGroup(db.root, group) ?? db.getRootGroup());
 }
 /** Deselect (back to root) if the current selection is `group` or nested
  * inside it — used when a group is moved or trashed out from under the
@@ -6996,7 +7130,8 @@ function deleteGroupAction(group) {
     renderGroupTree();
     const db = must(app.db);
     const rootGroup = db.getRootGroup();
-    if (isInRecycleBin(db.root, group)) {
+    // With the database's bin turned off, KeePass and KeePassXC delete outright (#132).
+    if (isInRecycleBin(db.root, group) || !isRecycleBinEnabled(db.root)) {
         const entryCount = collectAllEntries(group).length;
         let entryWord = 'entries';
         if (entryCount === 1) {
@@ -7031,8 +7166,8 @@ function renderEntryPanel() {
     let rows;
     if (app.searchQuery) {
         panelTitle.textContent = `"${app.searchQuery}"`;
-        const all = collectAllEntries(must(app.db).getRootGroup());
-        rows = filterEntriesByQuery(all, app.searchQuery);
+        const db = must(app.db);
+        rows = filterEntriesByQuery(collectSearchableEntries(db.root, db.getRootGroup()), app.searchQuery);
     }
     else {
         const currentGroup = must(app.currentGroup);
@@ -7567,15 +7702,16 @@ function showEntryDetail() {
     qs('[data-action="print"]').addEventListener('click', () => window.print());
     // Deleting is "Trash" (reversible, moves into the recycle bin) unless the
     // entry is already inside the bin, where it's "Restore" or a permanent,
-    // confirmed "Delete" instead.
+    // confirmed "Delete" instead; with the bin turned off, only "Delete" (#132).
     const parentGroup = findEntryParent(db.getRootGroup(), entry);
     const inBin = parentGroup !== null && isInRecycleBin(db.root, parentGroup);
+    const permanent = inBin || !isRecycleBinEnabled(db.root);
     const trashBtn = qs('[data-action="trash"]');
     const restoreBtn = qs('[data-action="restore"]');
     const deleteBtn = qs('[data-action="delete"]');
-    trashBtn.hidden = inBin;
+    trashBtn.hidden = permanent;
     restoreBtn.hidden = !inBin;
-    deleteBtn.hidden = !inBin;
+    deleteBtn.hidden = !permanent;
     trashBtn.addEventListener('click', () => {
         const bin = findOrCreateRecycleBin(db.root);
         const parent = findEntryParent(db.getRootGroup(), entry);
@@ -7589,8 +7725,9 @@ function showEntryDetail() {
     restoreBtn.addEventListener('click', () => {
         const rootGroup = db.getRootGroup();
         const parent = findEntryParent(rootGroup, entry);
-        if (parent && parent !== rootGroup) {
-            moveToGroup(entry, parent, rootGroup);
+        const destination = findPreviousParentGroup(db.root, entry) ?? rootGroup; // where it came from (#133)
+        if (parent && parent !== destination) {
+            moveToGroup(entry, parent, destination);
             setDirty(true);
         }
         app.currentEntry = null;
@@ -7685,7 +7822,7 @@ function renderDetailHistory(db, entry, container) {
         const times = getEntryTimes(snapshot);
         label.textContent = `${formatDateTime(times.modified)} — ${entryTitle(snapshot)}`;
         const restoreBtn = makeIconButton('icon-btn', 'Restore this version', 'restore', () => {
-            restoreHistoryEntry(db.root, entry, snapshot);
+            restoreHistoryEntry(db.root, entry, snapshot, db.binaries);
             setDirty(true);
             showEntryDetail();
         });
@@ -7773,7 +7910,26 @@ function showEntryEdit(isNew) {
             showEntryDetail();
         }
     });
+    /* Everything Save writes, as the form shows it. An untouched form saves nothing, so
+    no History copy or newer time makes a stale entry win a merge in another client (#134). */
+    const formState = () => JSON.stringify([
+        Array.from(fieldsEl.querySelectorAll('.edit-field'), (row) => [
+            must(row.querySelector('.edit-key')).value,
+            must(row.querySelector('.edit-value')).value,
+            row.dataset.protected,
+        ]),
+        String(pickedIconId ?? elementIconId(entry)),
+        qs('#edit-tags').value,
+        expiresCheckbox.checked,
+        expiryInput.value,
+        attachments.map((held) => [held.name, 'data' in held ? -1 : held.ref]),
+    ]);
+    const untouched = formState();
     qs('[data-action="save"]').addEventListener('click', () => {
+        if (!isNew && formState() === untouched) {
+            showEntryDetail();
+            return;
+        }
         commitEdits(entry, fieldsEl, isNew, pickedIconId, attachments);
     });
 }
@@ -7811,11 +7967,24 @@ function buildEditField(key, value, isProtected, removable) {
     keyInput.value = key;
     keyInput.placeholder = 'Field name';
     keyInput.readOnly = !removable;
-    // A single-line input would flatten multi-line notes into one line on save (#89).
-    const valueInput = document.createElement(key === 'Notes' && !isProtected ? 'textarea' : 'input');
+    /* A single-line input drops line breaks, so Notes and custom fields (multi-line in KeePass
+    and KeePassXC) and any value already holding one get a box that keeps them (#89, #126). */
+    const lines = value.split(/\r\n|\r|\n/).length;
+    const multiLine = key === 'Notes' || isCustomField(key) || lines > 1;
+    const valueInput = document.createElement(multiLine ? 'textarea' : 'input');
     valueInput.className = 'edit-value';
     valueInput.value = value;
     valueInput.placeholder = 'Value';
+    if (multiLine) {
+        // Notes opens with room to write; any other box is as tall as its value.
+        valueInput.setAttribute('rows', String(Math.max(lines, key === 'Notes' ? 5 : 1)));
+    }
+    if (multiLine && isProtected) {
+        // What a password input gets on its own: no spell checker or autocorrect reads it.
+        valueInput.setAttribute('spellcheck', 'false');
+        valueInput.setAttribute('autocapitalize', 'off');
+        valueInput.setAttribute('autocorrect', 'off');
+    }
     // Kept apart from the row's own spacing so they sit close together (#89); copy
     // leads the value, as it does everywhere, and the rest follow it (#87).
     const lead = document.createElement('span');
@@ -7827,10 +7996,19 @@ function buildEditField(key, value, isProtected, removable) {
     row.appendChild(valueInput);
     row.appendChild(actions);
     if (isProtected) {
-        valueInput.setAttribute('type', 'password');
+        let concealed = false;
+        const toggleConcealed = () => {
+            concealed = !concealed;
+            // A password input can't hold line breaks, so a multi-line box is masked by CSS (#126).
+            if (multiLine)
+                valueInput.classList.toggle('concealed', concealed);
+            else
+                valueInput.setAttribute('type', concealed ? 'password' : 'text');
+        };
+        toggleConcealed();
         const toggle = makeIconButton('icon-btn', 'Show / hide', 'eye', () => {
-            valueInput.setAttribute('type', valueInput.type === 'password' ? 'text' : 'password');
-            toggle.replaceChildren(icon(valueInput.type === 'password' ? 'eye' : 'eye-off'));
+            toggleConcealed();
+            toggle.replaceChildren(icon(concealed ? 'eye' : 'eye-off'));
             valueInput.focus(); // the next move is usually to edit the value (#110)
         });
         keepFieldFocus(toggle);
@@ -7859,18 +8037,36 @@ function buildEditField(key, value, isProtected, removable) {
     }
     return row;
 }
+/* Shows, or clears, why Save refuses two of these names being the same, and returns the
+input of the later one, likelier the one just added or renamed (#125, #120). */
+function nameClash(noun, names, inputs, errorEl) {
+    const duplicate = duplicateName(names);
+    errorEl.hidden = duplicate === null;
+    if (duplicate === null)
+        return null;
+    errorEl.textContent = `More than one ${noun} is named "${duplicate}". Rename or remove one, then save.`;
+    return must(inputs[names.lastIndexOf(duplicate)]);
+}
 function commitEdits(entry, fieldsEl, isNew, pickedIconId, attachments) {
     const db = must(app.db);
-    // A brand-new entry has no prior state worth keeping — only snapshot when
-    // editing one that already existed, matching real KeePass.
-    if (!isNew) {
-        pushHistorySnapshot(db.root, entry);
-    }
-    const fields = Array.from(fieldsEl.querySelectorAll('.edit-field')).map((row) => ({
+    const rows = Array.from(fieldsEl.querySelectorAll('.edit-field'));
+    const fields = rows.map((row) => ({
         key: must(row.querySelector('.edit-key')).value.trim(),
         value: must(row.querySelector('.edit-value')).value,
         protect: row.dataset.protected === '1',
     }));
+    const fieldClash = nameClash('field', fields.map((field) => field.key), fieldsEl.querySelectorAll('.edit-key'), qs('#edit-error'));
+    const attachmentClash = nameClash('attachment', attachments.map((held) => held.name), qs('#edit-attachments').querySelectorAll('.attachment-name'), qs('#edit-attachments-error'));
+    const clash = fieldClash ?? attachmentClash;
+    if (clash) {
+        clash.focus();
+        return;
+    }
+    // A brand-new entry has no prior state worth keeping — only snapshot when
+    // editing one that already existed, matching real KeePass.
+    if (!isNew) {
+        pushHistorySnapshot(db.root, entry, db.binaries);
+    }
     applyEntryEdits(entry, fields);
     if (pickedIconId !== undefined) {
         // createEntry() always appends an IconID child, so this is always present.
@@ -7970,13 +8166,11 @@ function openExportDialog() {
     const dlg = byId('dlg-export');
     const baseName = app.filename.replace(/\.kdbx$/i, '') || 'entries';
     must(dlg.querySelector('[data-action="export-csv"]')).onclick = () => {
-        const entries = collectAllEntries(must(app.db).getRootGroup());
-        downloadTextFile(toCsv(entries), `${baseName}.csv`, 'text/csv');
+        downloadTextFile(toCsv(must(app.db).getRootGroup()), `${baseName}.csv`, 'text/csv');
         dlg.close();
     };
     must(dlg.querySelector('[data-action="export-xml"]')).onclick = () => {
-        const entries = collectAllEntries(must(app.db).getRootGroup());
-        downloadTextFile(toXml(entries), `${baseName}.xml`, 'application/xml');
+        downloadTextFile(must(app.db).exportXml(), `${baseName}.xml`, 'application/xml');
         dlg.close();
     };
     wireClose(dlg);
@@ -8449,8 +8643,20 @@ function mergeNotice(summary, savedAt) {
     }
     return notice;
 }
-async function openHeld(creds, gone) {
-    app.db = await Kdbx.load(new Uint8Array(must(app.file)), creds);
+// Open with the first of these that works, which the database then keeps; the last one's error otherwise (#127).
+async function loadWithAny(bytes, attempts) {
+    const [first, ...rest] = attempts;
+    try {
+        return await Kdbx.load(bytes, first);
+    }
+    catch (err) {
+        if (rest.length === 0)
+            throw err;
+        return loadWithAny(bytes, rest);
+    }
+}
+async function openHeld(attempts, gone) {
+    app.db = await loadWithAny(new Uint8Array(must(app.file)), attempts);
     if (!gone)
         return null;
     return {
@@ -8458,9 +8664,9 @@ async function openHeld(creds, gone) {
         message: 'It was removed or replaced since it was opened here, so saving back will fail. Download a copy to keep this database.',
     };
 }
-async function opens(bytes, creds) {
+async function opens(bytes, attempts) {
     try {
-        await Kdbx.load(bytes, creds);
+        await loadWithAny(bytes, attempts);
         return true;
     }
     catch {
@@ -8471,12 +8677,12 @@ async function opens(bytes, creds) {
 unsaved here it replaces this copy; with unsaved edits the two are merged by
 KeePass's rules and the result left unsaved to review. Throws what the unlock
 screen should say when these credentials can't do either. */
-async function openNewer(creds, newer) {
+async function openNewer(attempts, newer) {
     const bytes = new Uint8Array(newer.bytes);
     const when = savedWhen(newer.savedAt);
     if (!app.dirty) {
         try {
-            app.db = await Kdbx.load(bytes, creds);
+            app.db = await loadWithAny(bytes, attempts);
         }
         catch {
             throw new Error(`The version saved elsewhere${when} doesn't open with these credentials.`);
@@ -8490,10 +8696,10 @@ async function openNewer(creds, newer) {
     }
     let db;
     try {
-        db = await Kdbx.load(new Uint8Array(must(app.file)), creds);
+        db = await loadWithAny(new Uint8Array(must(app.file)), attempts);
     }
     catch (err) {
-        if (await opens(bytes, creds)) {
+        if (await opens(bytes, attempts)) {
             throw new Error(`These credentials open the version saved elsewhere${when}, but your unsaved changes here are locked with the previous ones. Enter those to merge the two.`);
         }
         throw err;
@@ -8851,7 +9057,9 @@ if (typeof setText !== 'undefined') globalThis.setText = setText;
 if (typeof createEntry !== 'undefined') globalThis.createEntry = createEntry;
 if (typeof createGroup !== 'undefined') globalThis.createGroup = createGroup;
 if (typeof findOrCreateRecycleBin !== 'undefined') globalThis.findOrCreateRecycleBin = findOrCreateRecycleBin;
+if (typeof findPreviousParentGroup !== 'undefined') globalThis.findPreviousParentGroup = findPreviousParentGroup;
 if (typeof isInRecycleBin !== 'undefined') globalThis.isInRecycleBin = isInRecycleBin;
+if (typeof isRecycleBinEnabled !== 'undefined') globalThis.isRecycleBinEnabled = isRecycleBinEnabled;
 if (typeof getEntryTags !== 'undefined') globalThis.getEntryTags = getEntryTags;
 if (typeof setEntryTags !== 'undefined') globalThis.setEntryTags = setEntryTags;
 if (typeof getEntryTimes !== 'undefined') globalThis.getEntryTimes = getEntryTimes;
@@ -8874,12 +9082,14 @@ if (typeof findGroupParent !== 'undefined') globalThis.findGroupParent = findGro
 if (typeof isDescendantGroup !== 'undefined') globalThis.isDescendantGroup = isDescendantGroup;
 if (typeof collectAllEntries !== 'undefined') globalThis.collectAllEntries = collectAllEntries;
 if (typeof groupPathTo !== 'undefined') globalThis.groupPathTo = groupPathTo;
+if (typeof collectSearchableEntries !== 'undefined') globalThis.collectSearchableEntries = collectSearchableEntries;
 if (typeof filterEntriesByQuery !== 'undefined') globalThis.filterEntriesByQuery = filterEntriesByQuery;
 if (typeof sortEntries !== 'undefined') globalThis.sortEntries = sortEntries;
 if (typeof toCsv !== 'undefined') globalThis.toCsv = toCsv;
-if (typeof toXml !== 'undefined') globalThis.toXml = toXml;
 if (typeof applyEntryEdits !== 'undefined') globalThis.applyEntryEdits = applyEntryEdits;
+if (typeof duplicateName !== 'undefined') globalThis.duplicateName = duplicateName;
 if (typeof isCustomField !== 'undefined') globalThis.isCustomField = isCustomField;
+if (typeof unlockAttempts !== 'undefined') globalThis.unlockAttempts = unlockAttempts;
 if (typeof openableUrl !== 'undefined') globalThis.openableUrl = openableUrl;
 if (typeof isValidClipboardTimeout !== 'undefined') globalThis.isValidClipboardTimeout = isValidClipboardTimeout;
 if (typeof isValidCurtainTimeout !== 'undefined') globalThis.isValidCurtainTimeout = isValidCurtainTimeout;

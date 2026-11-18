@@ -77,6 +77,8 @@ footer a:hover {
   --muted: #5a6a62;
   --accent: #0e7c5a;
   --accent-dim: #eaf1ee;
+  --copied-row: #d8eae5;
+  --copied-cell: #b2d5ca;
   --danger: #9a2b2b;
   --danger-dim: #f2dada;
   --danger-border: #e6c2c2;
@@ -84,7 +86,7 @@ footer a:hover {
   --warning-bg: #fbf0e7;
   --warning-border: #ead7c2;
   --success: #0e7c5a;
-  /* 25 chars of a first-level sub-group (#63) at .group-btn's size, plus icon, padding, nesting, and the ⋯ slot. */
+  /* 25 chars of a first-level sub-group (#63) at .group-btn's size, plus icon, padding, nesting, and the toggle (#183) and ⋯ slots. */
   --sidebar-width: 280px;
 }
 
@@ -286,6 +288,13 @@ when resolving a <use> into it (#121). */
 through to notice unsaved edits, unlike every other dirty-aware prompt. */
 .icon-btn.unsaved {
   color: var(--accent);
+}
+
+/* A copy control's check, while its value is on the clipboard, at full strength (#177). */
+.icon-btn.copied,
+.copy-hint.copied {
+  color: var(--accent);
+  opacity: 1;
 }
 
 .back-link {
@@ -604,6 +613,24 @@ an overlaid handle would sit on top of its scrollbar. */
   gap: 0.1rem;
 }
 
+/* Every row keeps the slot (#183), so a group without subgroups lines up with its siblings;
+never under 24px square, the smallest target WCAG allows, whatever the reader's font size. */
+.group-toggle {
+  flex: 0 0 1.5rem;
+  min-width: 24px;
+  min-height: 24px;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 0.75rem;
+}
+
+.group-toggle[aria-expanded="true"] .icon {
+  transform: rotate(90deg);
+}
+
 /* Reserved on every row, shown only on the active one (#63), so selecting a
 group doesn't reflow its name. */
 .group-menu-btn {
@@ -621,19 +648,20 @@ group doesn't reflow its name. */
 so an absolutely positioned menu would be cut off. */
 .group-menu {
   display: flex;
-  gap: 0.25rem;
-  padding: 0.15rem 0 0.35rem 1rem;
+  flex-direction: column;
+  padding: 0.15rem 0.5rem 0.35rem 1.75rem;
 }
 
 .group-menu-item {
   background: none;
-  border: 1px solid var(--border);
+  border: none;
   border-radius: 4px;
   color: var(--text);
   cursor: pointer;
   font-family: inherit;
-  font-size: 0.75rem;
-  padding: 0.2rem 0.5rem;
+  font-size: 0.8rem;
+  padding: 0.35rem 0.5rem;
+  text-align: left;
   white-space: nowrap;
 }
 
@@ -671,6 +699,7 @@ so an absolutely positioned menu would be cut off. */
 .group-row .group-btn {
   flex: 1;
   min-width: 0;
+  padding-left: 0.25rem; /* the toggle's slot already sets the name off from the edge (#183) */
 }
 
 /* Entry panel */
@@ -989,6 +1018,18 @@ never be what makes the affordance discoverable, since touch has none. */
 
 .entry-table tbody tr:hover {
   background: var(--surface-2);
+}
+
+/* The copied value's row is tinted well past hover and its cell deeper still, with a
+heavier weight and a check for a copy control, so the mark never rests on color alone (#177). */
+.entry-table tbody tr.copied {
+  background: var(--copied-row);
+}
+
+.entry-table td.copied {
+  background: var(--copied-cell);
+  color: var(--text);
+  font-weight: 600;
 }
 
 .entry-table-title {
@@ -2014,7 +2055,7 @@ body.embedded footer {
         <button type="button" class="back-link" data-action="back">← Entries</button>
         <div class="detail-header-actions">
           <button type="button" class="btn btn-secondary" data-action="edit">Edit</button>
-          <button type="button" class="btn btn-secondary" data-action="move-entry">Move to…</button>
+          <button type="button" class="btn btn-secondary" data-action="move-entry">Move into…</button>
           <button type="button" class="btn btn-secondary" data-action="print">Print</button>
           <button type="button" class="btn btn-secondary" data-action="restore" hidden>Restore</button>
           <button type="button" class="btn btn-danger" data-action="trash">Trash</button>
@@ -2270,7 +2311,7 @@ body.embedded footer {
        ============================================================ -->
   <dialog id="dlg-move-to" class="kw-dialog">
     <div class="dialog-header">
-      <h2 id="move-to-title">Move to…</h2>
+      <h2 id="move-to-title">Move into…</h2>
       <button type="button" class="close-btn" data-action="close" title="Close"><svg class="icon" aria-hidden="true"><use href="#icon-close"/></svg></button>
     </div>
     <div class="dialog-body">
@@ -2307,16 +2348,16 @@ body.embedded footer {
   &middot; <a href="https://github.com/keepass-web/.github/blob/main/profile/FAQ.md" target="_blank" rel="noopener noreferrer">FAQ</a>
   &middot; <a href="https://github.com/keepass-web/source-application" target="_blank" rel="noopener noreferrer">Source</a>
 </p>
-<footer><a href="https://github.com/keepass-web/source-application/tree/v0.14.0" target="_blank" rel="noopener noreferrer">v0.14.0</a> committed on <time id="commit-date" datetime="2026-10-21T11:36:51-04:00">2026-10-21T11:36:51-04:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+<footer><a href="https://github.com/keepass-web/source-application/tree/v0.15.0" target="_blank" rel="noopener noreferrer">v0.15.0</a> committed on <time id="commit-date" datetime="2026-11-17T19:21:37-05:00">2026-11-17T19:21:37-05:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
 
 
   <script>
-/* keepass-web bundle — generated by bundle-iife */
+/* KeePass Web bundle — generated by bundle-iife */
 (function() {
 
 /* === embed-protocol/src/index.js === */
 /** `embed-protocol` — the equivalent-origin postMessage contract between a
-keepass-web implementation and whatever host embeds it in an iframe.
+KeePass Web implementation and whatever host embeds it in an iframe.
 Centralizes shapes/guards/builders so both ends provably agree on the wire
 format: kw-ready, kw-open, kw-create, kw-save, kw-saved, kw-title, kw-find,
 kw-close-request, kw-close-ack, kw-close (#1), kw-reconnect, kw-reconnected (#85),
@@ -2680,6 +2721,7 @@ class CC_KeystreamCipher {
     #counter;
     #buffer;
     #position;
+    #wiped = false;
     constructor(block, counter) {
         this.#block = block;
         this.#counter = counter;
@@ -2688,10 +2730,14 @@ class CC_KeystreamCipher {
     }
     /** XOR `data` with the next keystream bytes, continuing across calls. */
     process(data) {
+        // Refused, not run on the zeroed key, whose keystream anyone can compute (#145).
+        if (this.#wiped)
+            throw new Error('cipher was wiped and can no longer be used');
         const out = new Uint8Array(data.length);
         let i = 0;
         for (const byte of data) {
             if (this.#position === CC_BLOCK_BYTES) {
+                this.#buffer.fill(0); // a spent keystream block is zeroed, not left behind (#145)
                 this.#buffer = this.#block(this.#counter);
                 this.#counter += 1;
                 this.#position = 0;
@@ -2707,6 +2753,11 @@ class CC_KeystreamCipher {
         }
         return out;
     }
+    // Zero the buffered keystream, after which the cipher refuses to run (#145).
+    wipe() {
+        this.#buffer.fill(0);
+        this.#wiped = true;
+    }
 }
 /**
  * Stateful ChaCha20 (RFC 8439) cipher.
@@ -2716,24 +2767,32 @@ class CC_KeystreamCipher {
  * inner random stream and for chunked payload (de)cryption.
  */
 class ChaCha20 {
+    #key;
+    #nonce;
     #cipher;
     /**
-     * @param key 32-byte key.
-     * @param nonce 12-byte nonce.
+     * @param key 32-byte key, copied.
+     * @param nonce 12-byte nonce, copied.
      * @param counter Initial 32-bit block counter (default 0).
      */
     constructor(key, nonce, counter = 0) {
         cc_assertLength(key, CC_KEY_BYTES, 'key');
         cc_assertLength(nonce, CC_CHACHA_NONCE_BYTES, 'nonce');
-        const k = key.slice();
-        const n = nonce.slice();
-        this.#cipher = new CC_KeystreamCipher((c) => chacha20Block(k, n, c), counter >>> 0);
+        this.#key = key.slice();
+        this.#nonce = nonce.slice();
+        this.#cipher = new CC_KeystreamCipher((c) => chacha20Block(this.#key, this.#nonce, c), counter >>> 0);
     }
     encrypt(data) {
         return this.#cipher.process(data);
     }
     decrypt(data) {
         return this.#cipher.process(data);
+    }
+    // Zero the key copy and buffered keystream once the cipher is done with (#145).
+    wipe() {
+        this.#key.fill(0);
+        this.#nonce.fill(0);
+        this.#cipher.wipe();
     }
 }
 /**
@@ -2743,18 +2802,20 @@ class ChaCha20 {
  * XORed against one running Salsa20 keystream in document order.
  */
 class Salsa20 {
+    #key;
+    #nonce;
     #cipher;
     /**
-     * @param key 32-byte key.
-     * @param nonce 8-byte nonce.
+     * @param key 32-byte key, copied.
+     * @param nonce 8-byte nonce, copied.
      * @param counter Initial 64-bit block counter (default 0).
      */
     constructor(key, nonce, counter = 0) {
         cc_assertLength(key, CC_KEY_BYTES, 'key');
         cc_assertLength(nonce, CC_SALSA_NONCE_BYTES, 'nonce');
-        const k = key.slice();
-        const n = nonce.slice();
-        this.#cipher = new CC_KeystreamCipher((c) => salsa20Block(k, n, c), counter);
+        this.#key = key.slice();
+        this.#nonce = nonce.slice();
+        this.#cipher = new CC_KeystreamCipher((c) => salsa20Block(this.#key, this.#nonce, c), counter);
     }
     encrypt(data) {
         return this.#cipher.process(data);
@@ -2762,37 +2823,49 @@ class Salsa20 {
     decrypt(data) {
         return this.#cipher.process(data);
     }
+    // Zero the key copy and buffered keystream once the cipher is done with (#145).
+    wipe() {
+        this.#key.fill(0);
+        this.#nonce.fill(0);
+        this.#cipher.wipe();
+    }
 }
 /**
  * One-shot ChaCha20 (RFC 8439): XOR `data` with the keystream from `counter`.
  * Encryption and decryption are the same operation.
  */
 function chacha20(key, nonce, data, counter = 0) {
-    return new ChaCha20(key, nonce, counter).encrypt(data);
+    const cipher = new ChaCha20(key, nonce, counter);
+    try {
+        return cipher.encrypt(data);
+    }
+    finally {
+        cipher.wipe();
+    }
 }
 /**
  * One-shot Salsa20 (Bernstein): XOR `data` with the keystream from `counter`.
  * Encryption and decryption are the same operation.
  */
 function salsa20(key, nonce, data, counter = 0) {
-    return new Salsa20(key, nonce, counter).encrypt(data);
+    const cipher = new Salsa20(key, nonce, counter);
+    try {
+        return cipher.encrypt(data);
+    }
+    finally {
+        cipher.wipe();
+    }
 }
 
 
 /* === argon2/src/blake2b.js === */
-/** BLAKE2b (RFC 7693), Argon2's H (RFC 9106 §3.2) — unkeyed, 1..64-byte
-output. 64-bit math uses bigint; see SPEC.md for the trade-off. */
-const B2_MASK64 = (1n << 64n) - 1n;
-// BLAKE2b initialization vector (RFC 7693, Section 2.6).
+/** BLAKE2b (RFC 7693), Argon2's H (RFC 9106 §3.2) — unkeyed, 1..64-byte output. Each 64-bit word
+is held as its little-endian 32-bit halves in typed arrays, which zeroing really clears; a bigint
+would leave a copy behind for every operation (#145). */
+// BLAKE2b initialization vector (RFC 7693, Section 2.6), as low/high halves.
 const B2_IV = [
-    0x6a09e667f3bcc908n,
-    0xbb67ae8584caa73bn,
-    0x3c6ef372fe94f82bn,
-    0xa54ff53a5f1d36f1n,
-    0x510e527fade682d1n,
-    0x9b05688c2b3e6c1fn,
-    0x1f83d9abfb41bd6bn,
-    0x5be0cd19137e2179n,
+    0xf3bcc908, 0x6a09e667, 0x84caa73b, 0xbb67ae85, 0xfe94f82b, 0x3c6ef372, 0x5f1d36f1, 0xa54ff53a,
+    0xade682d1, 0x510e527f, 0x2b3e6c1f, 0x9b05688c, 0xfb41bd6b, 0x1f83d9ab, 0x137e2179, 0x5be0cd19,
 ];
 // Message word schedule per round (RFC 7693, Section 2.7).
 const B2_SIGMA = [
@@ -2809,54 +2882,74 @@ const B2_SIGMA = [
     [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     [14, 10, 4, 8, 9, 15, 13, 6, 1, 12, 0, 2, 11, 7, 5, 3],
 ];
-function b2_rotr64(x, n) {
-    return ((x >> n) | (x << (64n - n))) & B2_MASK64;
+const B2_NOTHING = new Uint32Array(2); // a zero word, for the additions that take no message word
+// Word a of v += word b of v + word x of m, mod 2^64 (each named by its low half's offset).
+function b2_add(v, a, b, m, x) {
+    const lo = v[a] + v[b] + m[x];
+    v[a + 1] =
+        (v[a + 1] +
+            v[b + 1] +
+            m[x + 1] +
+            ((lo / 0x100000000) | 0)) >>>
+            0;
+    v[a] = lo >>> 0;
 }
-// The BLAKE2b mixing function G (RFC 7693, Section 3.1).
-function b2_mix(v, a, b, c, d, x, y) {
-    let va = v[a];
-    let vb = v[b];
-    let vc = v[c];
-    let vd = v[d];
-    va = (va + vb + x) & B2_MASK64;
-    vd = b2_rotr64(vd ^ va, 32n);
-    vc = (vc + vd) & B2_MASK64;
-    vb = b2_rotr64(vb ^ vc, 24n);
-    va = (va + vb + y) & B2_MASK64;
-    vd = b2_rotr64(vd ^ va, 16n);
-    vc = (vc + vd) & B2_MASK64;
-    vb = b2_rotr64(vb ^ vc, 63n);
-    v[a] = va;
-    v[b] = vb;
-    v[c] = vc;
-    v[d] = vd;
-}
-// The BLAKE2b compression function F (RFC 7693, Section 3.2).
-function b2_compress(h, m, counter, last) {
-    const v = new Array(16);
-    for (let i = 0; i < 8; i++) {
-        v[i] = h[i];
-        v[i + 8] = B2_IV[i];
+// Word x of v = rotr64(word x ^ word y, n).
+function b2_xorRotr(v, x, y, n) {
+    const lo = (v[x] ^ v[y]) >>> 0;
+    const hi = (v[x + 1] ^ v[y + 1]) >>> 0;
+    if (n === 32) {
+        v[x] = hi;
+        v[x + 1] = lo;
     }
-    v[12] = v[12] ^ (counter & B2_MASK64);
-    v[13] = v[13] ^ ((counter >> 64n) & B2_MASK64);
+    else if (n < 32) {
+        v[x] = ((lo >>> n) | (hi << (32 - n))) >>> 0;
+        v[x + 1] = ((hi >>> n) | (lo << (32 - n))) >>> 0;
+    }
+    else {
+        v[x] = ((hi >>> (n - 32)) | (lo << (64 - n))) >>> 0;
+        v[x + 1] = ((lo >>> (n - 32)) | (hi << (64 - n))) >>> 0;
+    }
+}
+// The BLAKE2b mixing function G (RFC 7693, Section 3.1) on words a..d of v and words x, y of m.
+function b2_mix(v, m, a, b, c, d, x, y) {
+    const wa = 2 * a;
+    const wb = 2 * b;
+    const wc = 2 * c;
+    const wd = 2 * d;
+    b2_add(v, wa, wb, m, 2 * x);
+    b2_xorRotr(v, wd, wa, 32);
+    b2_add(v, wc, wd, B2_NOTHING, 0);
+    b2_xorRotr(v, wb, wc, 24);
+    b2_add(v, wa, wb, m, 2 * y);
+    b2_xorRotr(v, wd, wa, 16);
+    b2_add(v, wc, wd, B2_NOTHING, 0);
+    b2_xorRotr(v, wb, wc, 63);
+}
+// The BLAKE2b compression function F (RFC 7693, Section 3.2); v is scratch for the working vector.
+function b2_compress(h, m, v, counter, last) {
+    v.set(h, 0);
+    v.set(B2_IV, 16);
+    v[24] = (v[24] ^ (counter % 0x100000000)) >>> 0; // t0 into word 12; t1 stays 0
+    v[25] = (v[25] ^ Math.floor(counter / 0x100000000)) >>> 0;
     if (last) {
-        v[14] = v[14] ^ B2_MASK64;
+        v[28] = ~v[28] >>> 0; // word 14
+        v[29] = ~v[29] >>> 0;
     }
     for (let r = 0; r < 12; r++) {
         const s = B2_SIGMA[r];
-        const w = (k) => m[s[k]];
-        b2_mix(v, 0, 4, 8, 12, w(0), w(1));
-        b2_mix(v, 1, 5, 9, 13, w(2), w(3));
-        b2_mix(v, 2, 6, 10, 14, w(4), w(5));
-        b2_mix(v, 3, 7, 11, 15, w(6), w(7));
-        b2_mix(v, 0, 5, 10, 15, w(8), w(9));
-        b2_mix(v, 1, 6, 11, 12, w(10), w(11));
-        b2_mix(v, 2, 7, 8, 13, w(12), w(13));
-        b2_mix(v, 3, 4, 9, 14, w(14), w(15));
+        const w = (k) => s[k];
+        b2_mix(v, m, 0, 4, 8, 12, w(0), w(1));
+        b2_mix(v, m, 1, 5, 9, 13, w(2), w(3));
+        b2_mix(v, m, 2, 6, 10, 14, w(4), w(5));
+        b2_mix(v, m, 3, 7, 11, 15, w(6), w(7));
+        b2_mix(v, m, 0, 5, 10, 15, w(8), w(9));
+        b2_mix(v, m, 1, 6, 11, 12, w(10), w(11));
+        b2_mix(v, m, 2, 7, 8, 13, w(12), w(13));
+        b2_mix(v, m, 3, 4, 9, 14, w(14), w(15));
     }
-    for (let i = 0; i < 8; i++) {
-        h[i] = h[i] ^ v[i] ^ v[i + 8];
+    for (let i = 0; i < 16; i++) {
+        h[i] = (h[i] ^ v[i] ^ v[i + 16]) >>> 0;
     }
 }
 /** Unkeyed BLAKE2b digest of `input`.
@@ -2866,53 +2959,56 @@ function blake2b(outLength, input) {
     if (!Number.isInteger(outLength) || outLength < 1 || outLength > 64) {
         throw new RangeError(`BLAKE2b output length must be an integer in 1..64, got ${outLength}`);
     }
-    // Parameter block: digest length, key length (0), fanout (1), depth (1).
-    const h = B2_IV.slice();
-    h[0] = h[0] ^ 0x01010000n ^ BigInt(outLength);
-    // Process all full 128-byte blocks except the final one.
-    const block = new Array(16);
-    let counter = 0n;
-    let offset = 0;
-    const loadBlock = (start) => {
-        for (let i = 0; i < 16; i++) {
-            const at = start + i * 8;
-            let word = 0n;
-            // Manual little-endian load so we can tolerate a short final block.
-            for (let b = 0; b < 8; b++) {
-                const idx = at + b;
-                const byte = idx < input.length ? input[idx] : 0;
-                word |= BigInt(byte) << BigInt(8 * b);
+    const h = Uint32Array.from(B2_IV);
+    const block = new Uint32Array(32);
+    const v = new Uint32Array(32);
+    try {
+        // Parameter block: digest length, key length (0), fanout (1), depth (1).
+        h[0] = (h[0] ^ 0x01010000 ^ outLength) >>> 0;
+        // Process all full 128-byte blocks except the final one.
+        let counter = 0;
+        let offset = 0;
+        const loadBlock = (start) => {
+            for (let i = 0; i < 32; i++) {
+                let half = 0;
+                // Manual little-endian load so we can tolerate a short final block.
+                for (let b = 0; b < 4; b++) {
+                    const idx = start + 4 * i + b;
+                    half |= (idx < input.length ? input[idx] : 0) << (8 * b);
+                }
+                block[i] = half >>> 0;
             }
-            block[i] = word;
+        };
+        while (input.length - offset > 128) {
+            loadBlock(offset);
+            counter += 128;
+            b2_compress(h, block, v, counter, false);
+            offset += 128;
         }
-    };
-    while (input.length - offset > 128) {
+        // Final block (also covers the empty-input case, where one zero block runs).
+        counter += input.length - offset;
         loadBlock(offset);
-        counter += 128n;
-        b2_compress(h, block, counter, false);
-        offset += 128;
+        b2_compress(h, block, v, counter, true);
+        // Serialize the first `outLength` bytes of the state, little-endian.
+        const out = new Uint8Array(outLength);
+        for (let i = 0; i < outLength; i++) {
+            out[i] = (h[i >> 2] >>> (8 * (i & 3))) & 0xff;
+        }
+        return out;
     }
-    // Final block (also covers the empty-input case, where one zero block runs).
-    const remaining = input.length - offset;
-    counter += BigInt(remaining);
-    loadBlock(offset);
-    b2_compress(h, block, counter, true);
-    // Serialize the first `outLength` bytes of the state, little-endian.
-    const out = new Uint8Array(outLength);
-    for (let i = 0; i < outLength; i++) {
-        const word = h[Math.floor(i / 8)];
-        out[i] = Number((word >> BigInt(8 * (i % 8))) & 0xffn);
+    finally {
+        h.fill(0);
+        block.fill(0);
+        v.fill(0);
     }
-    return out;
 }
 
 
 /* === argon2/src/argon2.js === */
 /** Argon2d/Argon2id per RFC 9106 (see SPEC.md). Algorithm core only —
-validated public entry points live in index.ts; 64-bit math uses bigint. */
+validated public entry points live in index.ts. Each 64-bit word is held as
+its little-endian 32-bit halves, keeping the fill loop in plain integer math (#145). */
 
-const A2_M32 = 0xffffffffn;
-const A2_M64 = (1n << 64n) - 1n;
 // Argon2 type code: 0 = Argon2d, 2 = Argon2id (RFC 9106, Section 3.1).
 const ARGON2_D = 0;
 const ARGON2_ID = 2;
@@ -2920,11 +3016,12 @@ const ARGON2_ID = 2;
 const ARGON2_VERSION_10 = 0x10;
 const ARGON2_VERSION_13 = 0x13;
 const A2_SYNC_POINTS = 4; // number of vertical slices (SL)
-const A2_WORDS_PER_BLOCK = 128; // 1024 bytes / 8
+const A2_HALVES_PER_BLOCK = 256; // 1024 bytes / 4
 const A2_ADDRESSES_PER_BLOCK = 128;
-function a2_rotr64(x, n) {
-    return ((x >> n) | (x << (64n - n))) & A2_M64;
-}
+// Where the zero, input and address blocks sit in a segment's addressing scratch.
+const A2_ZERO = 0;
+const A2_INPUT = A2_HALVES_PER_BLOCK;
+const A2_ADDRESS = 2 * A2_HALVES_PER_BLOCK;
 function a2_le32(n) {
     const out = new Uint8Array(4);
     out[0] = n & 0xff;
@@ -2946,113 +3043,170 @@ function a2_concatBytes(...parts) {
     }
     return out;
 }
-function a2_bytesToBlock(bytes, out) {
-    for (let k = 0; k < A2_WORDS_PER_BLOCK; k++) {
-        let word = 0n;
-        for (let b = 0; b < 8; b++) {
-            word |= BigInt(bytes[k * 8 + b]) << BigInt(8 * b);
+function a2_bytesToBlock(bytes, out, at) {
+    for (let k = 0; k < A2_HALVES_PER_BLOCK; k++) {
+        const i = 4 * k;
+        out[at + k] =
+            (bytes[i] |
+                (bytes[i + 1] << 8) |
+                (bytes[i + 2] << 16) |
+                (bytes[i + 3] << 24)) >>>
+                0;
+    }
+}
+function a2_blockToBytes(block, out) {
+    for (let k = 0; k < A2_HALVES_PER_BLOCK; k++) {
+        const half = block[k];
+        out[4 * k] = half;
+        out[4 * k + 1] = half >>> 8;
+        out[4 * k + 2] = half >>> 16;
+        out[4 * k + 3] = half >>> 24;
+    }
+}
+/** Variable-length hash H' (RFC 9106 §3.3) of input into out, built on BLAKE2b. The caller
+owns out; every intermediate digest here is zeroed on every path (#145). */
+function a2_hPrime(out, input) {
+    const prefixed = a2_concatBytes(a2_le32(out.length), input);
+    let v = new Uint8Array(0);
+    try {
+        if (out.length <= 64) {
+            v = blake2b(out.length, prefixed);
+            out.set(v);
+            return;
         }
-        out[k] = word;
-    }
-}
-function a2_blockToBytes(block) {
-    const out = new Uint8Array(1024);
-    for (let k = 0; k < A2_WORDS_PER_BLOCK; k++) {
-        const word = block[k];
-        for (let b = 0; b < 8; b++) {
-            out[k * 8 + b] = Number((word >> BigInt(8 * b)) & 0xffn);
+        const blocks = Math.ceil(out.length / 32) - 2;
+        v = blake2b(64, prefixed);
+        out.set(v.subarray(0, 32), 0);
+        let pos = 32;
+        for (let i = 2; i <= blocks; i++) {
+            const next = blake2b(64, v);
+            v.fill(0);
+            v = next;
+            out.set(v.subarray(0, 32), pos);
+            pos += 32;
         }
+        const last = blake2b(out.length - 32 * blocks, v);
+        out.set(last, pos);
+        last.fill(0);
     }
-    return out;
+    finally {
+        prefixed.fill(0);
+        v.fill(0);
+    }
 }
-// Variable-length hash H' (RFC 9106 §3.3), built on BLAKE2b.
-function a2_hPrime(outLength, input) {
-    if (outLength <= 64) {
-        return blake2b(outLength, a2_concatBytes(a2_le32(outLength), input));
-    }
-    const out = new Uint8Array(outLength);
-    const blocks = Math.ceil(outLength / 32) - 2;
-    let v = blake2b(64, a2_concatBytes(a2_le32(outLength), input));
-    out.set(v.subarray(0, 32), 0);
-    let pos = 32;
-    for (let i = 2; i <= blocks; i++) {
-        v = blake2b(64, v);
-        out.set(v.subarray(0, 32), pos);
-        pos += 32;
-    }
-    out.set(blake2b(outLength - 32 * blocks, v), pos);
-    return out;
+// High 32 bits of x * y: the double product is within 2^11 of exact, so rounding recovers them.
+function a2_mulHi(x, y) {
+    return Math.round((x * y - (Math.imul(x, y) >>> 0)) / 0x100000000);
 }
-// P's index patterns over the 1024-byte block as an 8x8 register matrix (RFC 9106 §3.5).
-const A2_ROWS = [];
-const A2_COLS = [];
-for (let r = 0; r < 8; r++) {
-    const row = [];
-    const col = [];
-    for (let k = 0; k < 16; k++) {
-        row.push(16 * r + k);
-    }
-    for (let k = 0; k < 8; k++) {
-        col.push(2 * r + 16 * k);
-        col.push(2 * r + 16 * k + 1);
-    }
-    A2_ROWS.push(row);
-    A2_COLS.push(col);
+// Scratch for every G call; Argon2 runs synchronously, so no two calls share them at once.
+const A2_R = new Uint32Array(A2_HALVES_PER_BLOCK);
+const A2_TMP = new Uint32Array(A2_HALVES_PER_BLOCK);
+/** GB, the modified BLAKE2b mixing function with multiplications (RFC 9106 §3.6), on the words of
+A2_R at a, b, c, d. Each word's halves stay in locals, read and written once; each x + y +
+2 * lo32(x) * lo32(y) step takes the product's high half as a2_mulHi does, reusing its low half p. */
+function a2_gb(a, b, c, d) {
+    const v = A2_R;
+    let al = v[a];
+    let ah = v[a + 1];
+    let bl = v[b];
+    let bh = v[b + 1];
+    let cl = v[c];
+    let ch = v[c + 1];
+    let dl = v[d];
+    let dh = v[d + 1];
+    let p;
+    let s;
+    let xl;
+    let xh;
+    p = Math.imul(al, bl) >>> 0; // a = a + b + 2 * lo32(a) * lo32(b)
+    s = al + bl + ((p << 1) >>> 0);
+    ah =
+        (ah +
+            bh +
+            (((Math.round((al * bl - p) / 0x100000000) << 1) | (p >>> 31)) >>> 0) +
+            ((s / 0x100000000) | 0)) >>>
+            0;
+    al = s >>> 0;
+    xl = (dl ^ al) >>> 0; // d = rotr64(d ^ a, 32)
+    dl = (dh ^ ah) >>> 0;
+    dh = xl;
+    p = Math.imul(cl, dl) >>> 0; // c = c + d + 2 * lo32(c) * lo32(d)
+    s = cl + dl + ((p << 1) >>> 0);
+    ch =
+        (ch +
+            dh +
+            (((Math.round((cl * dl - p) / 0x100000000) << 1) | (p >>> 31)) >>> 0) +
+            ((s / 0x100000000) | 0)) >>>
+            0;
+    cl = s >>> 0;
+    xl = (bl ^ cl) >>> 0; // b = rotr64(b ^ c, 24)
+    xh = (bh ^ ch) >>> 0;
+    bl = ((xl >>> 24) | (xh << 8)) >>> 0;
+    bh = ((xh >>> 24) | (xl << 8)) >>> 0;
+    p = Math.imul(al, bl) >>> 0; // a = a + b + 2 * lo32(a) * lo32(b)
+    s = al + bl + ((p << 1) >>> 0);
+    ah =
+        (ah +
+            bh +
+            (((Math.round((al * bl - p) / 0x100000000) << 1) | (p >>> 31)) >>> 0) +
+            ((s / 0x100000000) | 0)) >>>
+            0;
+    al = s >>> 0;
+    xl = (dl ^ al) >>> 0; // d = rotr64(d ^ a, 16)
+    xh = (dh ^ ah) >>> 0;
+    dl = ((xl >>> 16) | (xh << 16)) >>> 0;
+    dh = ((xh >>> 16) | (xl << 16)) >>> 0;
+    p = Math.imul(cl, dl) >>> 0; // c = c + d + 2 * lo32(c) * lo32(d)
+    s = cl + dl + ((p << 1) >>> 0);
+    ch =
+        (ch +
+            dh +
+            (((Math.round((cl * dl - p) / 0x100000000) << 1) | (p >>> 31)) >>> 0) +
+            ((s / 0x100000000) | 0)) >>>
+            0;
+    cl = s >>> 0;
+    xl = (bl ^ cl) >>> 0; // b = rotr64(b ^ c, 63)
+    xh = (bh ^ ch) >>> 0;
+    bl = ((xh >>> 31) | (xl << 1)) >>> 0;
+    bh = ((xl >>> 31) | (xh << 1)) >>> 0;
+    v[a] = al;
+    v[a + 1] = ah;
+    v[b] = bl;
+    v[b + 1] = bh;
+    v[c] = cl;
+    v[c + 1] = ch;
+    v[d] = dl;
+    v[d + 1] = dh;
 }
-// GB, the modified BLAKE2b mixing function with multiplications (Section 3.6).
-function a2_gb(v, a, b, c, d) {
-    let va = v[a];
-    let vb = v[b];
-    let vc = v[c];
-    let vd = v[d];
-    va = (va + vb + 2n * (va & A2_M32) * (vb & A2_M32)) & A2_M64;
-    vd = a2_rotr64(vd ^ va, 32n);
-    vc = (vc + vd + 2n * (vc & A2_M32) * (vd & A2_M32)) & A2_M64;
-    vb = a2_rotr64(vb ^ vc, 24n);
-    va = (va + vb + 2n * (va & A2_M32) * (vb & A2_M32)) & A2_M64;
-    vd = a2_rotr64(vd ^ va, 16n);
-    vc = (vc + vd + 2n * (vc & A2_M32) * (vd & A2_M32)) & A2_M64;
-    vb = a2_rotr64(vb ^ vc, 63n);
-    v[a] = va;
-    v[b] = vb;
-    v[c] = vc;
-    v[d] = vd;
+// Permutation P on the 16 words of A2_R whose low halves sit at w0..w15 (RFC 9106, Section 3.6).
+function a2_permute(w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15) {
+    a2_gb(w0, w4, w8, w12);
+    a2_gb(w1, w5, w9, w13);
+    a2_gb(w2, w6, w10, w14);
+    a2_gb(w3, w7, w11, w15);
+    a2_gb(w0, w5, w10, w15);
+    a2_gb(w1, w6, w11, w12);
+    a2_gb(w2, w7, w8, w13);
+    a2_gb(w3, w4, w9, w14);
 }
-// Permutation P applied to the 16 words named by `q` (RFC 9106, Section 3.6).
-function a2_permute(v, q) {
-    const i = (k) => q[k];
-    a2_gb(v, i(0), i(4), i(8), i(12));
-    a2_gb(v, i(1), i(5), i(9), i(13));
-    a2_gb(v, i(2), i(6), i(10), i(14));
-    a2_gb(v, i(3), i(7), i(11), i(15));
-    a2_gb(v, i(0), i(5), i(10), i(15));
-    a2_gb(v, i(1), i(6), i(11), i(12));
-    a2_gb(v, i(2), i(7), i(8), i(13));
-    a2_gb(v, i(3), i(4), i(9), i(14));
-}
-// G (RFC 9106 §3.5): next = (with_xor?next:0) XOR R XOR P_columns(P_rows(R)), where R=ref XOR prev.
-function a2_fillBlock(prev, ref, next, withXor) {
-    const r = new BigUint64Array(A2_WORDS_PER_BLOCK);
-    for (let k = 0; k < A2_WORDS_PER_BLOCK; k++) {
-        r[k] = ref[k] ^ prev[k];
+/** G (RFC 9106 §3.5) on the blocks of m starting at prev, ref and next: next = (with_xor?next:0)
+XOR R XOR P_columns(P_rows(R)), where R=ref XOR prev. The block is an 8x8 matrix of 16-byte
+registers; a row is 16 consecutive words, a column 8 word pairs one row apart. */
+function a2_fillBlock(m, prev, ref, next, withXor) {
+    const keep = withXor ? 0xffffffff : 0; // how much of next's old content XORs in
+    for (let k = 0; k < A2_HALVES_PER_BLOCK; k++) {
+        const r = (m[ref + k] ^ m[prev + k]) >>> 0;
+        A2_R[k] = r;
+        A2_TMP[k] = (r ^ (m[next + k] & keep)) >>> 0;
     }
-    const tmp = new BigUint64Array(A2_WORDS_PER_BLOCK);
-    if (withXor) {
-        for (let k = 0; k < A2_WORDS_PER_BLOCK; k++) {
-            tmp[k] = r[k] ^ next[k];
-        }
+    for (let b = 0; b < A2_HALVES_PER_BLOCK; b += 32) {
+        a2_permute(b, b + 2, b + 4, b + 6, b + 8, b + 10, b + 12, b + 14, b + 16, b + 18, b + 20, b + 22, b + 24, b + 26, b + 28, b + 30);
     }
-    else {
-        tmp.set(r);
+    for (let c = 0; c < 32; c += 4) {
+        a2_permute(c, c + 2, c + 32, c + 34, c + 64, c + 66, c + 96, c + 98, c + 128, c + 130, c + 160, c + 162, c + 192, c + 194, c + 224, c + 226);
     }
-    for (let i = 0; i < 8; i++) {
-        a2_permute(r, A2_ROWS[i]);
-    }
-    for (let i = 0; i < 8; i++) {
-        a2_permute(r, A2_COLS[i]);
-    }
-    for (let k = 0; k < A2_WORDS_PER_BLOCK; k++) {
-        next[k] = tmp[k] ^ r[k];
+    for (let k = 0; k < A2_HALVES_PER_BLOCK; k++) {
+        m[next + k] = (A2_TMP[k] ^ A2_R[k]) >>> 0;
     }
 }
 // Map a pseudo-random value to a reference block index in a lane (RFC 9106 §3.4.2, index_alpha).
@@ -3075,59 +3229,92 @@ function a2_indexAlpha(pass, slice, index, segmentLength, laneLength, pseudoRand
     else {
         referenceAreaSize = laneLength - segmentLength + (index === 0 ? -1 : 0);
     }
-    let relative = BigInt(pseudoRand);
-    relative = (relative * relative) >> 32n;
-    relative = BigInt(referenceAreaSize) - 1n - ((BigInt(referenceAreaSize) * relative) >> 32n);
+    const x = a2_mulHi(pseudoRand, pseudoRand);
+    const relative = referenceAreaSize - 1 - a2_mulHi(referenceAreaSize, x);
     let startPosition = 0;
     if (pass !== 0) {
         startPosition = slice === A2_SYNC_POINTS - 1 ? 0 : (slice + 1) * segmentLength;
     }
-    return Number((BigInt(startPosition) + relative) % BigInt(laneLength));
+    return (startPosition + relative) % laneLength;
 }
-// Run the full Argon2 operation and return the tag.
+/** Run the full Argon2 operation and return the tag. Everything derived from the password is
+zeroed before returning or throwing, and the tag too when it isn't returned (#145). */
 function argon2Core(params) {
+    const tag = new Uint8Array(params.tagLength);
+    let h0Input = new Uint8Array(0);
+    let h0 = new Uint8Array(0);
+    const laneSeed = new Uint8Array(72); // H_0 ‖ column ‖ lane
+    const blockBytes = new Uint8Array(1024);
+    let store = new Uint32Array(0);
+    const c = new Uint32Array(A2_HALVES_PER_BLOCK);
+    try {
+        h0Input = a2_h0Input(params);
+        h0 = blake2b(64, h0Input);
+        // Step 2: the memory matrix B[lanes][columns], allocated here so the finally below wipes it.
+        const lanes = params.parallelism;
+        store = new Uint32Array(4 * lanes * Math.floor(params.memory / (4 * lanes)) * A2_HALVES_PER_BLOCK);
+        a2_fill(params, store, h0, laneSeed, blockBytes);
+        a2_finalBlock(params, store, c);
+        a2_blockToBytes(c, blockBytes);
+        a2_hPrime(tag, blockBytes); // Step 8: tag = H'^T(C).
+    }
+    catch (err) {
+        tag.fill(0);
+        throw err;
+    }
+    finally {
+        h0Input.fill(0);
+        h0.fill(0);
+        laneSeed.fill(0);
+        blockBytes.fill(0);
+        store.fill(0);
+        c.fill(0);
+        A2_R.fill(0);
+        A2_TMP.fill(0);
+    }
+    return tag;
+}
+// Step 1: the input hashed into H_0.
+function a2_h0Input(params) {
     const { password, salt, secret, associatedData } = params;
+    return a2_concatBytes(a2_le32(params.parallelism), a2_le32(params.tagLength), a2_le32(params.memory), a2_le32(params.iterations), a2_le32(params.version), a2_le32(params.type), a2_le32(password.length), password, a2_le32(salt.length), salt, a2_le32(secret.length), secret, a2_le32(associatedData.length), associatedData);
+}
+// Steps 3-6: fill the memory matrix in store; laneSeed and blockBytes are scratch.
+function a2_fill(params, store, h0, laneSeed, blockBytes) {
     const lanes = params.parallelism;
-    const memory = params.memory;
     const passes = params.iterations;
-    const tagLength = params.tagLength;
     const version = params.version;
     const type = params.type;
-    // Step 1: H_0.
-    const h0 = blake2b(64, a2_concatBytes(a2_le32(lanes), a2_le32(tagLength), a2_le32(memory), a2_le32(passes), a2_le32(version), a2_le32(type), a2_le32(password.length), password, a2_le32(salt.length), salt, a2_le32(secret.length), secret, a2_le32(associatedData.length), associatedData));
-    // Step 2: allocate memory matrix B[lanes][columns].
-    const memoryBlocks = 4 * lanes * Math.floor(memory / (4 * lanes));
+    const memoryBlocks = store.length / A2_HALVES_PER_BLOCK;
     const columns = memoryBlocks / lanes;
     const segmentLength = columns / A2_SYNC_POINTS;
-    const store = new BigUint64Array(memoryBlocks * A2_WORDS_PER_BLOCK);
-    const block = (lane, col) => {
-        const start = (lane * columns + col) * A2_WORDS_PER_BLOCK;
-        return store.subarray(start, start + A2_WORDS_PER_BLOCK);
-    };
+    const at = (lane, col) => (lane * columns + col) * A2_HALVES_PER_BLOCK;
     // Steps 3-4: first two columns of each lane.
+    laneSeed.set(h0);
     for (let lane = 0; lane < lanes; lane++) {
-        a2_bytesToBlock(a2_hPrime(1024, a2_concatBytes(h0, a2_le32(0), a2_le32(lane))), block(lane, 0));
-        a2_bytesToBlock(a2_hPrime(1024, a2_concatBytes(h0, a2_le32(1), a2_le32(lane))), block(lane, 1));
+        laneSeed.set(a2_le32(lane), 68);
+        for (let col = 0; col < 2; col++) {
+            laneSeed.set(a2_le32(col), 64);
+            a2_hPrime(blockBytes, laneSeed);
+            a2_bytesToBlock(blockBytes, store, at(lane, col));
+        }
     }
-    const zeroBlock = new BigUint64Array(A2_WORDS_PER_BLOCK);
     const fillSegment = (pass, slice, lane) => {
         const dataIndependent = type === ARGON2_ID && pass === 0 && slice < A2_SYNC_POINTS / 2;
-        let addressBlock = zeroBlock;
-        let inputBlock = zeroBlock;
+        // The zero, input and address blocks of data-independent addressing (RFC 9106 §3.4.1.2).
+        const addressing = new Uint32Array(dataIndependent ? 3 * A2_HALVES_PER_BLOCK : 0);
         const nextAddresses = () => {
-            inputBlock[6] = inputBlock[6] + 1n;
-            a2_fillBlock(zeroBlock, inputBlock, addressBlock, false);
-            a2_fillBlock(zeroBlock, addressBlock, addressBlock, false);
+            addressing[A2_INPUT + 12] = addressing[A2_INPUT + 12] + 1; // word 6, the counter
+            a2_fillBlock(addressing, A2_ZERO, A2_INPUT, A2_ADDRESS, false);
+            a2_fillBlock(addressing, A2_ZERO, A2_ADDRESS, A2_ADDRESS, false);
         };
         if (dataIndependent) {
-            addressBlock = new BigUint64Array(A2_WORDS_PER_BLOCK);
-            inputBlock = new BigUint64Array(A2_WORDS_PER_BLOCK);
-            inputBlock[0] = BigInt(pass);
-            inputBlock[1] = BigInt(lane);
-            inputBlock[2] = BigInt(slice);
-            inputBlock[3] = BigInt(memoryBlocks);
-            inputBlock[4] = BigInt(passes);
-            inputBlock[5] = BigInt(type);
+            addressing[A2_INPUT] = pass;
+            addressing[A2_INPUT + 2] = lane;
+            addressing[A2_INPUT + 4] = slice;
+            addressing[A2_INPUT + 6] = memoryBlocks;
+            addressing[A2_INPUT + 8] = passes;
+            addressing[A2_INPUT + 10] = type;
         }
         let startIndex = 0;
         if (pass === 0 && slice === 0) {
@@ -3139,23 +3326,29 @@ function argon2Core(params) {
         for (let index = startIndex; index < segmentLength; index++) {
             const col = slice * segmentLength + index;
             const prevCol = col === 0 ? columns - 1 : col - 1;
-            let pseudoRand;
+            // J1 and J2 (RFC 9106 §3.4.1) are the low and high halves of a 64-bit word.
+            let source;
+            let word;
             if (dataIndependent) {
                 if (index % A2_ADDRESSES_PER_BLOCK === 0) {
                     nextAddresses();
                 }
-                pseudoRand = addressBlock[index % A2_ADDRESSES_PER_BLOCK];
+                source = addressing;
+                word = A2_ADDRESS + 2 * (index % A2_ADDRESSES_PER_BLOCK);
             }
             else {
-                pseudoRand = block(lane, prevCol)[0];
+                source = store;
+                word = at(lane, prevCol);
             }
-            let refLane = Number((pseudoRand >> 32n) % BigInt(lanes));
+            const j1 = source[word];
+            const j2 = source[word + 1];
+            let refLane = j2 % lanes;
             if (pass === 0 && slice === 0) {
                 refLane = lane;
             }
-            const refIndex = a2_indexAlpha(pass, slice, index, segmentLength, columns, Number(pseudoRand & A2_M32), refLane === lane);
+            const refIndex = a2_indexAlpha(pass, slice, index, segmentLength, columns, j1, refLane === lane);
             const withXor = version !== ARGON2_VERSION_10 && pass > 0;
-            a2_fillBlock(block(lane, prevCol), block(refLane, refIndex), block(lane, col), withXor);
+            a2_fillBlock(store, at(lane, prevCol), at(refLane, refIndex), at(lane, col), withXor);
         }
     };
     // Steps 5-6: fill the matrix, slicewise across all lanes.
@@ -3166,16 +3359,17 @@ function argon2Core(params) {
             }
         }
     }
-    // Step 7: final block C is the XOR of the last column across lanes.
-    const c = new BigUint64Array(A2_WORDS_PER_BLOCK);
+}
+// Step 7: final block C, the XOR of the last column across lanes, into c.
+function a2_finalBlock(params, store, c) {
+    const lanes = params.parallelism;
+    const laneHalves = store.length / lanes;
     for (let lane = 0; lane < lanes; lane++) {
-        const last = block(lane, columns - 1);
-        for (let k = 0; k < A2_WORDS_PER_BLOCK; k++) {
-            c[k] = c[k] ^ last[k];
+        const last = (lane + 1) * laneHalves - A2_HALVES_PER_BLOCK;
+        for (let k = 0; k < A2_HALVES_PER_BLOCK; k++) {
+            c[k] = (c[k] ^ store[last + k]) >>> 0;
         }
     }
-    // Step 8: tag = H'^T(C).
-    return a2_hPrime(tagLength, a2_blockToBytes(c));
 }
 
 
@@ -3485,6 +3679,7 @@ class ByteWriter {
         }
         const next = new Uint8Array(capacity);
         next.set(this.#buffer.subarray(0, this.#length));
+        this.#buffer.fill(0); // what it held may be sensitive, so it isn't left behind (#145)
         this.#buffer = next;
     }
     writeBytes(bytes) {
@@ -3532,6 +3727,11 @@ class ByteWriter {
     /** Return the written bytes as a right-sized copy. */
     toBytes() {
         return this.#buffer.slice(0, this.#length);
+    }
+    // Zero everything written, once a caller holding sensitive bytes has taken its copy (#145).
+    wipe() {
+        this.#buffer.fill(0);
+        this.#length = 0;
     }
 }
 
@@ -4044,13 +4244,14 @@ async function aesCbcDecrypt(key, iv, data) {
         throw new Error('AES-CBC decryption failed (wrong credentials or corrupt file)');
     }
 }
-/** Ceiling on AES-KDF `rounds`, read from the file before auth — unchecked, a
-crafted file could force a many-exabyte allocation just by being opened.
-Far above any real KeePass config, but keeps a worst case survivable. */
-const KX_MAX_AES_KDF_ROUNDS = 100000000n;
+/** Ceiling on AES-KDF `rounds`, read from the file before auth: KeePassXC's own
+maximum, so a crafted file can't hold an unlock open indefinitely (#145). */
+const KX_MAX_AES_KDF_ROUNDS = 1000000000n;
+// 1 MiB of zero blocks per WebCrypto call, so memory stays flat at any round count (#145).
+const KX_AES_KDF_CHUNK_ROUNDS = 65_536;
 /** AES-KDF (KDBX 3.1's KDF): each 16-byte key half is AES-256-ECB'd `rounds`
 times under `seed`. WebCrypto has no ECB, so we simulate it via CBC with
-the half as IV over `rounds` zero blocks, then SHA-256 the final blocks. */
+the half as IV over zero blocks, then SHA-256 the final blocks. */
 async function aesKdfTransform(key, seed, rounds) {
     if (key.length !== 32) {
         throw new RangeError(`AES-KDF expects a 32-byte key, got ${key.length}`);
@@ -4064,16 +4265,35 @@ async function aesKdfTransform(key, seed, rounds) {
     const n = Number(rounds);
     const subtle = kx_getCrypto().subtle;
     const cryptoKey = await subtle.importKey('raw', kx_buf(seed), 'AES-CBC', false, ['encrypt']);
-    const transformHalf = async (iv) => {
-        // `n` zero plaintext blocks; CBC produces an extra PKCS#7 padding block,
-        // so the value we want (AES^n) is the n-th block, i.e. bytes [16*(n-1), 16*n).
-        const zeros = new Uint8Array(16 * n);
-        const ciphertext = new Uint8Array(await subtle.encrypt({ name: 'AES-CBC', iv: kx_buf(iv) }, cryptoKey, kx_buf(zeros)));
-        return ciphertext.slice(16 * (n - 1), 16 * n);
+    const zeros = new Uint8Array(16 * Math.min(n, KX_AES_KDF_CHUNK_ROUNDS));
+    // AES^n of half into out; each chunk of intermediate blocks is zeroed once the next has its IV.
+    const transformHalf = async (half, out) => {
+        let block = half;
+        let ciphertext = new Uint8Array(0);
+        try {
+            for (let left = n; left > 0; left -= KX_AES_KDF_CHUNK_ROUNDS) {
+                const count = Math.min(left, KX_AES_KDF_CHUNK_ROUNDS);
+                // AES^count of the IV is the count-th block (CBC appends a PKCS#7 block after it).
+                const next = new Uint8Array(await subtle.encrypt({ name: 'AES-CBC', iv: kx_buf(block) }, cryptoKey, kx_buf(zeros.subarray(0, 16 * count))));
+                ciphertext.fill(0);
+                ciphertext = next;
+                block = ciphertext.subarray(16 * (count - 1), 16 * count);
+            }
+            out.set(block);
+        }
+        finally {
+            ciphertext.fill(0);
+        }
     };
-    const left = await transformHalf(key.slice(0, 16));
-    const right = await transformHalf(key.slice(16, 32));
-    return sha256(concatBytes(left, right));
+    const transformed = new Uint8Array(32);
+    try {
+        await transformHalf(key.subarray(0, 16), transformed.subarray(0, 16));
+        await transformHalf(key.subarray(16, 32), transformed.subarray(16, 32));
+        return await sha256(transformed);
+    }
+    finally {
+        transformed.fill(0);
+    }
 }
 async function kx_runTransformStream(stream, data) {
     const writer = stream.writable.getWriter();
@@ -4081,16 +4301,23 @@ async function kx_runTransformStream(stream, data) {
     void writer.close();
     const reader = stream.readable.getReader();
     const chunks = [];
-    for (;;) {
-        const { done, value } = await reader.read();
-        if (done) {
-            break;
+    try {
+        for (;;) {
+            const { done, value } = await reader.read();
+            if (done) {
+                break;
+            }
+            if (value) {
+                chunks.push(value);
+            }
         }
-        if (value) {
-            chunks.push(value);
-        }
+        return concatBytes(...chunks);
     }
-    return concatBytes(...chunks);
+    finally {
+        // The chunks are (de)compressed database content (#145).
+        for (const chunk of chunks)
+            chunk.fill(0);
+    }
 }
 /** GZip-compress `data` (RFC 1952), matching KDBX compression algorithm 1. */
 async function gzip(data) {
@@ -4104,26 +4331,34 @@ async function gunzip(data) {
 
 /* === kdbx/src/key.js === */
 /** Derives the encryption/auth keys from the master seed and the
-KDF-transformed composite key (spec: "Computation of Keys"). */
+KDF-transformed composite key (spec: "Computation of Keys"). Each joined
+input holds key material, so it's zeroed once hashed (#145). */
 
 
+async function kx_hashJoined(hash, ...parts) {
+    const joined = concatBytes(...parts);
+    try {
+        return await hash(joined);
+    }
+    finally {
+        joined.fill(0);
+    }
+}
 // Final encryption key = SHA-256(masterSeed ‖ transformedKey).
 async function deriveCipherKey(masterSeed, transformedKey) {
-    return sha256(concatBytes(masterSeed, transformedKey));
+    return kx_hashJoined(sha256, masterSeed, transformedKey);
 }
 // HMAC base = SHA-512(masterSeed‖transformedKey‖0x01); derives header/per-block HMAC keys.
 async function deriveHmacBaseKey(masterSeed, transformedKey) {
-    return sha512(concatBytes(masterSeed, transformedKey, new Uint8Array([0x01])));
+    return kx_hashJoined(sha512, masterSeed, transformedKey, new Uint8Array([0x01]));
 }
 // Header HMAC key = SHA-512(0xFFFFFFFFFFFFFFFF ‖ base).
 async function deriveHeaderHmacKey(hmacBaseKey) {
-    const index = new Uint8Array(8).fill(0xff);
-    return sha512(concatBytes(index, hmacBaseKey));
+    return kx_hashJoined(sha512, new Uint8Array(8).fill(0xff), hmacBaseKey);
 }
 // Per-block HMAC key = SHA-512(index_u64le ‖ base).
 async function deriveBlockHmacKey(hmacBaseKey, index) {
-    const indexBytes = new ByteWriter(8).writeU64(index).toBytes();
-    return sha512(concatBytes(indexBytes, hmacBaseKey));
+    return kx_hashJoined(sha512, new ByteWriter(8).writeU64(index).toBytes(), hmacBaseKey);
 }
 
 
@@ -4132,17 +4367,19 @@ async function deriveBlockHmacKey(hmacBaseKey, index) {
 and SHA-256'd, in that fixed order. (Key-provider plugins/DPAPI: out of scope.) */
 
 
-// A set of credentials from which a composite key can be derived.
+/** A set of credentials from which a composite key can be derived. It keeps its own copies of
+the password and key file, so wipe() zeroes those without touching the caller's (#145). */
 class Credentials {
     #password;
     #keyFile;
+    #wiped = false;
     constructor(input) {
         if (input.password === undefined && input.keyFile === undefined) {
             throw new Error('credentials require a password and/or a key file');
         }
         this.#password =
-            typeof input.password === 'string' ? utf8Encode(input.password) : input.password;
-        this.#keyFile = input.keyFile;
+            typeof input.password === 'string' ? utf8Encode(input.password) : input.password?.slice();
+        this.#keyFile = input.keyFile?.slice();
     }
     // Convenience constructor for a password-only credential.
     static fromPassword(password) {
@@ -4150,14 +4387,32 @@ class Credentials {
     }
     // Compute the 32-byte composite key for these credentials.
     async getCompositeKey() {
+        // Refused, not derived from the zeros, so nothing is ever sealed under an all-zero key (#145).
+        if (this.#wiped)
+            throw new Error('credentials were wiped and can no longer derive a key');
         const components = [];
-        if (this.#password !== undefined) {
-            components.push(await sha256(this.#password));
+        let joined = new Uint8Array(0);
+        try {
+            if (this.#password !== undefined) {
+                components.push(await sha256(this.#password));
+            }
+            if (this.#keyFile !== undefined) {
+                components.push(await keyFileComponent(this.#keyFile));
+            }
+            joined = concatBytes(...components);
+            return await sha256(joined);
         }
-        if (this.#keyFile !== undefined) {
-            components.push(await keyFileComponent(this.#keyFile));
+        finally {
+            for (const component of components)
+                component.fill(0);
+            joined.fill(0);
         }
-        return sha256(concatBytes(...components));
+    }
+    // Zero the password and key file once these credentials are no longer needed.
+    wipe() {
+        this.#password?.fill(0);
+        this.#keyFile?.fill(0);
+        this.#wiped = true;
     }
 }
 const KX_HEX_64 = /^[0-9a-fA-F]{64}$/;
@@ -4191,8 +4446,8 @@ async function kx_tryParseXmlKeyFile(bytes) {
         return undefined;
     }
     const data = dataMatch[2].replace(/\s+/g, '');
-    const versionMatch = text.match(/<Version>\s*([^<]+?)\s*<\/Version>/);
-    const version = versionMatch?.[1] ?? '1.0';
+    const versionMatch = text.match(/<Version>([^<]+)<\/Version>/);
+    const version = (versionMatch?.[1] ?? '1.0').trim();
     if (!version.startsWith('2')) {
         return fromBase64(data);
     }
@@ -4201,8 +4456,11 @@ async function kx_tryParseXmlKeyFile(bytes) {
     const hashMatch = dataMatch[1].match(/\bHash="([0-9a-fA-F]+)"/);
     if (hashMatch?.[1] !== undefined) {
         const expectedHash = hashMatch[1].toLowerCase();
-        const actualHash = toHex((await sha256(key)).slice(0, 4));
+        const digest = await sha256(key);
+        const actualHash = toHex(digest.subarray(0, 4));
+        digest.fill(0);
         if (actualHash !== expectedHash) {
+            key.fill(0);
             throw new Error('key file is corrupt (checksum mismatch)');
         }
     }
@@ -4230,12 +4488,14 @@ async function createProtectedStreamCipher(streamId, streamKey) {
     if (streamId === InnerStreamCipher.Salsa20) {
         const key = await sha256(streamKey);
         const cipher = new Salsa20(key, SALSA20_NONCE);
-        return { process: (data) => cipher.encrypt(data) };
+        key.fill(0); // the cipher keeps its own copy
+        return { process: (data) => cipher.encrypt(data), wipe: () => cipher.wipe() };
     }
     if (streamId === InnerStreamCipher.ChaCha20) {
         const hash = await sha512(streamKey);
-        const cipher = new ChaCha20(hash.slice(0, 32), hash.slice(32, 44));
-        return { process: (data) => cipher.encrypt(data) };
+        const cipher = new ChaCha20(hash.subarray(0, 32), hash.subarray(32, 44));
+        hash.fill(0); // the cipher keeps its own copy
+        return { process: (data) => cipher.encrypt(data), wipe: () => cipher.wipe() };
     }
     throw new Error(`unsupported inner random stream cipher ${streamId}`);
 }
@@ -4249,51 +4509,63 @@ async function createProtectedStreamCipher(streamId, streamKey) {
 // Block size used when writing (KeePass uses 1 MiB).
 const KX_HBS_BLOCK_SIZE = 1024 * 1024;
 const KX_ZERO_HASH = new Uint8Array(32);
-// Verify and concatenate a hashed block stream into its payload.
+/** Verify and concatenate a hashed block stream into its payload. The blocks are
+decrypted database content, so each copy is zeroed once joined (#145). */
 async function readHashedBlockStream(data) {
     const reader = new ByteReader(data);
     const chunks = [];
-    let expectedIndex = 0;
-    for (;;) {
-        const index = reader.readU32();
-        const storedHash = reader.readBytes(32);
-        const size = reader.readU32();
-        if (index !== expectedIndex) {
-            throw new Error('hashed block stream is out of order');
+    try {
+        let expectedIndex = 0;
+        for (;;) {
+            const index = reader.readU32();
+            const storedHash = reader.readBytes(32);
+            const size = reader.readU32();
+            if (index !== expectedIndex) {
+                throw new Error('hashed block stream is out of order');
+            }
+            if (size === 0) {
+                break;
+            }
+            const blockData = reader.readBytes(size);
+            chunks.push(blockData);
+            const hash = await sha256(blockData);
+            if (!bytesEqual(hash, storedHash)) {
+                throw new Error('hashed block stream integrity check failed');
+            }
+            expectedIndex += 1;
         }
-        if (size === 0) {
-            break;
-        }
-        const blockData = reader.readBytes(size);
-        const hash = await sha256(blockData);
-        if (!bytesEqual(hash, storedHash)) {
-            throw new Error('hashed block stream integrity check failed');
-        }
-        chunks.push(blockData);
-        expectedIndex += 1;
+        return concatBytes(...chunks);
     }
-    return concatBytes(...chunks);
+    finally {
+        for (const chunk of chunks)
+            chunk.fill(0);
+    }
 }
-// Frame a payload as a hashed block stream.
+// Frame a payload as a hashed block stream; the writer's own copy of it is zeroed (#145).
 async function writeHashedBlockStream(payload, blockSize = KX_HBS_BLOCK_SIZE) {
     const writer = new ByteWriter(payload.length + 64);
-    let index = 0;
-    let offset = 0;
-    while (offset < payload.length) {
-        const end = Math.min(offset + blockSize, payload.length);
-        const block = payload.subarray(offset, end);
+    try {
+        let index = 0;
+        let offset = 0;
+        while (offset < payload.length) {
+            const end = Math.min(offset + blockSize, payload.length);
+            const block = payload.subarray(offset, end);
+            writer.writeU32(index);
+            writer.writeBytes(await sha256(block));
+            writer.writeU32(block.length);
+            writer.writeBytes(block);
+            index += 1;
+            offset = end;
+        }
+        // Terminating block: size 0 with a zero hash.
         writer.writeU32(index);
-        writer.writeBytes(await sha256(block));
-        writer.writeU32(block.length);
-        writer.writeBytes(block);
-        index += 1;
-        offset = end;
+        writer.writeBytes(KX_ZERO_HASH);
+        writer.writeU32(0);
+        return writer.toBytes();
     }
-    // Terminating block: size 0 with a zero hash.
-    writer.writeU32(index);
-    writer.writeBytes(KX_ZERO_HASH);
-    writer.writeU32(0);
-    return writer.toBytes();
+    finally {
+        writer.wipe();
+    }
 }
 
 
@@ -4308,9 +4580,14 @@ Encrypt-then-MAC — integrity is checked before decryption. */
 const KX_HMS_BLOCK_SIZE = 1024 * 1024;
 async function kx_blockMac(hmacBaseKey, index, data) {
     const blockKey = await deriveBlockHmacKey(hmacBaseKey, index);
-    const indexBytes = new ByteWriter(8).writeU64(index).toBytes();
-    const sizeBytes = new ByteWriter(4).writeI32(data.length).toBytes();
-    return hmacSha256(blockKey, concatBytes(indexBytes, sizeBytes, data));
+    try {
+        const indexBytes = new ByteWriter(8).writeU64(index).toBytes();
+        const sizeBytes = new ByteWriter(4).writeI32(data.length).toBytes();
+        return await hmacSha256(blockKey, concatBytes(indexBytes, sizeBytes, data));
+    }
+    finally {
+        blockKey.fill(0); // #145
+    }
 }
 // Verify and concatenate an HMAC-protected block stream into its payload.
 async function readHmacBlockStream(data, hmacBaseKey) {
@@ -4509,39 +4786,50 @@ function writeOuterHeader(header) {
 // Inner header (4.x only): the stream cipher ID/key, plus binaries referenced by the XML.
 
 
-// Parse the inner header from the start of a decrypted, decompressed payload.
+/** Parse the inner header from the start of a decrypted, decompressed payload. Each field
+read is a copy of decrypted content: one not kept is zeroed, and if the header turns out
+malformed, so are the stream key and attachments read so far (#145). */
 function readInnerHeader(payload) {
     const reader = new ByteReader(payload);
     const binaries = [];
     let innerRandomStreamId = InnerStreamCipher.ChaCha20;
     let innerRandomStreamKey = new Uint8Array(0);
-    for (;;) {
-        const id = reader.readU8();
-        const size = reader.readI32();
-        const value = reader.readBytes(size);
-        if (id === InnerHeaderFieldId.EndOfHeader) {
-            break;
+    let xml;
+    try {
+        for (;;) {
+            const id = reader.readU8();
+            const size = reader.readI32();
+            const value = reader.readBytes(size);
+            if (id === InnerHeaderFieldId.EndOfHeader) {
+                break;
+            }
+            switch (id) {
+                case InnerHeaderFieldId.InnerRandomStreamId:
+                    innerRandomStreamId = new ByteReader(value).readI32();
+                    break;
+                case InnerHeaderFieldId.InnerRandomStreamKey:
+                    innerRandomStreamKey = value;
+                    break;
+                case InnerHeaderFieldId.Binary:
+                    binaries.push({ flags: value[0] ?? 0, data: value.slice(1) });
+                    value.fill(0);
+                    break;
+                default:
+                    value.fill(0);
+                    break;
+            }
         }
-        switch (id) {
-            case InnerHeaderFieldId.InnerRandomStreamId:
-                innerRandomStreamId = new ByteReader(value).readI32();
-                break;
-            case InnerHeaderFieldId.InnerRandomStreamKey:
-                innerRandomStreamKey = value;
-                break;
-            case InnerHeaderFieldId.Binary:
-                binaries.push({ flags: value[0] ?? 0, data: value.slice(1) });
-                break;
-            default:
-                break;
-        }
+        xml = reader.readRest();
     }
-    return {
-        inner: { innerRandomStreamId, innerRandomStreamKey, binaries },
-        xml: reader.readRest(),
-    };
+    catch (err) {
+        innerRandomStreamKey.fill(0);
+        for (const binary of binaries)
+            binary.data.fill(0);
+        throw err;
+    }
+    return { inner: { innerRandomStreamId, innerRandomStreamKey, binaries }, xml };
 }
-// Serialize an inner header to its byte encoding.
+// Serialize an inner header to its byte encoding; the writer's own copy is zeroed (#145).
 function writeInnerHeader(inner) {
     const writer = new ByteWriter();
     const writeField = (id, value) => {
@@ -4549,13 +4837,21 @@ function writeInnerHeader(inner) {
         writer.writeI32(value.length);
         writer.writeBytes(value);
     };
-    writeField(InnerHeaderFieldId.InnerRandomStreamId, new ByteWriter(4).writeI32(inner.innerRandomStreamId).toBytes());
-    writeField(InnerHeaderFieldId.InnerRandomStreamKey, inner.innerRandomStreamKey);
-    for (const binary of inner.binaries) {
-        writeField(InnerHeaderFieldId.Binary, concatBytes(new Uint8Array([binary.flags]), binary.data));
+    try {
+        writeField(InnerHeaderFieldId.InnerRandomStreamId, new ByteWriter(4).writeI32(inner.innerRandomStreamId).toBytes());
+        writeField(InnerHeaderFieldId.InnerRandomStreamKey, inner.innerRandomStreamKey);
+        for (const binary of inner.binaries) {
+            writer.writeU8(InnerHeaderFieldId.Binary);
+            writer.writeI32(binary.data.length + 1);
+            writer.writeU8(binary.flags);
+            writer.writeBytes(binary.data);
+        }
+        writeField(InnerHeaderFieldId.EndOfHeader, new Uint8Array(0));
+        return writer.toBytes();
     }
-    writeField(InnerHeaderFieldId.EndOfHeader, new Uint8Array(0));
-    return writer.toBytes();
+    finally {
+        writer.wipe();
+    }
 }
 
 
@@ -4573,7 +4869,9 @@ const KX_BYTES_PER_KIB = 1024n;
 allows up to ~4TiB memory / 2^32-1 iterations; unchecked, a crafted file
 could force a huge allocation before any password is even checked. */
 const KX_MAX_ARGON2_MEMORY_KIB = 2 * 1024 * 1024; // 2 GiB
-const KX_MAX_ARGON2_ITERATIONS = 64;
+/** Run time grows with memory × passes, so passes are bounded through that product:
+64 over the full 2 GiB, proportionally more over less (#145). */
+const KX_MAX_ARGON2_KIB_PASSES = 64 * KX_MAX_ARGON2_MEMORY_KIB;
 const KX_MAX_ARGON2_PARALLELISM = 64;
 // Transform a 32-byte composite key with AES-KDF (KDBX 3.1 and the AES-KDF KDF).
 async function aesKdf(compositeKey, seed, rounds) {
@@ -4612,11 +4910,11 @@ function kx_runArgon2(compositeKey, params, type) {
     if (parallelism > KX_MAX_ARGON2_PARALLELISM) {
         throw new Error(`Argon2 parallelism (${parallelism}) exceeds the maximum this app will run (${KX_MAX_ARGON2_PARALLELISM})`);
     }
-    if (iterations > KX_MAX_ARGON2_ITERATIONS) {
-        throw new Error(`Argon2 iterations (${iterations}) exceeds the maximum this app will run (${KX_MAX_ARGON2_ITERATIONS})`);
-    }
     if (memory > KX_MAX_ARGON2_MEMORY_KIB) {
         throw new Error(`Argon2 memory (${memory} KiB) exceeds the maximum this app will run (${KX_MAX_ARGON2_MEMORY_KIB} KiB)`);
+    }
+    if (memory * iterations > KX_MAX_ARGON2_KIB_PASSES) {
+        throw new Error(`Argon2 iterations (${iterations}) exceeds the maximum this app will run at ${memory} KiB (${Math.floor(KX_MAX_ARGON2_KIB_PASSES / memory)})`);
     }
     const versionParam = params.get(KdfParam.Argon2Version);
     const version = versionParam === undefined
@@ -4650,7 +4948,7 @@ values hold plaintext in memory and are encrypted only on save. */
 
 
 const KX_PROTECTED_ATTRIBUTE = 'Protected';
-const KX_GENERATOR = 'keepass-web';
+const KX_GENERATOR = 'KeePass Web';
 // A value that is encrypted by the inner random stream when stored on disk.
 class ProtectedValue {
     #text;
@@ -4767,15 +5065,17 @@ function kx_walkProtected(element, visit) {
 Base64 ciphertext with plaintext (the marker attribute is kept). */
 function applyInboundProtection(root, cipher) {
     kx_walkProtected(root, (element) => {
-        const ciphertext = fromBase64(getText(element));
-        setText(element, utf8Decode(cipher.process(ciphertext)));
+        const plaintext = cipher.process(fromBase64(getText(element)));
+        setText(element, utf8Decode(plaintext));
+        plaintext.fill(0); // #145
     });
 }
 // Encrypts every Protected="True" value in place; call on a clone to keep the original readable.
 function applyOutboundProtection(root, cipher) {
     kx_walkProtected(root, (element) => {
-        const ciphertext = cipher.process(utf8Encode(getText(element)));
-        setText(element, toBase64(ciphertext));
+        const plaintext = utf8Encode(getText(element));
+        setText(element, toBase64(cipher.process(plaintext)));
+        plaintext.fill(0); // #145
     });
 }
 // Plain XML has no inner stream, so KeePass marks a protected value ProtectInMemory there instead (#137).
@@ -4923,6 +5223,26 @@ function moveToGroup(element, from, to) {
     const fromUuid = getChild(from, 'UUID');
     if (fromUuid)
         setChildText(element, 'PreviousParentGroup', getText(fromUuid));
+}
+/** Move an entry or group from `from` to just above or below `target`, a child of `to`, returning
+whether it moved. KeePass's merge orders siblings by the newer LocationChanged, so a move stamps it,
+as KeePass's reordering does, and one already in place doesn't, so it can't win a merge (#182). */
+function moveNextTo(element, from, to, target, side) {
+    const siblings = getChildren(to, element.name);
+    if (siblings[siblings.indexOf(target) + (side === 'above' ? -1 : 1)] === element)
+        return false;
+    if (from !== to)
+        moveToGroup(element, from, to);
+    const others = siblings.filter((sibling) => sibling !== element);
+    others.splice(others.indexOf(target) + (side === 'below' ? 1 : 0), 0, element);
+    setChildOrder(to, element.name, others);
+    kx_setTime(element, 'LocationChanged', kx_nowIso());
+    return true;
+}
+// Put `ordered` where `parent`'s children named `name` sit, leaving every other child in place.
+function setChildOrder(parent, name, ordered) {
+    const queue = [...ordered];
+    parent.children = parent.children.map((child) => child.type === 'element' && child.name === name ? queue.shift() : child);
 }
 /** Remove an entry or group for good, recording it and every group and entry
 under it in DeletedObjects so a merge elsewhere doesn't bring them back (#108). */
@@ -5284,7 +5604,8 @@ shape, so this module just remaps IDs to pool indices on load, and back on save.
 
 
 
-// Read Meta/Binaries into the pool, gunzipping if Compressed="True"; doesn't modify root.
+/** Read Meta/Binaries into the pool, gunzipping if Compressed="True"; doesn't modify root.
+A compressed copy is zeroed once inflated, and if reading fails, so is the pool so far (#145). */
 async function readMetaBinaries(root) {
     const binaries = [];
     const idToIndex = new Map();
@@ -5293,17 +5614,30 @@ async function readMetaBinaries(root) {
     if (!binariesEl) {
         return { binaries, idToIndex };
     }
-    for (const binaryEl of getChildren(binariesEl, 'Binary')) {
-        const idText = getAttribute(binaryEl, 'ID');
-        if (idText === undefined) {
-            continue;
+    try {
+        for (const binaryEl of getChildren(binariesEl, 'Binary')) {
+            const idText = getAttribute(binaryEl, 'ID');
+            if (idText === undefined) {
+                continue;
+            }
+            let data = fromBase64(getText(binaryEl));
+            if (getAttribute(binaryEl, 'Compressed') === 'True') {
+                const compressed = data;
+                try {
+                    data = await gunzip(compressed);
+                }
+                finally {
+                    compressed.fill(0);
+                }
+            }
+            idToIndex.set(Number.parseInt(idText, 10), binaries.length);
+            binaries.push({ flags: 0, data });
         }
-        let data = fromBase64(getText(binaryEl));
-        if (getAttribute(binaryEl, 'Compressed') === 'True') {
-            data = await gunzip(data);
-        }
-        idToIndex.set(Number.parseInt(idText, 10), binaries.length);
-        binaries.push({ flags: 0, data });
+    }
+    catch (err) {
+        for (const binary of binaries)
+            binary.data.fill(0);
+        throw err;
     }
     return { binaries, idToIndex };
 }
@@ -5360,7 +5694,8 @@ function writeMetaBinaries(root, binaries) {
 /* === kdbx/src/merge.js === */
 /** Merges another copy of a database into this one by KeePass's synchronization
 rules, so the result matches what KeePass and KeePassXC make of the same two
-files (#74). See SPEC.md, "Merging". */
+files (#74). Like theirs, it trusts each writer's clock, so clock skew between
+workstations can pick the wrong copy; that is accepted. See SPEC.md, "Merging". */
 
 // Times a merge ignores when deciding whether two copies of an entry differ, as KeePass does.
 const KX_UNCOMPARED_TIMES = new Set(['LastAccessTime', 'UsageCount', 'LocationChanged']);
@@ -5553,6 +5888,111 @@ function kx_rootGroup(document) {
     }
     return group;
 }
+function kx_layout(root, here) {
+    const layout = {
+        id: new Map(),
+        siblings: new Map(),
+        subgroups: new Map(),
+        moved: new Map(),
+    };
+    const add = (group, siblings) => {
+        layout.id.set(here(group), layout.id.size);
+        layout.siblings.set(here(group), siblings);
+        layout.moved.set(here(group), kx_seconds(group, 'LocationChanged'));
+    };
+    const visit = (group) => {
+        const subgroups = getChildren(group, 'Group');
+        const siblings = subgroups.map(here);
+        layout.subgroups.set(here(group), siblings);
+        for (const sub of subgroups)
+            add(sub, siblings);
+        for (const sub of subgroups)
+            visit(sub);
+    };
+    add(root, [here(root)]);
+    visit(root);
+    return layout;
+}
+// The copy that moved `group` last, and when; this copy wins a tie, as in KeePass.
+function kx_lastMove(group, local, other) {
+    const here = local.moved.get(group);
+    const there = other.moved.get(group);
+    if (there !== undefined && (here === undefined || there > here)) {
+        return { moved: there, layout: other };
+    }
+    return { moved: here, layout: local }; // every group is in at least one copy
+}
+// Whether `next` follows `group` in `layout` with nothing from `list` between them.
+function kx_follows(layout, group, next, list) {
+    const siblings = layout.siblings.get(group) ?? [];
+    for (const sibling of siblings.slice(siblings.indexOf(group) + 1)) {
+        if (sibling === next)
+            return true;
+        if (list.has(sibling))
+            return false;
+    }
+    return false;
+}
+function kx_runs(groups, local, other) {
+    const list = new Set(groups);
+    const runs = [];
+    let previous;
+    for (const group of groups) {
+        const move = kx_lastMove(group, local, other);
+        const run = runs.at(-1);
+        if (run &&
+            previous &&
+            kx_follows(local, previous, group, list) &&
+            kx_follows(other, previous, group, list)) {
+            run.groups.push(group);
+            if (move.moved > run.moved) {
+                run.moved = move.moved;
+                run.layout = move.layout;
+            }
+        }
+        else {
+            runs.push({ groups: [group], ...move });
+        }
+        previous = group;
+    }
+    return runs;
+}
+/* KeePass's order: the run moved last stays where the copy that moved it has it relative to
+the others, and each side of it is then ordered the same way. */
+function kx_orderRuns(runs) {
+    if (runs.length < 2)
+        return runs;
+    const pivot = runs.reduce((latest, run) => (run.moved > latest.moved ? run : latest));
+    const id = (run) => pivot.layout.id.get(run.groups[0]);
+    const pivotId = id(pivot); // a run's groups are all in the copy that moved it last
+    const pivotAt = runs.indexOf(pivot);
+    const before = [];
+    const after = [];
+    for (const [at, run] of runs.entries()) {
+        if (run === pivot)
+            continue;
+        const runId = id(run);
+        // A run the pivot's copy lacks keeps its side of the pivot.
+        if (runId === undefined ? at < pivotAt : runId < pivotId) {
+            before.push(run);
+        }
+        else {
+            after.push(run);
+        }
+    }
+    return [...kx_orderRuns(before), pivot, ...kx_orderRuns(after)];
+}
+/* Order every group's subgroups as KeePass's merge does (#182). Returns how many lists now order
+the groups this copy already had there differently. */
+function kx_reorder(group, local, other) {
+    const subgroups = getChildren(group, 'Group');
+    const ordered = kx_orderRuns(kx_runs(subgroups, local, other)).flatMap((run) => run.groups);
+    setChildOrder(group, 'Group', ordered);
+    const had = new Set(local.subgroups.get(group));
+    const before = subgroups.filter((sub) => had.has(sub));
+    const changed = ordered.filter((sub) => had.has(sub)).some((sub, at) => sub !== before[at]);
+    return subgroups.reduce((count, sub) => count + kx_reorder(sub, local, other), changed ? 1 : 0);
+}
 /** Merge `other` into `local`, both whole `<KeePassFile>` documents of the same
 database. `other` is consumed: its attachment references are rewritten through
 `adoptBinary`, which maps one of its pool indexes to one in `local`'s pool, and
@@ -5561,6 +6001,7 @@ function mergeDocuments(local, other, adoptBinary, binaries) {
     const localRoot = kx_rootGroup(local);
     const otherRoot = kx_rootGroup(other);
     const index = kx_index(localRoot, null, new Map());
+    const localLayout = kx_layout(localRoot, (group) => group); // before anything here moves
     const added = new Set();
     // Each of the other copy's groups by its counterpart here, so children land under the right parent.
     const counterpart = new Map();
@@ -5656,6 +6097,9 @@ function mergeDocuments(local, other, adoptBinary, binaries) {
         place(placed, otherEntry, otherParent);
     };
     mergeGroup(otherRoot, null);
+    // Sibling order after placement and before deletions, as KeePass orders its steps.
+    const otherLayout = kx_layout(otherRoot, (group) => counterpart.get(group));
+    summary.changed += kx_reorder(localRoot, localLayout, otherLayout);
     // Deletions from either copy, the later of two records for the same object winning.
     const records = new Map();
     for (const record of [...kx_deletedObjects(local), ...kx_deletedObjects(other)]) {
@@ -5727,13 +6171,14 @@ function mergeDocuments(local, other, adoptBinary, binaries) {
 
 
 
+// KeePassXC's starting points, so a database made here is no cheaper to attack (#145).
 const KX_DEFAULT_ARGON2 = {
-    memoryBytes: 16n * 1024n * 1024n,
-    iterations: 3n,
-    parallelism: 1,
+    memoryBytes: 64n * 1024n * 1024n,
+    iterations: 10n,
+    parallelism: 4,
     version: Argon2Version.V13,
 };
-const KX_DEFAULT_AES_KDF_ROUNDS = 60000n;
+const KX_DEFAULT_AES_KDF_ROUNDS = 1000000n;
 function kx_bytes(value) {
     return { type: 'bytes', value };
 }
@@ -5750,15 +6195,38 @@ function kx_cipherKind(cipherId) {
 function kx_ivLengthFor(cipherId) {
     return kx_cipherKind(cipherId) === 'chacha20' ? 12 : 16;
 }
+// Every buffer here held key material or database content and is done with (#145).
+function kx_zero(buffers) {
+    for (const buffer of buffers)
+        buffer.fill(0);
+}
+function kx_zeroBinaries(binaries) {
+    for (const binary of binaries)
+        binary.data.fill(0);
+}
 async function kx_encryptPayload(cipherId, cipherKey, iv, payload) {
-    return kx_cipherKind(cipherId) === 'aes'
-        ? aesCbcEncrypt(cipherKey, iv, payload)
-        : new ChaCha20(cipherKey, iv).encrypt(payload);
+    if (kx_cipherKind(cipherId) === 'aes') {
+        return aesCbcEncrypt(cipherKey, iv, payload);
+    }
+    const cipher = new ChaCha20(cipherKey, iv);
+    try {
+        return cipher.encrypt(payload);
+    }
+    finally {
+        cipher.wipe();
+    }
 }
 async function kx_decryptPayload(cipherId, cipherKey, iv, data) {
-    return kx_cipherKind(cipherId) === 'aes'
-        ? aesCbcDecrypt(cipherKey, iv, data)
-        : new ChaCha20(cipherKey, iv).decrypt(data);
+    if (kx_cipherKind(cipherId) === 'aes') {
+        return aesCbcDecrypt(cipherKey, iv, data);
+    }
+    const cipher = new ChaCha20(cipherKey, iv);
+    try {
+        return cipher.decrypt(data);
+    }
+    finally {
+        cipher.wipe();
+    }
 }
 // Transform the composite key according to the header's KDF settings.
 async function kx_transformKey(header, compositeKey) {
@@ -5814,6 +6282,7 @@ class Kdbx {
     #innerStreamId;
     // Inner random stream key (KDBX 4.x); for 3.1 the protected-stream key is in the header.
     #innerStreamKey;
+    #wiped = false;
     constructor(init) {
         this.header = init.header;
         this.root = init.root;
@@ -5832,28 +6301,60 @@ class Kdbx {
         return group;
     }
     /** Replace the credentials used when the database is next saved, recording the
-    change in MasterKeyChanged, which other clients' key-age reminders read (#108). */
+    change in MasterKeyChanged, which other clients' key-age reminders read (#108).
+    The credentials replaced are wiped (#145). */
     setCredentials(credentials) {
+        if (credentials !== this.#credentials)
+            this.#credentials.wipe();
         this.#credentials = credentials;
         touchMetaTime(this.root, 'MasterKeyChanged');
+    }
+    // Whether these are the credentials this database saves with.
+    usesCredentials(credentials) {
+        return credentials === this.#credentials;
+    }
+    /** Zero this database's credentials, inner stream key and attachments once it is closed
+    or replaced; it can't be used afterwards. Its XML text is left to the garbage collector,
+    since JavaScript strings can't be overwritten (#145). */
+    wipe() {
+        this.wipeContent();
+        this.#credentials.wipe();
+    }
+    // As wipe(), but leaving the credentials, for a copy opened with someone else's (#145).
+    wipeContent() {
+        this.#innerStreamKey.fill(0);
+        kx_zeroBinaries(this.binaries);
+        this.binaries = [];
+        this.#wiped = true;
+    }
+    // Refused, so nothing writes out a database whose attachments are already gone (#145).
+    #assertNotWiped() {
+        if (this.#wiped)
+            throw new Error('database was wiped and can no longer be used');
     }
     /** Merge another copy of this database, which must open with this one's
     credentials, into this one by KeePass's synchronization rules (#74). */
     async mergeIn(data) {
+        this.#assertNotWiped();
         const other = await Kdbx.load(data, this.#credentials);
-        return mergeDocuments(this.root, other.root, (ref) => {
-            const binary = other.getBinaryData(ref);
-            return binary === undefined ? -1 : this.addBinary(binary); // a stale reference stays stale
-        }, this.binaries);
+        try {
+            return mergeDocuments(this.root, other.root, (ref) => {
+                const binary = other.getBinaryData(ref);
+                return binary === undefined ? -1 : this.addBinary(binary); // a stale reference stays stale
+            }, this.binaries);
+        }
+        finally {
+            other.wipeContent(); // its credentials are this database's own, so they stay
+        }
     }
-    // Add a binary attachment, reusing an identical one if present; returns its pool index.
+    // Add a copy of a binary attachment, reusing an identical one if present; returns its pool index.
     addBinary(data) {
         for (let i = 0; i < this.binaries.length; i++) {
             // Index is always in range here; the cast only satisfies noUncheckedIndexedAccess.
             if (bytesEqual(this.binaries[i].data, data))
                 return i;
         }
-        this.binaries.push({ flags: 0, data });
+        this.binaries.push({ flags: 0, data: data.slice() });
         return this.binaries.length - 1;
     }
     // The bytes for a pool index, or undefined if out of range.
@@ -5890,18 +6391,28 @@ class Kdbx {
             if (newRef !== undefined)
                 setAttribute(valueEl, 'Ref', String(newRef));
         }
+        kx_zeroBinaries(this.binaries.filter((binary) => !kept.includes(binary)));
         this.binaries = kept;
     }
     // Parse a KDBX database from bytes.
     static async load(data, credentials) {
         const { header, rawHeader, offset } = readOuterHeader(data);
-        const compositeKey = await credentials.getCompositeKey();
-        const transformedKey = await kx_transformKey(header, compositeKey);
-        const cipherKey = await deriveCipherKey(header.masterSeed, transformedKey);
-        if (header.version.major >= 4) {
-            return Kdbx.#load4(data, offset, header, rawHeader, transformedKey, cipherKey, credentials);
+        const keys = [];
+        try {
+            const compositeKey = await credentials.getCompositeKey();
+            keys.push(compositeKey);
+            const transformedKey = await kx_transformKey(header, compositeKey);
+            keys.push(transformedKey);
+            const cipherKey = await deriveCipherKey(header.masterSeed, transformedKey);
+            keys.push(cipherKey);
+            if (header.version.major >= 4) {
+                return await Kdbx.#load4(data, offset, header, rawHeader, transformedKey, cipherKey, credentials);
+            }
+            return await Kdbx.#load3(data, offset, header, rawHeader, cipherKey, credentials);
         }
-        return Kdbx.#load3(data, offset, header, rawHeader, cipherKey, credentials);
+        finally {
+            kx_zero(keys);
+        }
     }
     static async #load4(data, offset, header, rawHeader, transformedKey, cipherKey, credentials) {
         const storedHeaderSha = data.subarray(offset, offset + 32);
@@ -5911,72 +6422,126 @@ class Kdbx {
         if (!bytesEqual(headerSha, storedHeaderSha)) {
             throw new Error('header SHA-256 mismatch (corrupt file)');
         }
-        const hmacBaseKey = await deriveHmacBaseKey(header.masterSeed, transformedKey);
-        const headerHmacKey = await deriveHeaderHmacKey(hmacBaseKey);
-        if (!bytesEqualConstantTime(await hmacSha256(headerHmacKey, rawHeader), storedHeaderHmac)) {
-            throw new Error('header HMAC mismatch (wrong credentials or corrupt file)');
+        // Keys and decrypted content are zeroed on every path; the stream key and attachments
+        // too if loading fails after the inner header is read (#145).
+        const secrets = [];
+        let inner;
+        let db;
+        try {
+            const hmacBaseKey = await deriveHmacBaseKey(header.masterSeed, transformedKey);
+            secrets.push(hmacBaseKey);
+            const headerHmacKey = await deriveHeaderHmacKey(hmacBaseKey);
+            secrets.push(headerHmacKey);
+            if (!bytesEqualConstantTime(await hmacSha256(headerHmacKey, rawHeader), storedHeaderHmac)) {
+                throw new Error('header HMAC mismatch (wrong credentials or corrupt file)');
+            }
+            const encrypted = await readHmacBlockStream(blockStream, hmacBaseKey);
+            let payload = await kx_decryptPayload(header.cipherId, cipherKey, header.encryptionIv, encrypted);
+            secrets.push(payload);
+            if (header.compression === Compression.GZip) {
+                payload = await gunzip(payload);
+                secrets.push(payload);
+            }
+            const parsed = readInnerHeader(payload);
+            inner = parsed.inner;
+            secrets.push(parsed.xml);
+            const root = parseXml(utf8Decode(parsed.xml));
+            kx_checkHeaderHash(root, headerSha);
+            binaryTimesToIso(root);
+            const cipher = await createProtectedStreamCipher(inner.innerRandomStreamId, inner.innerRandomStreamKey);
+            try {
+                applyInboundProtection(root, cipher);
+            }
+            finally {
+                cipher.wipe();
+            }
+            db = new Kdbx({
+                header,
+                root,
+                binaries: inner.binaries,
+                credentials,
+                innerStreamId: inner.innerRandomStreamId,
+                innerStreamKey: inner.innerRandomStreamKey,
+            });
         }
-        const encrypted = await readHmacBlockStream(blockStream, hmacBaseKey);
-        let payload = await kx_decryptPayload(header.cipherId, cipherKey, header.encryptionIv, encrypted);
-        if (header.compression === Compression.GZip) {
-            payload = await gunzip(payload);
+        catch (err) {
+            if (inner) {
+                inner.innerRandomStreamKey.fill(0);
+                kx_zeroBinaries(inner.binaries);
+            }
+            throw err;
         }
-        const { inner, xml } = readInnerHeader(payload);
-        const root = parseXml(utf8Decode(xml));
-        kx_checkHeaderHash(root, headerSha);
-        binaryTimesToIso(root);
-        const cipher = await createProtectedStreamCipher(inner.innerRandomStreamId, inner.innerRandomStreamKey);
-        applyInboundProtection(root, cipher);
-        return new Kdbx({
-            header,
-            root,
-            binaries: inner.binaries,
-            credentials,
-            innerStreamId: inner.innerRandomStreamId,
-            innerStreamKey: inner.innerRandomStreamKey,
-        });
+        finally {
+            kx_zero(secrets);
+        }
+        return db;
     }
     static async #load3(data, offset, header, rawHeader, cipherKey, credentials) {
         const ciphertext = data.subarray(offset);
-        const plaintext = await aesCbcDecrypt(cipherKey, header.encryptionIv, ciphertext);
-        if (!header.streamStartBytes) {
-            throw new Error('KDBX 3.1 header is missing stream start bytes');
+        // Decrypted content is zeroed on every path; attachments too if loading fails after them (#145).
+        const secrets = [];
+        let binaries = [];
+        let db;
+        try {
+            const plaintext = await aesCbcDecrypt(cipherKey, header.encryptionIv, ciphertext);
+            secrets.push(plaintext);
+            if (!header.streamStartBytes) {
+                throw new Error('KDBX 3.1 header is missing stream start bytes');
+            }
+            if (!bytesEqual(plaintext.subarray(0, 32), header.streamStartBytes)) {
+                throw new Error('stream start bytes mismatch (wrong credentials or corrupt file)');
+            }
+            let payload = await readHashedBlockStream(plaintext.subarray(32));
+            secrets.push(payload);
+            if (header.compression === Compression.GZip) {
+                payload = await gunzip(payload);
+                secrets.push(payload);
+            }
+            const root = parseXml(utf8Decode(payload));
+            kx_checkHeaderHash(root, await sha256(rawHeader));
+            const parsed = await readMetaBinaries(root);
+            binaries = parsed.binaries;
+            remapEntryBinaryRefs(root, parsed.idToIndex);
+            removeMetaBinariesElement(root);
+            if (!header.protectedStreamKey) {
+                throw new Error('KDBX 3.1 header is missing the protected stream key');
+            }
+            const streamId = header.innerRandomStreamId ?? InnerStreamCipher.Salsa20;
+            const cipher = await createProtectedStreamCipher(streamId, header.protectedStreamKey);
+            try {
+                applyInboundProtection(root, cipher);
+            }
+            finally {
+                cipher.wipe();
+            }
+            db = new Kdbx({
+                header,
+                root,
+                binaries,
+                credentials,
+                innerStreamId: streamId,
+                innerStreamKey: header.protectedStreamKey,
+            });
         }
-        if (!bytesEqual(plaintext.subarray(0, 32), header.streamStartBytes)) {
-            throw new Error('stream start bytes mismatch (wrong credentials or corrupt file)');
+        catch (err) {
+            kx_zeroBinaries(binaries);
+            throw err;
         }
-        let payload = await readHashedBlockStream(plaintext.subarray(32));
-        if (header.compression === Compression.GZip) {
-            payload = await gunzip(payload);
+        finally {
+            kx_zero(secrets);
         }
-        const root = parseXml(utf8Decode(payload));
-        kx_checkHeaderHash(root, await sha256(rawHeader));
-        const { binaries, idToIndex } = await readMetaBinaries(root);
-        remapEntryBinaryRefs(root, idToIndex);
-        removeMetaBinariesElement(root);
-        if (!header.protectedStreamKey) {
-            throw new Error('KDBX 3.1 header is missing the protected stream key');
-        }
-        const streamId = header.innerRandomStreamId ?? InnerStreamCipher.Salsa20;
-        const cipher = await createProtectedStreamCipher(streamId, header.protectedStreamKey);
-        applyInboundProtection(root, cipher);
-        return new Kdbx({
-            header,
-            root,
-            binaries,
-            credentials,
-            innerStreamId: streamId,
-            innerStreamKey: header.protectedStreamKey,
-        });
+        return db;
     }
     // Serialize the database to KDBX bytes (regenerating all random material).
     async save() {
+        this.#assertNotWiped();
         return this.header.version.major >= 4 ? this.#save4() : this.#save3();
     }
     /** The whole database as unencrypted KeePass XML, which KeePass and KeePassXC
     export and import, so it moves into either without loss (#137). Attachments go
     in Meta, as KDBX 3.1 keeps them, and protected values in the clear. */
     exportXml() {
+        this.#assertNotWiped();
         const root = cloneElement(this.root);
         writeMetaBinaries(root, this.binaries);
         markProtectedInMemory(root);
@@ -6001,33 +6566,52 @@ class Kdbx {
         }
         const rawHeader = writeOuterHeader(header);
         const headerSha = await sha256(rawHeader);
-        // Fresh inner random stream key (64 bytes for ChaCha20, 32 for Salsa20).
+        // Fresh inner random stream key (64 bytes for ChaCha20, 32 for Salsa20); the old one is zeroed.
+        this.#innerStreamKey.fill(0);
         this.#innerStreamKey = getRandomBytes(this.#innerStreamId === InnerStreamCipher.ChaCha20 ? 64 : 32);
         const innerHeader = {
             innerRandomStreamId: this.#innerStreamId,
             innerRandomStreamKey: this.#innerStreamKey,
             binaries: this.binaries,
         };
+        // Keys and plaintext copies are zeroed on every path (#145).
+        const secrets = [];
         const cipher = await createProtectedStreamCipher(this.#innerStreamId, this.#innerStreamKey);
-        const clonedRoot = cloneElement(this.root);
-        isoTimesToBinary(clonedRoot);
-        setGenerator(clonedRoot);
-        kx_refreshHeaderHash(clonedRoot, headerSha);
-        applyOutboundProtection(clonedRoot, cipher);
-        const xmlBytes = utf8Encode(serializeXml(clonedRoot));
-        let payload = concatBytes(writeInnerHeader(innerHeader), xmlBytes);
-        if (header.compression === Compression.GZip) {
-            payload = await gzip(payload);
+        try {
+            const clonedRoot = cloneElement(this.root);
+            isoTimesToBinary(clonedRoot);
+            setGenerator(clonedRoot);
+            kx_refreshHeaderHash(clonedRoot, headerSha);
+            applyOutboundProtection(clonedRoot, cipher);
+            const xmlBytes = utf8Encode(serializeXml(clonedRoot));
+            secrets.push(xmlBytes);
+            const innerBytes = writeInnerHeader(innerHeader);
+            secrets.push(innerBytes);
+            let payload = concatBytes(innerBytes, xmlBytes);
+            secrets.push(payload);
+            if (header.compression === Compression.GZip) {
+                payload = await gzip(payload);
+                secrets.push(payload);
+            }
+            const compositeKey = await this.#credentials.getCompositeKey();
+            secrets.push(compositeKey);
+            const transformedKey = await transformWithKdfParameters(compositeKey, header.kdfParameters);
+            secrets.push(transformedKey);
+            const cipherKey = await deriveCipherKey(header.masterSeed, transformedKey);
+            secrets.push(cipherKey);
+            const encrypted = await kx_encryptPayload(header.cipherId, cipherKey, header.encryptionIv, payload);
+            const hmacBaseKey = await deriveHmacBaseKey(header.masterSeed, transformedKey);
+            secrets.push(hmacBaseKey);
+            const headerHmacKey = await deriveHeaderHmacKey(hmacBaseKey);
+            secrets.push(headerHmacKey);
+            const headerHmac = await hmacSha256(headerHmacKey, rawHeader);
+            const blockStream = await writeHmacBlockStream(encrypted, hmacBaseKey);
+            return concatBytes(rawHeader, headerSha, headerHmac, blockStream);
         }
-        const compositeKey = await this.#credentials.getCompositeKey();
-        const transformedKey = await transformWithKdfParameters(compositeKey, header.kdfParameters);
-        const cipherKey = await deriveCipherKey(header.masterSeed, transformedKey);
-        const encrypted = await kx_encryptPayload(header.cipherId, cipherKey, header.encryptionIv, payload);
-        const hmacBaseKey = await deriveHmacBaseKey(header.masterSeed, transformedKey);
-        const headerHmacKey = await deriveHeaderHmacKey(hmacBaseKey);
-        const headerHmac = await hmacSha256(headerHmacKey, rawHeader);
-        const blockStream = await writeHmacBlockStream(encrypted, hmacBaseKey);
-        return concatBytes(rawHeader, headerSha, headerHmac, blockStream);
+        finally {
+            cipher.wipe();
+            kx_zero(secrets);
+        }
     }
     async #save3() {
         this.#pruneUnreferencedBinaries();
@@ -6035,6 +6619,7 @@ class Kdbx {
         header.masterSeed = getRandomBytes(32);
         header.transformSeed = getRandomBytes(32);
         header.encryptionIv = getRandomBytes(16);
+        this.#innerStreamKey.fill(0); // the old stream key, which is also the header's old one
         header.protectedStreamKey = getRandomBytes(32);
         header.streamStartBytes = getRandomBytes(32);
         header.innerRandomStreamId = InnerStreamCipher.Salsa20;
@@ -6044,24 +6629,39 @@ class Kdbx {
             throw new Error('KDBX 3.1 database is missing transform rounds');
         }
         const rawHeader = writeOuterHeader(header);
+        // Keys and plaintext copies are zeroed on every path (#145).
+        const secrets = [];
         const cipher = await createProtectedStreamCipher(InnerStreamCipher.Salsa20, header.protectedStreamKey);
-        const clonedRoot = cloneElement(this.root);
-        writeMetaBinaries(clonedRoot, this.binaries);
-        kx_removePreviousParentGroups(clonedRoot);
-        setGenerator(clonedRoot);
-        kx_refreshHeaderHash(clonedRoot, await sha256(rawHeader));
-        applyOutboundProtection(clonedRoot, cipher);
-        let xmlBytes = utf8Encode(serializeXml(clonedRoot));
-        if (header.compression === Compression.GZip) {
-            xmlBytes = await gzip(xmlBytes);
+        try {
+            const clonedRoot = cloneElement(this.root);
+            writeMetaBinaries(clonedRoot, this.binaries);
+            kx_removePreviousParentGroups(clonedRoot);
+            setGenerator(clonedRoot);
+            kx_refreshHeaderHash(clonedRoot, await sha256(rawHeader));
+            applyOutboundProtection(clonedRoot, cipher);
+            let xmlBytes = utf8Encode(serializeXml(clonedRoot));
+            secrets.push(xmlBytes);
+            if (header.compression === Compression.GZip) {
+                xmlBytes = await gzip(xmlBytes);
+                secrets.push(xmlBytes);
+            }
+            const hashedStream = await writeHashedBlockStream(xmlBytes);
+            secrets.push(hashedStream);
+            const plaintext = concatBytes(header.streamStartBytes, hashedStream);
+            secrets.push(plaintext);
+            const compositeKey = await this.#credentials.getCompositeKey();
+            secrets.push(compositeKey);
+            const transformedKey = await aesKdf(compositeKey, header.transformSeed, header.transformRounds);
+            secrets.push(transformedKey);
+            const cipherKey = await deriveCipherKey(header.masterSeed, transformedKey);
+            secrets.push(cipherKey);
+            const encrypted = await aesCbcEncrypt(cipherKey, header.encryptionIv, plaintext);
+            return concatBytes(rawHeader, encrypted);
         }
-        const hashedStream = await writeHashedBlockStream(xmlBytes);
-        const plaintext = concatBytes(header.streamStartBytes, hashedStream);
-        const compositeKey = await this.#credentials.getCompositeKey();
-        const transformedKey = await aesKdf(compositeKey, header.transformSeed, header.transformRounds);
-        const cipherKey = await deriveCipherKey(header.masterSeed, transformedKey);
-        const encrypted = await aesCbcEncrypt(cipherKey, header.encryptionIv, plaintext);
-        return concatBytes(rawHeader, encrypted);
+        finally {
+            cipher.wipe();
+            kx_zero(secrets);
+        }
     }
     // Create a new, empty database with the given credentials.
     static async create(credentials, options = {}) {
@@ -6182,6 +6782,7 @@ bundle-iife hoists its exports onto globalThis alongside kdbx.
 Imports kdbx's model.ts/xml.ts directly, not the index.ts barrel, to
 sidestep a latent bug: kdbx.ts's own chacha20 import resolves relative to
 source, not build, and breaks when actually run from build output. */
+
 
 function entryField(entry, key) {
     for (const string of getChildren(entry, 'String')) {
@@ -6333,6 +6934,23 @@ function groupPathTo(rootGroup, target, path = []) {
     }
     return null;
 }
+// Furled only when the group's IsExpanded says false; KeePass reads anything else as expanded (#183).
+function isGroupFurled(group) {
+    const setting = getChild(group, 'IsExpanded');
+    return setting !== undefined && getText(setting).trim().toLowerCase() === 'false';
+}
+/* Written to IsExpanded, as KeePass does, leaving the group's modification time alone,
+so a merge never takes furling for an edit (#183). */
+function setGroupFurled(group, furled) {
+    const value = furled ? 'False' : 'True';
+    const setting = getChild(group, 'IsExpanded');
+    if (setting) {
+        setText(setting, value);
+    }
+    else {
+        appendChild(group, createElement('IsExpanded', value));
+    }
+}
 /** Every entry search looks through: none in the recycle bin or in a group with
 searching off, which a group without its own setting inherits, as in KeePass and KeePassXC (#131). */
 function collectSearchableEntries(document, group, inherited = true, results = []) {
@@ -6460,6 +7078,63 @@ function duplicateName(names) {
 const STANDARD_FIELD_NAMES = ['Title', 'UserName', 'Password', 'URL', 'Notes'];
 function isCustomField(key) {
     return !STANDARD_FIELD_NAMES.includes(key);
+}
+function childText(element, name) {
+    const child = getChild(element, name);
+    return child ? getText(child) : '';
+}
+// An entry's UUID, or '' for one a malformed file left without.
+function entryUuid(entry) {
+    return childText(entry, 'UUID');
+}
+/* Meta's CustomData is where KDBX keeps an app's own data. A lock puts the edit there just
+before it encrypts, and unlocking takes it straight back out, so no saved file holds it (#185). */
+const LOCKED_EDIT_KEY = 'KeePassWeb_LockedEdit';
+function holdLockedEdit(document, edit) {
+    const meta = getChild(document, 'Meta');
+    if (!meta)
+        return; // nowhere to carry it, and the lock goes ahead regardless
+    let customData = getChild(meta, 'CustomData');
+    if (!customData) {
+        customData = createElement('CustomData');
+        appendChild(meta, customData);
+    }
+    const stored = {
+        ...edit,
+        form: edit.form && {
+            ...edit.form,
+            attachments: edit.form.attachments.map((held) => 'data' in held ? { name: held.name, data: toBase64(held.data) } : held),
+        },
+    };
+    const item = createElement('Item');
+    appendChild(item, createElement('Key', LOCKED_EDIT_KEY));
+    appendChild(item, createElement('Value', JSON.stringify(stored)));
+    appendChild(customData, item);
+}
+// Removes every locked edit this database holds and returns the first, or null if none reads back.
+function takeLockedEdit(document) {
+    const meta = getChild(document, 'Meta');
+    const customData = meta && getChild(meta, 'CustomData');
+    if (!customData)
+        return null;
+    const items = getChildren(customData, 'Item').filter((item) => childText(item, 'Key') === LOCKED_EDIT_KEY);
+    customData.children = customData.children.filter((child) => !items.includes(child));
+    const [item] = items;
+    if (!item)
+        return null;
+    try {
+        const stored = JSON.parse(childText(item, 'Value'));
+        return {
+            ...stored,
+            form: stored.form && {
+                ...stored.form,
+                attachments: stored.form.attachments.map((held) => 'data' in held ? { name: held.name, data: fromBase64(held.data) } : held),
+            },
+        };
+    }
+    catch {
+        return null; // a damaged one is dropped, never in the way of an unlock
+    }
 }
 /** The credentials to try, in order, for what the unlock form holds. An empty
 password box beside a key file can mean the key file alone or an empty password
@@ -6630,10 +7305,37 @@ function byId(id) {
 function cloneTemplate(id) {
     return byId(id).content.cloneNode(true);
 }
+// Bytes read from a picked key file or attachment, zeroed once their screen or dialog is gone (#145).
+let pickedBytes = [];
+async function readPicked(file) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    pickedBytes.push(bytes);
+    return bytes;
+}
+function forgetPicked() {
+    for (const bytes of pickedBytes)
+        bytes.fill(0);
+    pickedBytes = [];
+}
+// The database keeps the credentials it opened or was created with; any others are spent (#145).
+function wipeUnadopted(credentials) {
+    for (const c of credentials)
+        if (!app.db?.usesCredentials(c))
+            c.wipe();
+}
+// A lock's held edit carries its attachments as bytes, which no screen will show (#145).
+function wipeLockedEdit(edit) {
+    for (const held of edit?.form?.attachments ?? [])
+        if ('data' in held)
+            held.data.fill(0);
+}
 // Replace the #root content with the given fragment.
 function setRoot(fragment) {
+    forgetPicked();
     const root = byId('root');
     root.innerHTML = '';
+    tableRows = new WeakMap();
+    editInProgress = null;
     root.appendChild(fragment);
 }
 // Shorthand querySelector on #root.
@@ -6738,6 +7440,7 @@ function clearClipboard() {
     writeClipboard('', () => {
         armClearRetry(false);
         byId('toast').hidden = true;
+        markCopied(null);
     }, () => {
         const countdown = byId('toast-countdown');
         countdown.setAttribute('aria-hidden', 'false'); // a one-off status, unlike the ticks, so it is announced (#88)
@@ -6749,13 +7452,16 @@ function clearClipboardNow() {
     if (byId('toast').hidden)
         return; // nothing of ours is on the clipboard
     clearTimeout(clipboardTimer);
+    markCopied(null); // its entry must not outlast the database while a refused clear waits (#177)
     clearClipboard();
 }
-function copyToClipboard(text, label = 'Value') {
+function copyToClipboard(text, label = 'Value', source = null, control = null) {
     writeClipboard(text, () => {
         clearTimeout(clipboardTimer);
         armClearRetry(false); // the new value restarts the clock
         showClipboardToast(label);
+        // A copy landing after its entry has gone, as through a lock, marks nothing (#177).
+        markCopied(source && inOpenDatabase(source.entry) ? source : null, control);
         clipboardDeadline = Date.now() + app.clipboardTimeout * 1000;
         tickClipboard();
     }, (err) => console.error('Clipboard write failed', err));
@@ -6823,7 +7529,7 @@ function showUnlock(relocking = false) {
     keyfileInput.addEventListener('change', async () => {
         const f = keyfileInput.files?.[0];
         if (f) {
-            keyfileData = new Uint8Array(await f.arrayBuffer());
+            keyfileData = await readPicked(f);
             qs('#keyfile-label').textContent = f.name;
         }
     });
@@ -6834,8 +7540,9 @@ function showUnlock(relocking = false) {
         btn.disabled = true;
         btn.textContent = 'Unlocking…';
         errorEl.hidden = true;
+        let attempts = [];
         try {
-            const attempts = unlockAttempts(passwordInput.value, keyfileData).map((input) => new Credentials(input));
+            attempts = unlockAttempts(passwordInput.value, keyfileData).map((input) => new Credentials(input));
             const latest = relocking && isHosted() ? await requestCheck() : null;
             const notice = latest?.status === 'newer'
                 ? await openNewer(attempts, latest)
@@ -6843,10 +7550,24 @@ function showUnlock(relocking = false) {
             app.currentGroup = must(app.db).getRootGroup();
             app.searchQuery = '';
             setDirty(relocking && app.dirty);
-            showEntryList();
+            // Each open strips any held edit, so none is saved; only this tab's own returns (#185).
+            const held = takeLockedEdit(must(app.db).root);
+            const edit = relocking && editLocked ? held : null;
+            let changedThere = null;
+            if (edit) {
+                changedThere = resumeEdit(edit);
+            }
+            else {
+                wipeLockedEdit(held);
+                showEntryList();
+            }
             armIdleWatch();
-            if (notice)
+            if (notice) {
+                if (changedThere !== null) {
+                    notice.message += ` "${changedThere}" also changed there; what you typed here is shown in place of it, and saving keeps that version in the entry's History.`;
+                }
                 showNotice(notice);
+            }
         }
         catch (err) {
             errorEl.textContent =
@@ -6855,6 +7576,9 @@ function showUnlock(relocking = false) {
             btn.disabled = false;
             btn.textContent = 'Unlock';
             passwordInput.focus();
+        }
+        finally {
+            wipeUnadopted(attempts);
         }
     });
 }
@@ -6873,7 +7597,7 @@ function showCreateDatabase() {
     keyfileInput.addEventListener('change', async () => {
         const f = keyfileInput.files?.[0];
         if (f) {
-            keyfileData = new Uint8Array(await f.arrayBuffer());
+            keyfileData = await readPicked(f);
             qs('#create-keyfile-label').textContent = f.name;
         }
     });
@@ -6896,11 +7620,11 @@ function showCreateDatabase() {
         }
         btn.disabled = true;
         btn.textContent = 'Creating…';
+        const input = { password: passwordInput.value };
+        if (keyfileData)
+            input.keyFile = keyfileData;
+        const creds = new Credentials(input);
         try {
-            const input = { password: passwordInput.value };
-            if (keyfileData)
-                input.keyFile = keyfileData;
-            const creds = new Credentials(input);
             const databaseName = nameInput.value.trim() || 'Database';
             app.db = await Kdbx.create(creds, { databaseName });
             app.filename = `${databaseName}.kdbx`;
@@ -6915,6 +7639,9 @@ function showCreateDatabase() {
             errorEl.hidden = false;
             btn.disabled = false;
             btn.textContent = 'Create';
+        }
+        finally {
+            wipeUnadopted([creds]);
         }
     });
 }
@@ -6993,18 +7720,40 @@ function wireSidebarResize() {
 /* The group whose ⋯ menu is open, not a flag (#63): the drawer shows ⋯ on every
 row, so the menu belongs to a row rather than to the selection. */
 let groupMenuFor = null;
+const furlToggles = new WeakMap(); // each render's, to keep focus (#183)
 function renderGroupTree() {
     const container = qs('#group-tree');
     container.innerHTML = '';
     const rootGroup = must(app.db).getRootGroup();
+    const selected = must(app.currentGroup);
+    /* The header's delete acts on the selection, so it is never out of sight (#183): a group
+    created or moved under a furled one unfurls the way to it. */
+    for (let at = findGroupParent(rootGroup, selected); at; at = findGroupParent(rootGroup, at)) {
+        if (isGroupFurled(at))
+            setGroupFurled(at, false);
+    }
     const ul = document.createElement('ul');
     ul.className = 'group-list';
     ul.appendChild(buildGroupNode(rootGroup, true));
     container.appendChild(ul);
     // Deleting acts on the selection (#63); the root group is the database itself.
-    const selected = must(app.currentGroup);
     qs('#delete-group-btn').disabled =
         selected === rootGroup || isRecycleBinGroup(selected);
+}
+// Furling around the selection moves it to the furled group, or the tree would unfurl again (#183).
+function toggleFurl(group) {
+    const furling = !isGroupFurled(group);
+    setGroupFurled(group, furling);
+    if (furling) {
+        const selected = must(app.currentGroup);
+        if (selected !== group && isDescendantGroup(group, selected)) {
+            groupMenuFor = null;
+            app.currentGroup = group;
+            renderEntryPanel();
+        }
+    }
+    renderGroupTree();
+    must(furlToggles.get(group)).focus();
 }
 /* Opening ⋯ selects the row too (#63); the drawer shows ⋯ on every row, so
 without this the header's delete could act on a different group than the menu
@@ -7023,6 +7772,19 @@ function buildGroupNode(group, isRoot) {
     const row = document.createElement('div');
     const isActive = group === app.currentGroup;
     row.className = `group-row${isActive ? ' group-row-active' : ''}`;
+    const subgroups = getChildren(group, 'Group');
+    const unfurled = !isGroupFurled(group);
+    if (subgroups.length > 0) {
+        const toggle = makeIconButton('icon-btn group-toggle', unfurled ? 'Hide subgroups' : 'Show subgroups', 'chevron', () => toggleFurl(group));
+        toggle.setAttribute('aria-expanded', String(unfurled));
+        furlToggles.set(group, toggle);
+        row.appendChild(toggle);
+    }
+    else {
+        const slot = document.createElement('span');
+        slot.className = 'group-toggle';
+        row.appendChild(slot);
+    }
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = `group-btn${isActive ? ' active' : ''}`;
@@ -7047,8 +7809,7 @@ function buildGroupNode(group, isRoot) {
     if (!isRoot && groupMenuFor === group) {
         li.appendChild(buildGroupMenu(group));
     }
-    const subgroups = getChildren(group, 'Group');
-    if (subgroups.length > 0) {
+    if (unfurled && subgroups.length > 0) {
         const ul = document.createElement('ul');
         for (const sub of subgroups) {
             ul.appendChild(buildGroupNode(sub, false));
@@ -7079,9 +7840,15 @@ function buildGroupMenu(group) {
             renderEntryPanel();
         });
     }));
-    menu.appendChild(makeMenuItem('Move', () => {
-        openMoveToDialog('Move group to…', (candidate) => !isDescendantGroup(group, candidate), (destination) => moveGroupTo(group, destination));
+    menu.appendChild(makeMenuItem('Move into…', () => {
+        openMoveToDialog('Move group into…', (candidate) => !isDescendantGroup(group, candidate), (destination) => moveGroupTo(group, destination));
     }));
+    for (const side of ['above', 'below']) {
+        menu.appendChild(makeMenuItem(`Move ${side}…`, () => {
+            const rootGroup = must(app.db).getRootGroup();
+            openMoveToDialog(`Move group ${side}…`, (candidate) => candidate !== rootGroup && !isDescendantGroup(group, candidate), (target) => moveGroupNextTo(group, target, side));
+        }));
+    }
     if (isTrashedGroup(group)) {
         menu.appendChild(makeMenuItem('Undelete', () => undeleteGroup(group)));
     }
@@ -7124,6 +7891,15 @@ function moveGroupTo(group, destination) {
     renderGroupTree();
     renderEntryPanel();
 }
+function moveGroupNextTo(group, target, side) {
+    const rootGroup = must(app.db).getRootGroup();
+    const from = must(findGroupParent(rootGroup, group));
+    const to = must(findGroupParent(rootGroup, target));
+    if (moveNextTo(group, from, to, target, side))
+        setDirty(true);
+    renderGroupTree();
+    renderEntryPanel();
+}
 function deleteGroupAction(group) {
     // The row is about to move or vanish; its menu should not travel with it (#63).
     groupMenuFor = null;
@@ -7141,6 +7917,7 @@ function deleteGroupAction(group) {
             const parent = findGroupParent(rootGroup, group);
             if (parent)
                 deletePermanently(db.root, group, parent);
+            forgetCopiedIfGone();
             resetSelectionIfAffected(rootGroup, group);
             setDirty(true);
             renderGroupTree();
@@ -7161,6 +7938,7 @@ function renderEntryPanel() {
     const panelTitle = qs('#panel-title');
     const listEl = qs('#entry-list');
     listEl.innerHTML = '';
+    tableRows = new WeakMap();
     listEl.classList.toggle('entry-list--tile', app.entryView === 'tile');
     listEl.classList.toggle('entry-list--table', app.entryView === 'table');
     let rows;
@@ -7256,23 +8034,66 @@ function openEntry(entry) {
     app.currentEntry = entry;
     showEntryDetail();
 }
+/* The row and cell whose value is on the clipboard stay marked until it clears, so
+coming back from pasting it elsewhere shows which entry to copy the next value from (#177). */
+let copiedCell = null;
+/* Replaced whenever the table goes, and weak, so rows holding its values outlive
+neither the table nor a locked or closed database (#177). */
+let tableRows = new WeakMap();
+// A copy control whose value is on the clipboard shows a check in place of its icon (#177).
+function markControl(control, copied) {
+    if (!control)
+        return;
+    control.classList.toggle('copied', copied);
+    control.replaceChildren(icon(copied ? 'checked' : 'copy'));
+}
+function markCell(td, copied) {
+    if (!td)
+        return;
+    td.classList.toggle('copied', copied);
+    markControl(td.querySelector('.copy-hint'), copied);
+}
+function markCopied(cell, control = null) {
+    copiedCell = cell;
+    document.querySelector('.entry-table tr.copied')?.classList.remove('copied');
+    markCell(document.querySelector('.entry-table td.copied'), false);
+    markControl(document.querySelector('button.copied'), false);
+    markControl(control, true);
+    if (!cell)
+        return;
+    const row = tableRows.get(cell.entry);
+    if (!row)
+        return; // not among the rows shown
+    row.classList.add('copied');
+    markCell(row.querySelector(`td[data-column="${cell.column}"]`), true);
+}
+function inOpenDatabase(entry) {
+    if (app.db === null)
+        return false;
+    return collectAllEntries(app.db.getRootGroup()).some((found) => found.entry === entry);
+}
+// An entry deleted for good, merged away, locked or closed must not live on in the mark (#177).
+function forgetCopiedIfGone() {
+    if (copiedCell && !inOpenDatabase(copiedCell.entry))
+        markCopied(null);
+}
 /* A click copies (#67); opening the card is the row's own button instead. The
 browser already decides what counts as a click, so a scroll that starts on a
 cell copies nothing and a secondary button never reaches here at all. */
-function wireCellCopy(cell, value, label) {
+function wireCellCopy(cell, value, label, source) {
     cell.addEventListener('click', (event) => {
         // Anywhere but the cell's own buttons, which run their own handlers (#76, #86).
         if (event.target.closest('.copy-hint, .open-hint'))
             return;
         if (value)
-            copyToClipboard(value, label);
+            copyToClipboard(value, label, source);
     });
 }
 /* A button, not decoration (#67): dim at rest so hover only raises its emphasis,
 and focusable so copying is reachable without a pointer at all. */
-function copyHint(value, label) {
+function copyHint(value, label, source) {
     return makeIconButton('copy-hint', `Copy ${label.toLowerCase()}`, 'copy', () => {
-        copyToClipboard(value, label);
+        copyToClipboard(value, label, source);
     });
 }
 /* noopener and noreferrer, so the site neither learns where it was opened from
@@ -7285,12 +8106,13 @@ function openUrlButton(className, href) {
 /* The copy control leads, so it is plainly the value's own however short the
 value is, and a long one can never push it out of the cell (#76, #87). The text
 ellipsizes in its own box, so an open control after it stays in sight too. */
-function buildEntryCell(display, value, label, action) {
+function buildEntryCell(source, display, value, label, action) {
     const td = document.createElement('td');
+    td.dataset.column = source.column;
     const inner = document.createElement('div');
     inner.className = 'entry-cell';
     if (value)
-        inner.appendChild(copyHint(value, label));
+        inner.appendChild(copyHint(value, label, source));
     const text = document.createElement('span');
     text.className = 'entry-cell-text';
     text.textContent = display;
@@ -7298,7 +8120,7 @@ function buildEntryCell(display, value, label, action) {
     if (action)
         inner.appendChild(action);
     td.appendChild(inner);
-    wireCellCopy(td, value, label);
+    wireCellCopy(td, value, label, source);
     return td;
 }
 const COLUMN_WIDTH_MIN = 80;
@@ -7400,18 +8222,20 @@ function buildEntryTable(rows) {
     const tbody = document.createElement('tbody');
     for (const { entry } of rows) {
         const tr = document.createElement('tr');
+        tableRows.set(entry, tr);
         // The icon is the entry's, not the title's, so it keeps out of the copied text's cell (#87).
         const iconTd = document.createElement('td');
         iconTd.className = 'entry-table-icon';
         iconTd.appendChild(icon(iconName(elementIconId(entry))));
         tr.appendChild(iconTd);
-        const titleTd = buildEntryCell(entryTitle(entry), entryTitle(entry), 'Title');
+        const title = entryTitle(entry);
+        const titleTd = buildEntryCell({ entry, column: 'title' }, title, title, 'Title');
         titleTd.className = 'entry-table-title';
         tr.appendChild(titleTd);
         for (const column of visibleColumns) {
             const value = entryColumnValue(entry, column.key);
             const href = column.key === 'url' ? openableUrl(value) : null;
-            const td = buildEntryCell(entryColumnDisplayValue(entry, column.key), value, column.label, href ? openUrlButton('open-hint', href) : undefined);
+            const td = buildEntryCell({ entry, column: column.key }, entryColumnDisplayValue(entry, column.key), value, column.label, href ? openUrlButton('open-hint', href) : undefined);
             if (column.key === 'password')
                 td.classList.add('entry-table-protected');
             tr.appendChild(td);
@@ -7424,6 +8248,7 @@ function buildEntryTable(rows) {
         tbody.appendChild(tr);
     }
     table.appendChild(tbody);
+    markCopied(copiedCell); // onto the rebuilt row
     return table;
 }
 function buildColumnPickerMenu() {
@@ -7459,6 +8284,7 @@ away (#64). */
 let lastActivity = 0;
 let idleTimer;
 let locking = false; // re-encrypting, with the page about to give way to the unlock screen (#84)
+let editLocked = false; // the last lock carried an open edit screen inside the database (#185)
 function curtain() {
     return byId('dlg-curtain');
 }
@@ -7501,8 +8327,9 @@ function handleVisibilityChange() {
         rescheduleIdleCheck();
 }
 /** Re-encrypts the current in-memory state (including anything not yet
-saved) rather than reloading the original file, so locking never loses an
-edit on its own — only choosing to discard at the prompt above does that. */
+saved, and an open edit screen (#185)) rather than reloading the original file,
+so locking never loses an edit on its own — only choosing to discard at the
+prompt above does that. */
 async function lockDatabase() {
     if (locking)
         return;
@@ -7510,9 +8337,17 @@ async function lockDatabase() {
     clearTimeout(idleTimer);
     clearClipboardNow(); // a copied secret must not outlast the lock (#88)
     try {
-        const bytes = await must(app.db).save();
+        const db = must(app.db);
+        const edit = editInProgress?.();
+        if (edit)
+            holdLockedEdit(db.root, edit);
+        // The open database never keeps it, even when the save fails (#185).
+        const bytes = await db.save().finally(() => wipeLockedEdit(takeLockedEdit(db.root)));
+        editLocked = edit !== undefined;
         app.file = bytes.buffer;
         Object.assign(app, { db: null, currentGroup: null, currentEntry: null, searchQuery: '' });
+        db.wipe(); // a locked tab keeps only the re-encrypted bytes (#145)
+        forgetCopiedIfGone(); // one a copy marked while the lock re-encrypted
         showUnlock(true);
         curtain().close(); // only now, so the re-encrypting page never shows through (#84)
     }
@@ -7522,6 +8357,7 @@ async function lockDatabase() {
 }
 function closeDatabase() {
     clearTimeout(idleTimer);
+    app.db?.wipe(); // none if it locked while the prompt was open (#145)
     Object.assign(app, {
         db: null,
         file: null,
@@ -7689,7 +8525,7 @@ function showEntryDetail() {
         showEntryEdit(false);
     });
     qs('[data-action="move-entry"]').addEventListener('click', () => {
-        openMoveToDialog('Move entry to…', () => true, (destination) => {
+        openMoveToDialog('Move entry into…', () => true, (destination) => {
             const parent = findEntryParent(db.getRootGroup(), entry);
             if (parent && parent !== destination) {
                 moveToGroup(entry, parent, destination);
@@ -7738,6 +8574,7 @@ function showEntryDetail() {
             const parent = findEntryParent(db.getRootGroup(), entry);
             if (parent) {
                 deletePermanently(db.root, entry, parent);
+                forgetCopiedIfGone();
                 setDirty(true);
             }
             app.currentEntry = null;
@@ -7772,7 +8609,7 @@ function buildDetailField(key, value, isProtected) {
         actions.appendChild(openUrlButton('icon-btn', href));
     // Leads the value, as copy does everywhere, so it is plainly that value's (#87).
     const copyBtn = makeIconButton('icon-btn', 'Copy', 'copy', () => {
-        copyToClipboard(value, fieldLabel(key));
+        copyToClipboard(value, fieldLabel(key), null, copyBtn);
     });
     valueWrap.appendChild(copyBtn);
     valueWrap.appendChild(valueSpan);
@@ -7796,7 +8633,7 @@ function renderDetailAttachments(db, entry, container) {
             const data = db.getBinaryData(ref);
             if (!data)
                 return;
-            const blob = new Blob([new Uint8Array(data)]);
+            const blob = new Blob([data]); // no copy left here to zero (#145)
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -7837,7 +8674,8 @@ function renderDetailHistory(db, entry, container) {
         container.appendChild(row);
     }
 }
-function showEntryEdit(isNew) {
+let editInProgress = null; // reads the open edit screen for a lock (#185)
+function showEntryEdit(isNew, held = null) {
     document.body.classList.remove('app-mode');
     setRoot(cloneTemplate('tpl-entry-edit'));
     const entry = must(app.currentEntry);
@@ -7882,8 +8720,6 @@ function showEntryEdit(isNew) {
         const isProtected = getAttribute(valueEl, 'Protected') === 'True';
         fieldsEl.appendChild(buildEditField(key, value, isProtected, isCustomField(key)));
     }
-    if (isNew)
-        must(fieldsEl.querySelector('.edit-value')).focus(); // Title, ready to type (#89)
     qs('[data-action="add-field"]').addEventListener('click', () => {
         fieldsEl.appendChild(buildEditField('', '', false, true));
     });
@@ -7894,7 +8730,7 @@ function showEntryEdit(isNew) {
         const file = input.files?.[0];
         if (!file)
             return;
-        attachments.push({ name: file.name, data: new Uint8Array(await file.arrayBuffer()) });
+        attachments.push({ name: file.name, data: await readPicked(file) });
         renderEditAttachments(attachments, attachmentsList);
         input.value = '';
     });
@@ -7925,6 +8761,45 @@ function showEntryEdit(isNew) {
         attachments.map((held) => [held.name, 'data' in held ? -1 : held.ref]),
     ]);
     const untouched = formState();
+    // A form a lock carried goes over the entry as stored, so Save still sees what changed (#185).
+    if (held) {
+        fieldsEl.replaceChildren(...held.fields.map((field) => buildEditField(field.key, field.value, field.protect, isCustomField(field.key))));
+        if (held.iconId !== null) {
+            pickedIconId = held.iconId;
+            iconBtn.replaceChildren(icon(iconName(String(held.iconId))));
+        }
+        qs('#edit-tags').value = held.tags;
+        expiresCheckbox.checked = held.expires;
+        expiryInput.disabled = !held.expires;
+        expiryInput.value = held.expiry;
+        attachments.splice(0, attachments.length, ...held.attachments);
+        // Zeroed with this screen, like a picked file (#145).
+        for (const attachment of held.attachments)
+            if ('data' in attachment)
+                pickedBytes.push(attachment.data);
+        renderEditAttachments(attachments, attachmentsList);
+    }
+    if (isNew)
+        must(fieldsEl.querySelector('.edit-value')).focus(); // Title, ready to type (#89)
+    editInProgress = () => ({
+        uuid: entryUuid(entry),
+        isNew,
+        modified: getEntryTimes(entry).modified,
+        form: formState() === untouched
+            ? null
+            : {
+                fields: editedFields(fieldsEl),
+                iconId: pickedIconId ?? null,
+                tags: qs('#edit-tags').value,
+                expires: expiresCheckbox.checked,
+                expiry: expiryInput.value,
+                // A save renumbers stored attachments, so they travel as bytes; a stale one has none.
+                attachments: attachments.map((attachment) => {
+                    const data = 'data' in attachment ? attachment.data : must(app.db).getBinaryData(attachment.ref);
+                    return data ? { name: attachment.name, data } : attachment;
+                }),
+            },
+    });
     qs('[data-action="save"]').addEventListener('click', () => {
         if (!isNew && formState() === untouched) {
             showEntryDetail();
@@ -7979,12 +8854,6 @@ function buildEditField(key, value, isProtected, removable) {
         // Notes opens with room to write; any other box is as tall as its value.
         valueInput.setAttribute('rows', String(Math.max(lines, key === 'Notes' ? 5 : 1)));
     }
-    if (multiLine && isProtected) {
-        // What a password input gets on its own: no spell checker or autocorrect reads it.
-        valueInput.setAttribute('spellcheck', 'false');
-        valueInput.setAttribute('autocapitalize', 'off');
-        valueInput.setAttribute('autocorrect', 'off');
-    }
     // Kept apart from the row's own spacing so they sit close together (#89); copy
     // leads the value, as it does everywhere, and the rest follow it (#87).
     const lead = document.createElement('span');
@@ -7995,29 +8864,56 @@ function buildEditField(key, value, isProtected, removable) {
     row.appendChild(lead);
     row.appendChild(valueInput);
     row.appendChild(actions);
-    if (isProtected) {
-        let concealed = false;
-        const toggleConcealed = () => {
-            concealed = !concealed;
-            // A password input can't hold line breaks, so a multi-line box is masked by CSS (#126).
-            if (multiLine)
-                valueInput.classList.toggle('concealed', concealed);
+    let concealed = false;
+    const reveal = makeIconButton('icon-btn', 'Show / hide', 'eye', () => {
+        conceal(!concealed);
+        valueInput.focus(); // the next move is usually to edit the value (#110)
+    });
+    keepFieldFocus(reveal);
+    const conceal = (on) => {
+        concealed = on;
+        // A password input can't hold line breaks, so a multi-line box is masked by CSS (#126).
+        if (multiLine)
+            valueInput.classList.toggle('concealed', on);
+        else
+            valueInput.setAttribute('type', on ? 'password' : 'text');
+        reveal.replaceChildren(icon(on ? 'eye' : 'eye-off'));
+    };
+    // Masked here, and encrypted in the file, as KeePass and KeePassXC let a custom field be (#141).
+    const lock = removable
+        ? makeIconButton('icon-btn', 'Protect', 'lock', () => {
+            protect(row.dataset.protected !== '1');
+            valueInput.focus();
+        })
+        : null;
+    const protect = (on) => {
+        row.dataset.protected = on ? '1' : '0';
+        reveal.hidden = !on;
+        conceal(on);
+        lock?.setAttribute('aria-pressed', String(on));
+        lock?.replaceChildren(icon(on ? 'lock' : 'lock-open'));
+        if (!multiLine)
+            return;
+        // What a password input gets on its own: no spell checker or autocorrect reads it.
+        for (const [name, off] of [
+            ['spellcheck', 'false'],
+            ['autocapitalize', 'off'],
+            ['autocorrect', 'off'],
+        ]) {
+            if (on)
+                valueInput.setAttribute(name, off);
             else
-                valueInput.setAttribute('type', concealed ? 'password' : 'text');
-        };
-        toggleConcealed();
-        const toggle = makeIconButton('icon-btn', 'Show / hide', 'eye', () => {
-            toggleConcealed();
-            toggle.replaceChildren(icon(concealed ? 'eye' : 'eye-off'));
-            valueInput.focus(); // the next move is usually to edit the value (#110)
-        });
-        keepFieldFocus(toggle);
-        actions.appendChild(toggle);
+                valueInput.removeAttribute(name);
+        }
+    };
+    if (isProtected || removable) {
+        protect(isProtected);
+        actions.appendChild(reveal);
     }
     const copyBtn = makeIconButton('icon-btn', 'Copy', 'copy', () => {
         // Copies whatever is currently typed, not the value the field opened
         // with — the user may have already edited it.
-        copyToClipboard(valueInput.value, fieldLabel(keyInput.value) || 'Value');
+        copyToClipboard(valueInput.value, fieldLabel(keyInput.value) || 'Value', null, copyBtn);
     });
     keepFieldFocus(copyBtn);
     lead.appendChild(copyBtn);
@@ -8030,7 +8926,9 @@ function buildEditField(key, value, isProtected, removable) {
         keepFieldFocus(generateBtn);
         actions.appendChild(generateBtn);
     }
-    if (removable) {
+    if (lock) {
+        keepFieldFocus(lock);
+        actions.appendChild(lock);
         const removeBtn = makeIconButton('icon-btn', 'Remove field', 'remove', () => row.remove());
         removeBtn.style.color = 'var(--danger)';
         actions.appendChild(removeBtn);
@@ -8047,14 +8945,40 @@ function nameClash(noun, names, inputs, errorEl) {
     errorEl.textContent = `More than one ${noun} is named "${duplicate}". Rename or remove one, then save.`;
     return must(inputs[names.lastIndexOf(duplicate)]);
 }
-function commitEdits(entry, fieldsEl, isNew, pickedIconId, attachments) {
-    const db = must(app.db);
-    const rows = Array.from(fieldsEl.querySelectorAll('.edit-field'));
-    const fields = rows.map((row) => ({
+function editedFields(fieldsEl) {
+    return Array.from(fieldsEl.querySelectorAll('.edit-field'), (row) => ({
         key: must(row.querySelector('.edit-key')).value.trim(),
         value: must(row.querySelector('.edit-value')).value,
         protect: row.dataset.protected === '1',
     }));
+}
+/* Reopens the edit screen a lock carried; a new entry takes it if a merge removed the old.
+Returns the entry's title when a version from elsewhere changed it under what was typed (#185). */
+function resumeEdit(edit) {
+    publishTitle();
+    const rootGroup = must(app.db).getRootGroup();
+    const found = collectAllEntries(rootGroup).find(({ entry }) => entryUuid(entry) === edit.uuid);
+    if (found) {
+        app.currentGroup = found.group;
+        app.currentEntry = found.entry;
+        showEntryEdit(edit.isNew, edit.form);
+        const changed = edit.form !== null && getEntryTimes(found.entry).modified !== edit.modified;
+        return changed ? entryTitle(found.entry) : null;
+    }
+    if (edit.form) {
+        app.currentEntry = createEntry({});
+        appendChild(rootGroup, app.currentEntry);
+        setDirty(true);
+        showEntryEdit(true, edit.form);
+    }
+    else {
+        showEntryList();
+    }
+    return null;
+}
+function commitEdits(entry, fieldsEl, isNew, pickedIconId, attachments) {
+    const db = must(app.db);
+    const fields = editedFields(fieldsEl);
     const fieldClash = nameClash('field', fields.map((field) => field.key), fieldsEl.querySelectorAll('.edit-key'), qs('#edit-error'));
     const attachmentClash = nameClash('attachment', attachments.map((held) => held.name), qs('#edit-attachments').querySelectorAll('.attachment-name'), qs('#edit-attachments-error'));
     const clash = fieldClash ?? attachmentClash;
@@ -8116,10 +9040,11 @@ function openSettings() {
     keyfileInput.onchange = async () => {
         const f = keyfileInput.files?.[0];
         if (f) {
-            keyfileData = new Uint8Array(await f.arrayBuffer());
+            keyfileData = await readPicked(f);
             keyfileLabel.textContent = f.name;
         }
     };
+    dlg.onclose = forgetPicked;
     must(dlg.querySelector('[data-action="save-settings"]')).onclick = () => {
         const v = Number.parseInt(timeoutInput.value, 10);
         if (isValidClipboardTimeout(v))
@@ -8234,6 +9159,7 @@ async function runMerge(session, dlg) {
         return;
     }
     app.baseVersion = latest.version;
+    forgetCopiedIfGone();
     setDirty(true);
     dlg.close();
     // What was on screen may have changed or gone, so the merged database is shown from the top.
@@ -8666,7 +9592,7 @@ async function openHeld(attempts, gone) {
 }
 async function opens(bytes, attempts) {
     try {
-        await loadWithAny(bytes, attempts);
+        (await loadWithAny(bytes, attempts)).wipeContent(); // opened only to find out; the attempts stay usable (#145)
         return true;
     }
     catch {
@@ -8674,13 +9600,18 @@ async function opens(bytes, attempts) {
     }
 }
 /** Open the version saved elsewhere while this tab was locked. With nothing
-unsaved here it replaces this copy; with unsaved edits the two are merged by
+unsaved here it replaces this copy (merging in, to keep an open edit screen the
+lock carried (#185)); with unsaved edits the two are merged by
 KeePass's rules and the result left unsaved to review. Throws what the unlock
 screen should say when these credentials can't do either. */
 async function openNewer(attempts, newer) {
     const bytes = new Uint8Array(newer.bytes);
     const when = savedWhen(newer.savedAt);
-    if (!app.dirty) {
+    const opened = {
+        title: 'Opened the newer version',
+        message: `This database was saved elsewhere${when}, so that version is open now.`,
+    };
+    if (!app.dirty && !editLocked) {
         try {
             app.db = await loadWithAny(bytes, attempts);
         }
@@ -8689,10 +9620,7 @@ async function openNewer(attempts, newer) {
         }
         app.file = newer.bytes;
         app.baseVersion = newer.version;
-        return {
-            title: 'Opened the newer version',
-            message: `This database was saved elsewhere${when}, so that version is open now.`,
-        };
+        return opened;
     }
     let db;
     try {
@@ -8708,7 +9636,7 @@ async function openNewer(attempts, newer) {
     try {
         const summary = await db.mergeIn(bytes);
         app.baseVersion = newer.version;
-        return mergeNotice(summary, newer.savedAt);
+        return app.dirty ? mergeNotice(summary, newer.savedAt) : opened;
     }
     catch {
         return {
@@ -9066,6 +9994,7 @@ if (typeof getEntryTimes !== 'undefined') globalThis.getEntryTimes = getEntryTim
 if (typeof setEntryExpiry !== 'undefined') globalThis.setEntryExpiry = setEntryExpiry;
 if (typeof touchLastModified !== 'undefined') globalThis.touchLastModified = touchLastModified;
 if (typeof moveToGroup !== 'undefined') globalThis.moveToGroup = moveToGroup;
+if (typeof moveNextTo !== 'undefined') globalThis.moveNextTo = moveNextTo;
 if (typeof deletePermanently !== 'undefined') globalThis.deletePermanently = deletePermanently;
 if (typeof getEntryAttachments !== 'undefined') globalThis.getEntryAttachments = getEntryAttachments;
 if (typeof addEntryAttachment !== 'undefined') globalThis.addEntryAttachment = addEntryAttachment;
@@ -9082,6 +10011,8 @@ if (typeof findGroupParent !== 'undefined') globalThis.findGroupParent = findGro
 if (typeof isDescendantGroup !== 'undefined') globalThis.isDescendantGroup = isDescendantGroup;
 if (typeof collectAllEntries !== 'undefined') globalThis.collectAllEntries = collectAllEntries;
 if (typeof groupPathTo !== 'undefined') globalThis.groupPathTo = groupPathTo;
+if (typeof isGroupFurled !== 'undefined') globalThis.isGroupFurled = isGroupFurled;
+if (typeof setGroupFurled !== 'undefined') globalThis.setGroupFurled = setGroupFurled;
 if (typeof collectSearchableEntries !== 'undefined') globalThis.collectSearchableEntries = collectSearchableEntries;
 if (typeof filterEntriesByQuery !== 'undefined') globalThis.filterEntriesByQuery = filterEntriesByQuery;
 if (typeof sortEntries !== 'undefined') globalThis.sortEntries = sortEntries;
@@ -9089,6 +10020,9 @@ if (typeof toCsv !== 'undefined') globalThis.toCsv = toCsv;
 if (typeof applyEntryEdits !== 'undefined') globalThis.applyEntryEdits = applyEntryEdits;
 if (typeof duplicateName !== 'undefined') globalThis.duplicateName = duplicateName;
 if (typeof isCustomField !== 'undefined') globalThis.isCustomField = isCustomField;
+if (typeof entryUuid !== 'undefined') globalThis.entryUuid = entryUuid;
+if (typeof holdLockedEdit !== 'undefined') globalThis.holdLockedEdit = holdLockedEdit;
+if (typeof takeLockedEdit !== 'undefined') globalThis.takeLockedEdit = takeLockedEdit;
 if (typeof unlockAttempts !== 'undefined') globalThis.unlockAttempts = unlockAttempts;
 if (typeof openableUrl !== 'undefined') globalThis.openableUrl = openableUrl;
 if (typeof isValidClipboardTimeout !== 'undefined') globalThis.isValidClipboardTimeout = isValidClipboardTimeout;

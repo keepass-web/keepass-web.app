@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KeePass Web - Google Drive</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 7V5a3.5 3.5 0 0 1 7 0v2' fill='none' stroke='%230e7c5a' stroke-width='2' stroke-linecap='round'/%3E%3Crect x='2' y='7' width='12' height='8' rx='2' fill='%230e7c5a'/%3E%3C/svg%3E">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 7V5a3.5 3.5 0 0 1 7 0v2' fill='none' stroke='%235562e0' stroke-width='2' stroke-linecap='round'/%3E%3Crect x='2' y='7' width='12' height='8' rx='2' fill='%235562e0'/%3E%3C/svg%3E">
   <style>
 /* ============================================================
    Shared footer partial (pages/shared/footer.html)
@@ -69,16 +69,38 @@ footer a:hover {
 }
 
 :root {
-  --bg: #eef2ef;
-  --surface: #ffffff;
-  --surface-2: #eaefec;
-  --border: #d8e2dc;
-  --text: #0e1714;
-  --muted: #5a6a62;
-  --accent: #0e7c5a;
-  --accent-dim: #eaf1ee;
-  --danger: #9a2b2b;
-  --success: #0e7c5a;
+  color-scheme: light dark;
+  --bg: light-dark(#f9f5f0, #151412);
+  --surface: light-dark(#fffdfa, #201e1a);
+  --surface-2: light-dark(#e7ecff, #24293e);
+  --border: light-dark(#e2dfda, #383531);
+  --text: light-dark(#201e1a, #f1ede8);
+  --muted: light-dark(#55524e, #a7a49f);
+  --accent: light-dark(#424bbc, #8da0ff);
+  --on-accent: light-dark(#ffffff, #151412);
+  --accent-dim: light-dark(#cfd9ff, #252b4c);
+  --danger: light-dark(#cc2553, #ffa8b2);
+  --success: light-dark(#00702a, #67bf76);
+}
+
+/* Older browsers keep the light palette (#196). A custom property accepts
+light-dark() even where it can't compute it, so a plain value declared first
+wouldn't survive as a fallback. */
+@supports not (color: light-dark(red, red)) {
+  :root {
+    color-scheme: light;
+    --bg: #f9f5f0;
+    --surface: #fffdfa;
+    --surface-2: #e7ecff;
+    --border: #e2dfda;
+    --text: #201e1a;
+    --muted: #55524e;
+    --accent: #424bbc;
+    --on-accent: #ffffff;
+    --accent-dim: #cfd9ff;
+    --danger: #cc2553;
+    --success: #00702a;
+  }
 }
 
 /* `height`, not `min-height`: the embedded-app screen's `.app-frame` iframe
@@ -168,7 +190,7 @@ body {
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 600;
 }
 
@@ -344,11 +366,12 @@ body {
 
   <p class="footer-links">
   <a href="https://github.com/sponsors/keepass-web" target="_blank" rel="noopener noreferrer">&hearts; Sponsor</a>
-  &middot; <a href="https://github.com/keepass-web/source-application/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT Licensed</a>
+  &middot; <a href="https://github.com/keepass-web/source-application" target="_blank" rel="noopener noreferrer">&starf; Star</a>
+  &middot; <a href="https://github.com/keepass-web/.github/blob/main/profile/FAQ.md#how-can-i-help" target="_blank" rel="noopener noreferrer">Share</a>
   &middot; <a href="https://github.com/keepass-web/.github/blob/main/profile/FAQ.md" target="_blank" rel="noopener noreferrer">FAQ</a>
-  &middot; <a href="https://github.com/keepass-web/source-application" target="_blank" rel="noopener noreferrer">Source</a>
+  &middot; <a href="https://github.com/keepass-web/source-application/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT Licensed</a>
 </p>
-<footer><a href="https://github.com/keepass-web/source-application/tree/v0.15.0" target="_blank" rel="noopener noreferrer">v0.15.0</a> committed on <time id="commit-date" datetime="2026-11-17T19:21:37-05:00">2026-11-17T19:21:37-05:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+<footer><a href="https://github.com/keepass-web/source-application/tree/v0.16.0" target="_blank" rel="noopener noreferrer">v0.16.0</a> committed on <time id="commit-date" datetime="2026-11-21T12:04:28-05:00">2026-11-21T12:04:28-05:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
 
 
   <script>
@@ -566,8 +589,10 @@ defined once instead of once per page. */
 /* Hue and silhouette rather than an open versus closed shackle (#73): a tab
 gives an icon 16 pixels, where a shackle's gap is about two of them and the two
 states are indistinguishable. Unlocked is a different color and shows rows,
-because rows are what clicking that tab is about to put on screen. */
-const LOCKED_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.4' fill='%230e7c5a'/%3E%3Cpath d='M6 8.4V7a2 2 0 0 1 4 0v1.4' fill='none' stroke='%23fff' stroke-width='1.35' stroke-linecap='round'/%3E%3Crect x='4.5' y='8.4' width='7' height='4.5' rx='1.1' fill='%23fff'/%3E%3C/svg%3E";
+because rows are what clicking that tab is about to put on screen. An icon can't
+follow the page's dark mode, so locked's blue is one that reaches 3:1 against
+both a white and a #202124 tab strip (#196). */
+const LOCKED_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.4' fill='%235562e0'/%3E%3Cpath d='M6 8.4V7a2 2 0 0 1 4 0v1.4' fill='none' stroke='%23fff' stroke-width='1.35' stroke-linecap='round'/%3E%3Crect x='4.5' y='8.4' width='7' height='4.5' rx='1.1' fill='%23fff'/%3E%3C/svg%3E";
 const UNLOCKED_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.4' fill='%238a5a1e'/%3E%3Crect x='3.7' y='4.4' width='8.6' height='1.9' rx='.95' fill='%23fff'/%3E%3Crect x='3.7' y='7.05' width='8.6' height='1.9' rx='.95' fill='%23fff'/%3E%3Crect x='3.7' y='9.7' width='8.6' height='1.9' rx='.95' fill='%23fff'/%3E%3C/svg%3E";
 /** The tab's name. The state is named in words and not repeated as a glyph:
 the icon beside it already carries it as a picture, and the padlock emoji says
@@ -599,7 +624,7 @@ function applyTabState(doc, baseTitle, filename, locked) {
 /* === ../pages/cloud-google-drive/logic.js === */
 /** Pure logic for the Drive connector: URL/request-body construction and the
 must() guard — no DOM/network state, so unit-tested directly. Sign-in and
-browsing live in Google's own SDKs, not here. */
+browsing themselves live in Google's own SDKs. */
 // Unwrap a possibly-missing DOM lookup, or fail loudly; kept here so its throw branch is testable.
 function must(value) {
     if (value === null || value === undefined) {
@@ -695,6 +720,16 @@ const MAX_RETRY_DELAY_MS = 8000;
 tabs spread out instead of landing together (#85). */
 function backoffDelayMs(retry, random = Math.random) {
     return Math.round(random() * Math.min(BASE_RETRY_DELAY_MS * 2 ** retry, MAX_RETRY_DELAY_MS));
+}
+/** A failed sign-in's message. From disk, Google refuses every attempt and GIS calls
+it a closed popup, so the only useful answer there is the way around it (#113). */
+function signInErrorText(type, protocol) {
+    if (protocol === 'file:') {
+        return 'Google blocks sign-in from a page opened from disk. Open it from keepass-web.app instead, or serve these files at http://localhost:57932; the FAQ shows how.';
+    }
+    return type === 'popup_failed_to_open'
+        ? 'The sign-in popup was blocked. Allow popups for this site, then try again.'
+        : 'Google sign-in was cancelled.';
 }
 
 
@@ -954,9 +989,7 @@ function handleTokenResponse(response) {
 function handleTokenError(error) {
     const pending = settleToken;
     settleToken = null;
-    pending?.reject(new Error(error.type === 'popup_failed_to_open'
-        ? 'The sign-in popup was blocked. Allow popups for this site, then try again.'
-        : 'Google sign-in was cancelled.'));
+    pending?.reject(new Error(signInErrorText(error.type, window.location.protocol)));
 }
 // ============================================================
 // Screen: Choose a file (Google Picker)
@@ -1342,6 +1375,7 @@ if (typeof isReconnectMessage !== 'undefined') globalThis.isReconnectMessage = i
 if (typeof reconnectedMessage !== 'undefined') globalThis.reconnectedMessage = reconnectedMessage;
 if (typeof isCheckMessage !== 'undefined') globalThis.isCheckMessage = isCheckMessage;
 if (typeof checkedMessage !== 'undefined') globalThis.checkedMessage = checkedMessage;
+if (typeof signInErrorText !== 'undefined') globalThis.signInErrorText = signInErrorText;
 })();
 </script>
 </body>

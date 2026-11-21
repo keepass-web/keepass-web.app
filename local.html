@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KeePass Web - Local file</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 7V5a3.5 3.5 0 0 1 7 0v2' fill='none' stroke='%230e7c5a' stroke-width='2' stroke-linecap='round'/%3E%3Crect x='2' y='7' width='12' height='8' rx='2' fill='%230e7c5a'/%3E%3C/svg%3E">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 7V5a3.5 3.5 0 0 1 7 0v2' fill='none' stroke='%235562e0' stroke-width='2' stroke-linecap='round'/%3E%3Crect x='2' y='7' width='12' height='8' rx='2' fill='%235562e0'/%3E%3C/svg%3E">
   <style>
 /* ============================================================
    Shared footer partial (pages/shared/footer.html)
@@ -69,18 +69,42 @@ footer a:hover {
 }
 
 :root {
-  --bg: #eef2ef;
-  --surface: #ffffff;
-  --surface-2: #eaefec;
-  --border: #d8e2dc;
-  --text: #0e1714;
-  --muted: #5a6a62;
-  --accent: #0e7c5a;
-  --accent-dim: #eaf1ee;
-  --danger: #9a2b2b;
-  --danger-dim: #f2dada;
-  --success: #0e7c5a;
-  --success-dim: #eaf1ee;
+  color-scheme: light dark;
+  --bg: light-dark(#f9f5f0, #151412);
+  --surface: light-dark(#fffdfa, #201e1a);
+  --surface-2: light-dark(#e7ecff, #24293e);
+  --border: light-dark(#e2dfda, #383531);
+  --text: light-dark(#201e1a, #f1ede8);
+  --muted: light-dark(#55524e, #a7a49f);
+  --accent: light-dark(#424bbc, #8da0ff);
+  --on-accent: light-dark(#ffffff, #151412);
+  --accent-dim: light-dark(#cfd9ff, #252b4c);
+  --danger: light-dark(#cc2553, #ffa8b2);
+  --danger-dim: light-dark(#fff4f4, #3f181f);
+  --success: light-dark(#00702a, #67bf76);
+  --success-dim: light-dark(#effaf0, #162c1a);
+}
+
+/* Older browsers keep the light palette (#196). A custom property accepts
+light-dark() even where it can't compute it, so a plain value declared first
+wouldn't survive as a fallback. */
+@supports not (color: light-dark(red, red)) {
+  :root {
+    color-scheme: light;
+    --bg: #f9f5f0;
+    --surface: #fffdfa;
+    --surface-2: #e7ecff;
+    --border: #e2dfda;
+    --text: #201e1a;
+    --muted: #55524e;
+    --accent: #424bbc;
+    --on-accent: #ffffff;
+    --accent-dim: #cfd9ff;
+    --danger: #cc2553;
+    --danger-dim: #fff4f4;
+    --success: #00702a;
+    --success-dim: #effaf0;
+  }
 }
 
 /* `height`, not `min-height`: the embedded-app screen's `.app-frame` iframe
@@ -177,7 +201,7 @@ a:hover {
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 600;
 }
 
@@ -355,11 +379,12 @@ a:hover {
 
   <p class="footer-links">
   <a href="https://github.com/sponsors/keepass-web" target="_blank" rel="noopener noreferrer">&hearts; Sponsor</a>
-  &middot; <a href="https://github.com/keepass-web/source-application/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT Licensed</a>
+  &middot; <a href="https://github.com/keepass-web/source-application" target="_blank" rel="noopener noreferrer">&starf; Star</a>
+  &middot; <a href="https://github.com/keepass-web/.github/blob/main/profile/FAQ.md#how-can-i-help" target="_blank" rel="noopener noreferrer">Share</a>
   &middot; <a href="https://github.com/keepass-web/.github/blob/main/profile/FAQ.md" target="_blank" rel="noopener noreferrer">FAQ</a>
-  &middot; <a href="https://github.com/keepass-web/source-application" target="_blank" rel="noopener noreferrer">Source</a>
+  &middot; <a href="https://github.com/keepass-web/source-application/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT Licensed</a>
 </p>
-<footer><a href="https://github.com/keepass-web/source-application/tree/v0.15.0" target="_blank" rel="noopener noreferrer">v0.15.0</a> committed on <time id="commit-date" datetime="2026-11-17T19:21:37-05:00">2026-11-17T19:21:37-05:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+<footer><a href="https://github.com/keepass-web/source-application/tree/v0.16.0" target="_blank" rel="noopener noreferrer">v0.16.0</a> committed on <time id="commit-date" datetime="2026-11-21T12:04:28-05:00">2026-11-21T12:04:28-05:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
 
 
   <script>
@@ -577,8 +602,10 @@ defined once instead of once per page. */
 /* Hue and silhouette rather than an open versus closed shackle (#73): a tab
 gives an icon 16 pixels, where a shackle's gap is about two of them and the two
 states are indistinguishable. Unlocked is a different color and shows rows,
-because rows are what clicking that tab is about to put on screen. */
-const LOCKED_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.4' fill='%230e7c5a'/%3E%3Cpath d='M6 8.4V7a2 2 0 0 1 4 0v1.4' fill='none' stroke='%23fff' stroke-width='1.35' stroke-linecap='round'/%3E%3Crect x='4.5' y='8.4' width='7' height='4.5' rx='1.1' fill='%23fff'/%3E%3C/svg%3E";
+because rows are what clicking that tab is about to put on screen. An icon can't
+follow the page's dark mode, so locked's blue is one that reaches 3:1 against
+both a white and a #202124 tab strip (#196). */
+const LOCKED_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.4' fill='%235562e0'/%3E%3Cpath d='M6 8.4V7a2 2 0 0 1 4 0v1.4' fill='none' stroke='%23fff' stroke-width='1.35' stroke-linecap='round'/%3E%3Crect x='4.5' y='8.4' width='7' height='4.5' rx='1.1' fill='%23fff'/%3E%3C/svg%3E";
 const UNLOCKED_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.4' fill='%238a5a1e'/%3E%3Crect x='3.7' y='4.4' width='8.6' height='1.9' rx='.95' fill='%23fff'/%3E%3Crect x='3.7' y='7.05' width='8.6' height='1.9' rx='.95' fill='%23fff'/%3E%3Crect x='3.7' y='9.7' width='8.6' height='1.9' rx='.95' fill='%23fff'/%3E%3C/svg%3E";
 /** The tab's name. The state is named in words and not repeated as a glyph:
 the icon beside it already carries it as a picture, and the padlock emoji says

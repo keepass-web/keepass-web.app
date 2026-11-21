@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KeePass Web</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 7V5a3.5 3.5 0 0 1 7 0v2' fill='none' stroke='%230e7c5a' stroke-width='2' stroke-linecap='round'/%3E%3Crect x='2' y='7' width='12' height='8' rx='2' fill='%230e7c5a'/%3E%3C/svg%3E">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 7V5a3.5 3.5 0 0 1 7 0v2' fill='none' stroke='%235562e0' stroke-width='2' stroke-linecap='round'/%3E%3Crect x='2' y='7' width='12' height='8' rx='2' fill='%235562e0'/%3E%3C/svg%3E">
   <style>
 /* ============================================================
    Shared footer partial (pages/shared/footer.html)
@@ -69,25 +69,60 @@ footer a:hover {
 }
 
 :root {
-  --bg: #eef2ef;
-  --surface: #ffffff;
-  --surface-2: #eaefec;
-  --border: #d8e2dc;
-  --text: #0e1714;
-  --muted: #5a6a62;
-  --accent: #0e7c5a;
-  --accent-dim: #eaf1ee;
-  --copied-row: #d8eae5;
-  --copied-cell: #b2d5ca;
-  --danger: #9a2b2b;
-  --danger-dim: #f2dada;
-  --danger-border: #e6c2c2;
-  --warning: #8a5a1e;
-  --warning-bg: #fbf0e7;
-  --warning-border: #ead7c2;
-  --success: #0e7c5a;
+  color-scheme: light dark;
+  --bg: light-dark(#f9f5f0, #151412);
+  --surface: light-dark(#fffdfa, #201e1a);
+  --surface-2: light-dark(#e7ecff, #24293e);
+  --border: light-dark(#e2dfda, #383531);
+  --control-border: #83807b;
+  --text: light-dark(#201e1a, #f1ede8);
+  --muted: light-dark(#55524e, #a7a49f);
+  --accent: light-dark(#424bbc, #8da0ff);
+  --on-accent: light-dark(#ffffff, #151412);
+  --accent-dim: light-dark(#cfd9ff, #252b4c);
+  --copied-row: light-dark(#e0efff, #1c3249);
+  --copied-cell: light-dark(#c1defe, #144877);
+  --danger: light-dark(#cc2553, #ffa8b2);
+  --danger-dim: light-dark(#fff4f4, #3f181f);
+  --danger-border: light-dark(#ffccd0, #86002f);
+  --warning: light-dark(#623d00, #f7d4aa);
+  --warning-bg: light-dark(#fff5ea, #34230b);
+  --warning-border: light-dark(#f7d4aa, #623d00);
+  --success: light-dark(#00702a, #67bf76);
   /* 25 chars of a first-level sub-group (#63) at .group-btn's size, plus icon, padding, nesting, and the toggle (#183) and ⋯ slots. */
   --sidebar-width: 280px;
+}
+
+/* Older browsers keep the light palette (#196). A custom property accepts
+light-dark() even where it can't compute it, so a plain value declared first
+wouldn't survive as a fallback. */
+@supports not (color: light-dark(red, red)) {
+  :root {
+    color-scheme: light;
+    --bg: #f9f5f0;
+    --surface: #fffdfa;
+    --surface-2: #e7ecff;
+    --border: #e2dfda;
+    --text: #201e1a;
+    --muted: #55524e;
+    --accent: #424bbc;
+    --on-accent: #ffffff;
+    --accent-dim: #cfd9ff;
+    --copied-row: #e0efff;
+    --copied-cell: #c1defe;
+    --danger: #cc2553;
+    --danger-dim: #fff4f4;
+    --danger-border: #ffccd0;
+    --warning: #623d00;
+    --warning-bg: #fff5ea;
+    --warning-border: #f7d4aa;
+    --success: #00702a;
+  }
+
+  .sidebar-backdrop,
+  .kw-dialog::backdrop {
+    background: rgba(32, 30, 26, 0.45);
+  }
 }
 
 body {
@@ -198,7 +233,7 @@ body:not(.app-mode) {
 .btn-primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -222,7 +257,7 @@ body:not(.app-mode) {
 
 .btn-danger:hover:not(:disabled) {
   background: var(--danger);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .btn-block {
@@ -329,7 +364,7 @@ through to notice unsaved edits, unlike every other dirty-aware prompt. */
 .field input[type="search"],
 .field input[type="datetime-local"] {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--control-border);
   border-radius: 8px;
   color: var(--text);
   font-size: 0.9rem;
@@ -453,7 +488,7 @@ through to notice unsaved edits, unlike every other dirty-aware prompt. */
   display: flex;
   align-items: center;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--control-border);
   border-radius: 8px;
 }
 
@@ -519,7 +554,7 @@ through to notice unsaved edits, unlike every other dirty-aware prompt. */
 
 .search-input {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--control-border);
   border-radius: 8px;
   color: var(--text);
   font-size: 0.875rem;
@@ -748,7 +783,7 @@ so an absolutely positioned menu would be cut off. */
 
 .sort-select {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--control-border);
   border-radius: 4px;
   color: var(--text);
   font-size: 0.8rem;
@@ -1115,7 +1150,7 @@ heavier weight and a check for a copy control, so the mark never rests on color 
   .sidebar-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(14, 23, 20, 0.45);
+    background: light-dark(rgba(32, 30, 26, 0.45), rgba(0, 0, 0, 0.6));
     z-index: 15;
   }
 
@@ -1265,6 +1300,7 @@ body:not(.app-mode) .screen-detail {
 
 .detail-value-wrap,
 .edit-field,
+.edit-code,
 .attachment-row,
 .history-row {
   display: flex;
@@ -1296,6 +1332,15 @@ body:not(.app-mode) .screen-detail {
   display: flex;
   gap: 0.25rem;
   flex-shrink: 0;
+}
+
+/* After a one-time code: its seconds left, in figures of one width so it holds still (#138). */
+.code-note {
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 0.8em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 /* ============================================================
@@ -1354,12 +1399,14 @@ body:not(.app-mode) .screen-edit {
 }
 
 .edit-field,
+.edit-code,
 .attachment-row,
 .history-row {
   padding: 0.4rem 0.5rem;
 }
 
-.edit-key {
+.edit-key,
+.edit-code-label {
   background: none;
   border: none;
   color: var(--muted);
@@ -1422,13 +1469,19 @@ textarea.edit-value.concealed {
   padding-inline: 0.25rem;
 }
 
+.edit-code-value {
+  font-size: 0.9rem;
+}
+
 /* The label takes a line of its own so the value gets the row's full width (#89). */
 @media (max-width: 700px) {
-  .edit-field {
+  .edit-field,
+  .edit-code {
     flex-wrap: wrap;
   }
 
-  .edit-key {
+  .edit-key,
+  .edit-code-label {
     width: 100%;
   }
 }
@@ -1562,7 +1615,7 @@ input.attachment-name:focus {
 }
 
 .kw-dialog::backdrop {
-  background: rgba(14, 23, 20, 0.45);
+  background: light-dark(rgba(32, 30, 26, 0.45), rgba(0, 0, 0, 0.6));
 }
 
 .dialog-header {
@@ -1618,7 +1671,7 @@ input.attachment-name:focus {
 
 .dialog-body .field input {
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1px solid var(--control-border);
   border-radius: 8px;
   color: var(--text);
   font-size: 0.9rem;
@@ -2344,11 +2397,12 @@ body.embedded footer {
 
   <p class="footer-links">
   <a href="https://github.com/sponsors/keepass-web" target="_blank" rel="noopener noreferrer">&hearts; Sponsor</a>
-  &middot; <a href="https://github.com/keepass-web/source-application/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT Licensed</a>
+  &middot; <a href="https://github.com/keepass-web/source-application" target="_blank" rel="noopener noreferrer">&starf; Star</a>
+  &middot; <a href="https://github.com/keepass-web/.github/blob/main/profile/FAQ.md#how-can-i-help" target="_blank" rel="noopener noreferrer">Share</a>
   &middot; <a href="https://github.com/keepass-web/.github/blob/main/profile/FAQ.md" target="_blank" rel="noopener noreferrer">FAQ</a>
-  &middot; <a href="https://github.com/keepass-web/source-application" target="_blank" rel="noopener noreferrer">Source</a>
+  &middot; <a href="https://github.com/keepass-web/source-application/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT Licensed</a>
 </p>
-<footer><a href="https://github.com/keepass-web/source-application/tree/v0.15.0" target="_blank" rel="noopener noreferrer">v0.15.0</a> committed on <time id="commit-date" datetime="2026-11-17T19:21:37-05:00">2026-11-17T19:21:37-05:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+<footer><a href="https://github.com/keepass-web/source-application/tree/v0.16.0" target="_blank" rel="noopener noreferrer">v0.16.0</a> committed on <time id="commit-date" datetime="2026-11-21T12:04:28-05:00">2026-11-21T12:04:28-05:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
 
 
   <script>
@@ -6744,8 +6798,10 @@ defined once instead of once per page. */
 /* Hue and silhouette rather than an open versus closed shackle (#73): a tab
 gives an icon 16 pixels, where a shackle's gap is about two of them and the two
 states are indistinguishable. Unlocked is a different color and shows rows,
-because rows are what clicking that tab is about to put on screen. */
-const LOCKED_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.4' fill='%230e7c5a'/%3E%3Cpath d='M6 8.4V7a2 2 0 0 1 4 0v1.4' fill='none' stroke='%23fff' stroke-width='1.35' stroke-linecap='round'/%3E%3Crect x='4.5' y='8.4' width='7' height='4.5' rx='1.1' fill='%23fff'/%3E%3C/svg%3E";
+because rows are what clicking that tab is about to put on screen. An icon can't
+follow the page's dark mode, so locked's blue is one that reaches 3:1 against
+both a white and a #202124 tab strip (#196). */
+const LOCKED_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.4' fill='%235562e0'/%3E%3Cpath d='M6 8.4V7a2 2 0 0 1 4 0v1.4' fill='none' stroke='%23fff' stroke-width='1.35' stroke-linecap='round'/%3E%3Crect x='4.5' y='8.4' width='7' height='4.5' rx='1.1' fill='%23fff'/%3E%3C/svg%3E";
 const UNLOCKED_ICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3.4' fill='%238a5a1e'/%3E%3Crect x='3.7' y='4.4' width='8.6' height='1.9' rx='.95' fill='%23fff'/%3E%3Crect x='3.7' y='7.05' width='8.6' height='1.9' rx='.95' fill='%23fff'/%3E%3Crect x='3.7' y='9.7' width='8.6' height='1.9' rx='.95' fill='%23fff'/%3E%3C/svg%3E";
 /** The tab's name. The state is named in words and not repeated as a glyph:
 the icon beside it already carries it as a picture, and the padlock emoji says
@@ -7239,6 +7295,153 @@ function defaultExpiryLocalInputValue() {
     d.setFullYear(d.getFullYear() + 1);
     return isoToLocalInputValue(d.toISOString());
 }
+const OTP_LINK = /^otpauth:\/\/totp(?:[/?]|$)/i;
+const OTP_LINK_HASHES = {
+    SHA1: 'SHA-1',
+    SHA256: 'SHA-256',
+    SHA512: 'SHA-512',
+};
+const TIME_OTP_HASHES = {
+    'HMAC-SHA-1': 'SHA-1',
+    'HMAC-SHA-256': 'SHA-256',
+    'HMAC-SHA-512': 'SHA-512',
+};
+const BASE32_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+const STEAM_CHARS = '23456789BCDFGHJKMNPQRTVWXY';
+/* Spacing, padding and case vary with where a secret was copied from, so all three
+are ignored; two characters are the fewest that hold a byte. */
+function fromBase32(text) {
+    const chars = text.replace(/[\s=]+/g, '').toUpperCase();
+    if (!/^[A-Z2-7]{2,}$/.test(chars))
+        return null;
+    const out = new Uint8Array(Math.floor((chars.length * 5) / 8));
+    let bits = 0;
+    let value = 0;
+    let index = 0;
+    for (const char of chars) {
+        value = (value << 5) | BASE32_CHARS.indexOf(char);
+        bits += 5;
+        if (bits >= 8) {
+            bits -= 8;
+            out[index] = value >> bits;
+            index += 1;
+            value &= (1 << bits) - 1;
+        }
+    }
+    return out;
+}
+function fromHex(text) {
+    const digits = text.replace(/\s+/g, '');
+    if (!/^(?:[\da-f]{2})+$/i.test(digits))
+        return null;
+    const out = new Uint8Array(digits.length / 2);
+    for (let i = 0; i < out.length; i += 1) {
+        out[i] = Number.parseInt(digits.slice(i * 2, i * 2 + 2), 16);
+    }
+    return out;
+}
+// Checked first, so fromBase64 never throws with part of the secret decoded where nothing can zero it.
+function fromBase64Secret(text) {
+    if (!/^[A-Za-z\d+/]{2,}={0,2}$/.test(text.replace(/\s+/g, '')))
+        return null;
+    return fromBase64(text); // a buffer of its own
+}
+// KeePass's secret fields, one per encoding, of which it requires exactly one.
+const TIME_OTP_SECRETS = {
+    'TimeOtp-Secret': (text) => new TextEncoder().encode(text),
+    'TimeOtp-Secret-Hex': fromHex,
+    'TimeOtp-Secret-Base32': fromBase32,
+    'TimeOtp-Secret-Base64': fromBase64Secret,
+};
+const TOTP_FIELDS = [
+    'otp',
+    ...Object.keys(TIME_OTP_SECRETS),
+    'TimeOtp-Length',
+    'TimeOtp-Period',
+    'TimeOtp-Algorithm',
+];
+function wholeNumber(text) {
+    return /^\d+$/.test(text) ? Number(text) : Number.NaN;
+}
+// Up to 10 digits, all that RFC 4226's 31-bit value holds, over any whole period of seconds.
+function validSettings(hash, digits, period) {
+    return hash !== undefined && digits >= 1 && digits <= 10 && period >= 1;
+}
+function readOtpLink(link) {
+    let query;
+    try {
+        query = new URL(link).searchParams;
+    }
+    catch {
+        return null; // a link the parser refuses is unreadable, not an error
+    }
+    const steam = query.get('encoder') === 'steam';
+    const hash = OTP_LINK_HASHES[(query.get('algorithm') ?? 'SHA1').toUpperCase()];
+    const digits = steam ? 5 : wholeNumber(query.get('digits') ?? '6'); // a Steam code is always five
+    const period = wholeNumber(query.get('period') ?? '30');
+    if (!validSettings(hash, digits, period))
+        return null;
+    const secret = fromBase32(query.get('secret') ?? '');
+    return secret && { secret, hash, digits, period, steam };
+}
+function readTimeOtp(field) {
+    const [found, ...more] = Object.entries(TIME_OTP_SECRETS).filter(([key]) => field(key) !== '');
+    const hash = TIME_OTP_HASHES[(field('TimeOtp-Algorithm') || 'HMAC-SHA-1').toUpperCase()];
+    const digits = wholeNumber(field('TimeOtp-Length') || '6');
+    const period = wholeNumber(field('TimeOtp-Period') || '30');
+    if (!found || more.length > 0 || !validSettings(hash, digits, period))
+        return null;
+    const [key, decode] = found;
+    const secret = decode(field(key));
+    return secret && { secret, hash, digits, period, steam: false };
+}
+/** Whether an entry carries TOTP settings: an otpauth link in "otp", as KeePassXC
+keeps them, or a TimeOtp secret, as KeePass 2.47+ does. */
+function hasTotp(field) {
+    return (OTP_LINK.test(field('otp')) || Object.keys(TIME_OTP_SECRETS).some((key) => field(key) !== ''));
+}
+// Every value those settings are read from, so a change to any of them shows.
+function totpSettings(field) {
+    return JSON.stringify(TOTP_FIELDS.map((key) => field(key)));
+}
+/** The settings read into a key, the "otp" link first as KeePassXC reads it, or null
+when they can't be read. */
+async function readTotp(field) {
+    const link = field('otp');
+    const settings = OTP_LINK.test(link) ? readOtpLink(link) : readTimeOtp(field);
+    if (!settings)
+        return null;
+    const { secret, hash, digits, period, steam } = settings;
+    const key = await crypto.subtle
+        .importKey('raw', secret, { name: 'HMAC', hash }, false, ['sign'])
+        .finally(() => secret.fill(0)); // the key holds its own copy
+    return { key, digits, period, steam };
+}
+// RFC 6238's time step: whole periods of Unix seconds.
+function totpStep(totp, now) {
+    return Math.floor(Math.floor(now / 1000) / totp.period);
+}
+function totpSecondsLeft(totp, now) {
+    return totp.period - (Math.floor(now / 1000) % totp.period);
+}
+/** A time step's code: its HMAC cut to 31 bits by RFC 4226's dynamic truncation, then
+written in decimal digits, or in Steam's letters and digits. */
+async function totpCode(totp, step) {
+    const counter = new Uint8Array(8);
+    new DataView(counter.buffer).setBigUint64(0, BigInt(step));
+    const mac = new Uint8Array(await crypto.subtle.sign('HMAC', totp.key, counter));
+    const offset = mac[mac.length - 1] & 0xf;
+    let value = new DataView(mac.buffer).getUint32(offset) & 0x7fffffff;
+    mac.fill(0);
+    if (!totp.steam)
+        return String(value % 10 ** totp.digits).padStart(totp.digits, '0');
+    let code = '';
+    for (let i = 0; i < totp.digits; i += 1) {
+        code += STEAM_CHARS.charAt(value % STEAM_CHARS.length);
+        value = Math.floor(value / STEAM_CHARS.length);
+    }
+    return code;
+}
 
 
 /* === ../pages/0x67/page.js === */
@@ -7262,6 +7465,7 @@ const app = {
     columnVisibility: {
         username: true,
         password: true,
+        otp: false,
         url: true,
         notes: false,
         attachments: false,
@@ -7335,6 +7539,7 @@ function setRoot(fragment) {
     const root = byId('root');
     root.innerHTML = '';
     tableRows = new WeakMap();
+    dropCodes();
     editInProgress = null;
     root.appendChild(fragment);
 }
@@ -7939,6 +8144,7 @@ function renderEntryPanel() {
     const listEl = qs('#entry-list');
     listEl.innerHTML = '';
     tableRows = new WeakMap();
+    dropCodes();
     listEl.classList.toggle('entry-list--tile', app.entryView === 'tile');
     listEl.classList.toggle('entry-list--table', app.entryView === 'table');
     let rows;
@@ -8011,9 +8217,11 @@ function buildEntryRow(entry, group) {
 // ============================================================
 // Entry list: table view
 // ============================================================
+const CODE_LABEL = 'One-time code';
 const ENTRY_COLUMNS = [
     { key: 'username', label: 'Username' },
     { key: 'password', label: 'Password' },
+    { key: 'otp', label: CODE_LABEL },
     { key: 'url', label: 'URL' },
     { key: 'notes', label: 'Notes' },
     { key: 'attachments', label: 'Attachments' },
@@ -8080,20 +8288,23 @@ function forgetCopiedIfGone() {
 /* A click copies (#67); opening the card is the row's own button instead. The
 browser already decides what counts as a click, so a scroll that starts on a
 cell copies nothing and a secondary button never reaches here at all. */
-function wireCellCopy(cell, value, label, source) {
+function wireCellCopy(cell, read, label, source) {
     cell.addEventListener('click', (event) => {
         // Anywhere but the cell's own buttons, which run their own handlers (#76, #86).
         if (event.target.closest('.copy-hint, .open-hint'))
             return;
+        const value = read();
         if (value)
             copyToClipboard(value, label, source);
     });
 }
 /* A button, not decoration (#67): dim at rest so hover only raises its emphasis,
 and focusable so copying is reachable without a pointer at all. */
-function copyHint(value, label, source) {
+function copyHint(read, label, source) {
     return makeIconButton('copy-hint', `Copy ${label.toLowerCase()}`, 'copy', () => {
-        copyToClipboard(value, label, source);
+        const value = read();
+        if (value)
+            copyToClipboard(value, label, source);
     });
 }
 /* noopener and noreferrer, so the site neither learns where it was opened from
@@ -8112,7 +8323,7 @@ function buildEntryCell(source, display, value, label, action) {
     const inner = document.createElement('div');
     inner.className = 'entry-cell';
     if (value)
-        inner.appendChild(copyHint(value, label, source));
+        inner.appendChild(copyHint(() => value, label, source));
     const text = document.createElement('span');
     text.className = 'entry-cell-text';
     text.textContent = display;
@@ -8120,7 +8331,7 @@ function buildEntryCell(source, display, value, label, action) {
     if (action)
         inner.appendChild(action);
     td.appendChild(inner);
-    wireCellCopy(td, value, label, source);
+    wireCellCopy(td, () => value, label, source);
     return td;
 }
 const COLUMN_WIDTH_MIN = 80;
@@ -8233,6 +8444,10 @@ function buildEntryTable(rows) {
         titleTd.className = 'entry-table-title';
         tr.appendChild(titleTd);
         for (const column of visibleColumns) {
+            if (column.key === 'otp') {
+                tr.appendChild(buildCodeCell(entry));
+                continue;
+            }
             const value = entryColumnValue(entry, column.key);
             const href = column.key === 'url' ? openableUrl(value) : null;
             const td = buildEntryCell({ entry, column: column.key }, entryColumnDisplayValue(entry, column.key), value, column.label, href ? openUrlButton('open-hint', href) : undefined);
@@ -8347,6 +8562,7 @@ async function lockDatabase() {
         app.file = bytes.buffer;
         Object.assign(app, { db: null, currentGroup: null, currentEntry: null, searchQuery: '' });
         db.wipe(); // a locked tab keeps only the re-encrypted bytes (#145)
+        totpKeys = new WeakMap(); // nor any key made from its secrets (#138)
         forgetCopiedIfGone(); // one a copy marked while the lock re-encrypted
         showUnlock(true);
         curtain().close(); // only now, so the re-encrypting page never shows through (#84)
@@ -8358,6 +8574,7 @@ async function lockDatabase() {
 function closeDatabase() {
     clearTimeout(idleTimer);
     app.db?.wipe(); // none if it locked while the prompt was open (#145)
+    totpKeys = new WeakMap(); // keys made from its secrets go with it (#138)
     Object.assign(app, {
         db: null,
         file: null,
@@ -8476,6 +8693,168 @@ function startFind() {
     search.select();
     return true;
 }
+let codeSlots = [];
+let codeTimer;
+/* Each entry's settings as read into a key, kept while they stay the same, so a
+table redrawn on every search keystroke reads none of them again. */
+let totpKeys = new WeakMap();
+function dropCodes() {
+    clearTimeout(codeTimer);
+    codeTimer = undefined;
+    codeSlots = [];
+}
+function entryTotp(entry) {
+    const field = (key) => entryField(entry, key);
+    const settings = totpSettings(field);
+    const held = totpKeys.get(entry);
+    if (held?.settings === settings)
+        return held.totp;
+    const totp = readTotp(field);
+    totpKeys.set(entry, { settings, totp });
+    return totp;
+}
+function newCodeSlot(textClass, control, cell) {
+    const text = document.createElement('span');
+    text.className = textClass;
+    const note = document.createElement('span');
+    note.className = 'code-note';
+    return { reading: null, totp: null, step: -1, version: 0, code: '', text, note, control, cell };
+}
+// Shows what these settings give, from now until the slot's screen goes.
+function watchCode(slot, reading) {
+    slot.reading = reading;
+    slot.totp = null;
+    slot.note.textContent = '';
+    replaceCode(slot, -1);
+    if (!codeSlots.includes(slot))
+        codeSlots.push(slot);
+    codeTimer ??= setTimeout(tickCodes, 1000 - (Date.now() % 1000));
+    const settled = reading.catch(() => null); // a read that fails is as unreadable as bad settings
+    void settled.then((totp) => {
+        if (slot.reading !== reading)
+            return; // the settings changed again meanwhile
+        slot.totp = totp;
+        slot.control.hidden = totp === null;
+        // Unannounced while it counts down, as the toast's countdown is (#88); not when it explains.
+        slot.note.setAttribute('aria-hidden', String(totp !== null));
+        if (totp)
+            showCode(slot, Date.now());
+        else
+            slot.note.textContent = 'Unreadable settings';
+    });
+}
+/* One timer for every code on screen, waking on each whole second as the clipboard's
+does, so a code changes the moment its time step does. */
+function tickCodes() {
+    const now = Date.now();
+    for (const slot of codeSlots)
+        showCode(slot, now);
+    codeTimer = setTimeout(tickCodes, 1000 - (now % 1000));
+}
+function showCode(slot, now) {
+    const { totp } = slot;
+    if (!totp)
+        return; // still reading, or unreadable
+    slot.note.textContent = `${totpSecondsLeft(totp, now)}s`;
+    const step = totpStep(totp, now);
+    if (step === slot.step)
+        return;
+    replaceCode(slot, step);
+    const { version } = slot;
+    void totpCode(totp, step).then((code) => {
+        if (slot.version !== version)
+            return; // a newer step or newer settings took its place
+        slot.code = code;
+        slot.text.textContent = code;
+    });
+}
+/* What was shown, and maybe copied, is no longer the code, so its check comes off. In the
+table its entry alone stays marked, by a column no cell has, since one of that entry's
+values is still on the clipboard (#177). */
+function replaceCode(slot, step) {
+    slot.step = step;
+    slot.version += 1;
+    slot.code = '';
+    slot.text.textContent = '';
+    if (!slot.control.classList.contains('copied'))
+        return;
+    if (slot.cell)
+        markCopied({ entry: slot.cell.entry, column: '' });
+    else
+        markControl(slot.control, false);
+}
+// The card's and the edit screen's code, copied by an icon button as their fields are.
+function codeControls(textClass) {
+    const control = makeIconButton('icon-btn', 'Copy', 'copy', () => {
+        if (slot.code)
+            copyToClipboard(slot.code, CODE_LABEL, null, control);
+    });
+    const slot = newCodeSlot(textClass, control, null);
+    return slot;
+}
+// Shaped like the card's other fields, copy leading the code (#87).
+function buildCodeField(entry) {
+    const row = document.createElement('div');
+    row.className = 'detail-field';
+    const label = document.createElement('div');
+    label.className = 'detail-label';
+    label.textContent = CODE_LABEL;
+    const valueWrap = document.createElement('div');
+    valueWrap.className = 'detail-value-wrap';
+    const slot = codeControls('detail-value');
+    valueWrap.append(slot.control, slot.text, slot.note);
+    row.append(label, valueWrap);
+    watchCode(slot, entryTotp(entry));
+    return row;
+}
+/* Built apart from the stored values' cells, since what it copies is the code current at
+the click, not a value taken when the table was drawn. */
+function buildCodeCell(entry) {
+    const source = { entry, column: 'otp' };
+    if (!hasTotp((key) => entryField(entry, key)))
+        return buildEntryCell(source, '', '', CODE_LABEL);
+    const td = document.createElement('td');
+    td.dataset.column = source.column;
+    const inner = document.createElement('div');
+    inner.className = 'entry-cell';
+    const control = copyHint(() => slot.code, CODE_LABEL, source);
+    const slot = newCodeSlot('entry-cell-text', control, source);
+    inner.append(control, slot.text, slot.note);
+    td.appendChild(inner);
+    wireCellCopy(td, () => slot.code, CODE_LABEL, source);
+    watchCode(slot, entryTotp(entry));
+    return td;
+}
+/* The code follows the settings as typed, as this screen's copy controls copy what is
+typed, so a new secret can be checked with its site before it is saved. */
+function wireEditCode(fieldsEl) {
+    const row = document.createElement('div');
+    row.className = 'edit-code';
+    const label = document.createElement('span');
+    label.className = 'edit-code-label';
+    label.textContent = CODE_LABEL;
+    const lead = document.createElement('span');
+    lead.className = 'edit-actions';
+    const slot = codeControls('edit-code-value');
+    keepFieldFocus(slot.control);
+    lead.appendChild(slot.control);
+    row.append(label, lead, slot.text, slot.note);
+    fieldsEl.after(row);
+    const field = (key) => editedFields(fieldsEl).find((typed) => typed.key === key)?.value ?? '';
+    let settings = null;
+    const refresh = () => {
+        const typed = totpSettings(field);
+        if (typed === settings)
+            return; // typing elsewhere leaves the code, and its check, alone
+        settings = typed;
+        row.hidden = !hasTotp(field);
+        watchCode(slot, readTotp(field));
+    };
+    refresh();
+    fieldsEl.addEventListener('input', refresh);
+    // A field added or removed changes the settings as surely as typing does.
+    new window.MutationObserver(refresh).observe(fieldsEl, { childList: true });
+}
 // ============================================================
 // Screen: Entry Detail
 // ============================================================
@@ -8514,6 +8893,8 @@ function showEntryDetail() {
         const isProtected = getAttribute(valueEl, 'Protected') === 'True';
         fieldsEl.appendChild(buildDetailField(key, value, isProtected));
     }
+    if (hasTotp((key) => entryField(entry, key)))
+        fieldsEl.appendChild(buildCodeField(entry));
     const db = must(app.db);
     renderDetailAttachments(db, entry, qs('#detail-attachments'));
     renderDetailHistory(db, entry, qs('#detail-history'));
@@ -8779,6 +9160,7 @@ function showEntryEdit(isNew, held = null) {
                 pickedBytes.push(attachment.data);
         renderEditAttachments(attachments, attachmentsList);
     }
+    wireEditCode(fieldsEl);
     if (isNew)
         must(fieldsEl.querySelector('.edit-value')).focus(); // Title, ready to type (#89)
     editInProgress = () => ({
@@ -10035,6 +10417,12 @@ if (typeof ICON_PALETTE !== 'undefined') globalThis.ICON_PALETTE = ICON_PALETTE;
 if (typeof isoToLocalInputValue !== 'undefined') globalThis.isoToLocalInputValue = isoToLocalInputValue;
 if (typeof localInputValueToIso !== 'undefined') globalThis.localInputValueToIso = localInputValueToIso;
 if (typeof defaultExpiryLocalInputValue !== 'undefined') globalThis.defaultExpiryLocalInputValue = defaultExpiryLocalInputValue;
+if (typeof hasTotp !== 'undefined') globalThis.hasTotp = hasTotp;
+if (typeof totpSettings !== 'undefined') globalThis.totpSettings = totpSettings;
+if (typeof readTotp !== 'undefined') globalThis.readTotp = readTotp;
+if (typeof totpStep !== 'undefined') globalThis.totpStep = totpStep;
+if (typeof totpSecondsLeft !== 'undefined') globalThis.totpSecondsLeft = totpSecondsLeft;
+if (typeof totpCode !== 'undefined') globalThis.totpCode = totpCode;
 if (typeof isOpenMessage !== 'undefined') globalThis.isOpenMessage = isOpenMessage;
 if (typeof isCreateMessage !== 'undefined') globalThis.isCreateMessage = isCreateMessage;
 if (typeof isSavedMessage !== 'undefined') globalThis.isSavedMessage = isSavedMessage;

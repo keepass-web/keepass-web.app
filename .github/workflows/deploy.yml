@@ -51,6 +51,8 @@ jobs:
           curl -fsSL "${base}/local.html"               -o local.html
           curl -fsSL "${base}/index.html"               -o index.html
           curl -fsSL "${base}/cloud-google-drive.html"  -o cloud-google-drive.html
+          curl -fsSL "${base}/privacy.html"             -o privacy.html
+          curl -fsSL "${base}/terms.html"               -o terms.html
           curl -fsSL "${base}/CNAME"                    -o CNAME
 
       - name: Verify attestations
@@ -61,6 +63,8 @@ jobs:
           gh attestation verify local.html               --repo keepass-web/source-application
           gh attestation verify index.html               --repo keepass-web/source-application
           gh attestation verify cloud-google-drive.html  --repo keepass-web/source-application
+          gh attestation verify privacy.html             --repo keepass-web/source-application
+          gh attestation verify terms.html               --repo keepass-web/source-application
           gh attestation verify CNAME                    --repo keepass-web/source-application
 
       - name: Push branch
@@ -70,7 +74,7 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "${branch}"
-          git add 0x67.html local.html index.html cloud-google-drive.html CNAME
+          git add 0x67.html local.html index.html cloud-google-drive.html privacy.html terms.html CNAME
           git commit -m "Deploy ${tag}"
           git push --force origin "${branch}"
 

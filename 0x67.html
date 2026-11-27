@@ -153,15 +153,17 @@ body.app-mode #root {
 }
 
 /* ============================================================
-   Centred-content body: upload and unlock screens
+   Top-anchored body: a phone keyboard leaves Unlock in view (#214)
    ============================================================ */
 
 body:not(.app-mode) {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
   padding: 2rem;
+}
+
+body:not(.app-mode) #root {
+  flex: 1;
 }
 
 /* ============================================================
@@ -428,6 +430,7 @@ through to notice unsaved edits, unlike every other dirty-aware prompt. */
   gap: 2rem;
   max-width: 440px;
   width: 100%;
+  margin: 1rem auto 0;
   text-align: center;
 }
 
@@ -470,6 +473,7 @@ through to notice unsaved edits, unlike every other dirty-aware prompt. */
   gap: 1.25rem;
   max-width: 400px;
   width: 100%;
+  margin: 1rem auto 0;
 }
 
 .db-filename {
@@ -1205,11 +1209,6 @@ body.app-mode .screen-detail {
   height: 100%;
 }
 
-/* Centered, #root shrinks to its content and leaves width: 100% nothing to fill (#89). */
-body:not(.app-mode) #root:has(> .screen-detail, > .screen-edit) {
-  align-self: stretch;
-}
-
 body:not(.app-mode) .screen-detail {
   max-width: 640px;
   width: 100%;
@@ -1781,8 +1780,7 @@ input.attachment-name:focus {
    Footer
    (a flex-shrink:0 sibling of #root in both body layouts above, so it
    claims its own space instead of being clipped by app-mode's
-   height:100vh/overflow:hidden or centered away by the upload/unlock
-   layout's justify-content:center)
+   height:100vh/overflow:hidden)
    ============================================================ */
 
 /* Embedded: the host page has its own footer, so hide this copy. */
@@ -2452,7 +2450,7 @@ color alone needs a system color (#210). */
   &middot; <a href="privacy.html" target="_blank" rel="noopener noreferrer">Privacy</a>
   &middot; <a href="terms.html" target="_blank" rel="noopener noreferrer">Terms</a>
 </p>
-<footer><a href="https://github.com/keepass-web/source-application/tree/v0.17.2" target="_blank" rel="noopener noreferrer">v0.17.2</a> committed on <time id="commit-date" datetime="2026-11-23T11:42:01-05:00">2026-11-23T11:42:01-05:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
+<footer><a href="https://github.com/keepass-web/source-application/tree/v0.17.3" target="_blank" rel="noopener noreferrer">v0.17.3</a> committed on <time id="commit-date" datetime="2026-11-27T10:56:29-05:00">2026-11-27T10:56:29-05:00</time><script>document.getElementById('commit-date').textContent = new Date(document.getElementById('commit-date').getAttribute('datetime')).toLocaleString();</script></footer>
 
 
   <script>
